@@ -1,0 +1,193 @@
+{
+  "version": 3,
+  "targets": {
+    "net7.0-windows7.0": {
+      "Newtonsoft.Json/13.0.3": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Penumbra.Api/1.0.7": {
+        "type": "package",
+        "compile": {
+          "lib/net7.0-windows7.0/Penumbra.Api.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net7.0-windows7.0/Penumbra.Api.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Penumbra.String/1.0.3": {
+        "type": "package",
+        "compile": {
+          "lib/net7.0-windows7.0/Penumbra.String.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net7.0-windows7.0/Penumbra.String.dll": {
+            "related": ".xml"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Newtonsoft.Json/13.0.3": {
+      "sha512": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ==",
+      "type": "package",
+      "path": "newtonsoft.json/13.0.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.md",
+        "README.md",
+        "lib/net20/Newtonsoft.Json.dll",
+        "lib/net20/Newtonsoft.Json.xml",
+        "lib/net35/Newtonsoft.Json.dll",
+        "lib/net35/Newtonsoft.Json.xml",
+        "lib/net40/Newtonsoft.Json.dll",
+        "lib/net40/Newtonsoft.Json.xml",
+        "lib/net45/Newtonsoft.Json.dll",
+        "lib/net45/Newtonsoft.Json.xml",
+        "lib/net6.0/Newtonsoft.Json.dll",
+        "lib/net6.0/Newtonsoft.Json.xml",
+        "lib/netstandard1.0/Newtonsoft.Json.dll",
+        "lib/netstandard1.0/Newtonsoft.Json.xml",
+        "lib/netstandard1.3/Newtonsoft.Json.dll",
+        "lib/netstandard1.3/Newtonsoft.Json.xml",
+        "lib/netstandard2.0/Newtonsoft.Json.dll",
+        "lib/netstandard2.0/Newtonsoft.Json.xml",
+        "newtonsoft.json.13.0.3.nupkg.sha512",
+        "newtonsoft.json.nuspec",
+        "packageIcon.png"
+      ]
+    },
+    "Penumbra.Api/1.0.7": {
+      "sha512": "NVntxQIaBPFyUmnFvIYF4G41i1at2U0efhEnqRSZYRJDxj2N4gmVivjJgjQuHxQlzFTDCCgphN8y/L/+Gr80fA==",
+      "type": "package",
+      "path": "penumbra.api/1.0.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net7.0-windows7.0/Penumbra.Api.dll",
+        "lib/net7.0-windows7.0/Penumbra.Api.xml",
+        "penumbra.api.1.0.7.nupkg.sha512",
+        "penumbra.api.nuspec"
+      ]
+    },
+    "Penumbra.String/1.0.3": {
+      "sha512": "cpIJU5oGme3nOwIK+D68hC2sVPkTTfE6M3gXExh6V6jvtQGKT4VI9e16FtY0uw6/tsWMI83OGS2UavU9ZC7h0A==",
+      "type": "package",
+      "path": "penumbra.string/1.0.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net7.0-windows7.0/Penumbra.String.dll",
+        "lib/net7.0-windows7.0/Penumbra.String.xml",
+        "penumbra.string.1.0.3.nupkg.sha512",
+        "penumbra.string.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net7.0-windows7.0": [
+      "Newtonsoft.Json >= 13.0.3",
+      "Penumbra.Api >= 1.0.7",
+      "Penumbra.String >= 1.0.3"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\stel9\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {},
+    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj",
+      "projectName": "PenumbraModForwarder",
+      "projectPath": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj",
+      "packagesPath": "C:\\Users\\stel9\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\stel9\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net7.0-windows"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net7.0-windows7.0": {
+          "targetAlias": "net7.0-windows",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "net7.0-windows7.0": {
+        "targetAlias": "net7.0-windows",
+        "dependencies": {
+          "Newtonsoft.Json": {
+            "target": "Package",
+            "version": "[13.0.3, )"
+          },
+          "Penumbra.Api": {
+            "target": "Package",
+            "version": "[1.0.7, )"
+          },
+          "Penumbra.String": {
+            "target": "Package",
+            "version": "[1.0.3, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          },
+          "Microsoft.WindowsDesktop.App.WindowsForms": {
+            "privateAssets": "none"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.104\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
