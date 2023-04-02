@@ -2,6 +2,8 @@ using Anamnesis.Penumbra;
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Reflection;
+using AutoUpdaterDotNET;
+
 namespace FFXIVModExractor {
     public partial class MainWindow : Form {
         bool exitInitiated = false;
@@ -108,6 +110,16 @@ namespace FFXIVModExractor {
                 this.Close();
                 Application.Exit();
             } else {
+                AutoUpdater.InstalledVersion = new Version(Application.ProductVersion);
+                AutoUpdater.DownloadPath = Application.StartupPath;
+                AutoUpdater.Synchronous = true;
+                AutoUpdater.Mandatory = true;
+                AutoUpdater.UpdateMode = Mode.ForcedDownload;
+                AutoUpdater.Start("https://raw.githubusercontent.com/Sebane1/PenumbraModForwarder/master/update.xml");
+                AutoUpdater.ApplicationExitEvent += delegate () {
+                    hideAfterLoad = true;
+                    exitInitiated = true;
+                };
                 GetAutoLoadOption();
                 if (autoLoadModCheckbox.Checked) {
                     hideAfterLoad = true;

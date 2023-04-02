@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj": {}
+    "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\PenumbraModForwarder.csproj": {}
   },
   "projects": {
-    "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj": {
+    "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\PenumbraModForwarder.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj",
+        "projectUniqueName": "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\PenumbraModForwarder.csproj",
         "projectName": "PenumbraModForwarder",
-        "projectPath": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj",
+        "projectPath": "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\PenumbraModForwarder.csproj",
         "packagesPath": "C:\\Users\\stel9\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\obj\\",
+        "outputPath": "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
@@ -45,6 +45,10 @@
         "net7.0-windows7.0": {
           "targetAlias": "net7.0-windows",
           "dependencies": {
+            "Autoupdater.NET.Official": {
+              "target": "Package",
+              "version": "[1.7.7, )"
+            },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.3, )"

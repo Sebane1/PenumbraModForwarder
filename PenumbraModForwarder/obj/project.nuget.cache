@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "rWjHrY5umAZWK81aoXXtUJD7Y62B6LuXeNvQesX4jd/XwfQC6H9bAOunjW1ffNveW5tBqW42WP65WKJx/dNyAQ==",
+  "dgSpecHash": "RQtS8HlRvN71JsPL376KGQeVJexyB6c+AQhGhuJpEQ/+rxXswFP4d23bMjHkanpCa8iaShNtpYHKeAP15Bs66w==",
   "success": true,
-  "projectFilePath": "C:\\Users\\stel9\\source\\repos\\FFXIVModExractor\\FFXIVModExractor\\PenumbraModForwarder.csproj",
+  "projectFilePath": "C:\\Users\\stel9\\source\\repos\\PenumbraModForwarder\\PenumbraModForwarder\\PenumbraModForwarder.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\stel9\\.nuget\\packages\\autoupdater.net.official\\1.7.7\\autoupdater.net.official.1.7.7.nupkg.sha512",
+    "C:\\Users\\stel9\\.nuget\\packages\\microsoft.web.webview2\\1.0.1587.40\\microsoft.web.webview2.1.0.1587.40.nupkg.sha512",
     "C:\\Users\\stel9\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
     "C:\\Users\\stel9\\.nuget\\packages\\penumbra.api\\1.0.7\\penumbra.api.1.0.7.nupkg.sha512",
     "C:\\Users\\stel9\\.nuget\\packages\\penumbra.string\\1.0.3\\penumbra.string.1.0.3.nupkg.sha512"
