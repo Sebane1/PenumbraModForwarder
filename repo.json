@@ -16,9 +16,9 @@
         "LoadPriority": 69420,
         "LoadRequiredState": 2,
         "LoadSync": true,
-        "DownloadLinkInstall": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_DO-NOT-DOWNLOAD.zip",
-        "DownloadLinkTesting": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_DO-NOT-DOWNLOAD.zip",
-        "DownloadLinkUpdate": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_DO-NOT-DOWNLOAD.zip",
+        "DownloadLinkInstall": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_ONLY.FOR.TESTING.zip",
+        "DownloadLinkTesting": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_ONLY.FOR.TESTING.zip",
+        "DownloadLinkUpdate": "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v0.0.0.1/Penumbra_ONLY.FOR.TESTING.zip",
         "IconUrl": "https://raw.githubusercontent.com/xivdev/Penumbra/master/images/icon.png"
     }
 ]

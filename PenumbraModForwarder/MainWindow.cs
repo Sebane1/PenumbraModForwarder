@@ -125,6 +125,7 @@ namespace FFXIVModExractor {
                     hideAfterLoad = true;
                 }
             }
+            ContextMenuStrip = contextMenu;
         }
 
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e) {
@@ -193,19 +194,15 @@ namespace FFXIVModExractor {
         private void associateFileTypes_Click(object sender, EventArgs e) {
             if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redircted to penumbra via this program?",
                 Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
-                var pmp = Registry.ClassesRoot.OpenSubKey(".pmp");
-                var pmpType = pmp.GetValue("");
 
-                var ttmp = Registry.ClassesRoot.OpenSubKey(".ttmp");
-                var ttmpType = ttmp.GetValue("");
 
-                var ttmp2 = Registry.ClassesRoot.OpenSubKey(".ttmp2");
-                var ttmp2Type = ttmp2.GetValue("");
 
                 string myExecutable = Assembly.GetEntryAssembly().Location;
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
                 string keyName = "";
                 try {
+                    var pmp = Registry.ClassesRoot.OpenSubKey(".pmp");
+                    var pmpType = pmp.GetValue("");
                     keyName = pmpType + @"\shell\Open\command";
                     using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
                         key.SetValue("", command);
@@ -215,6 +212,8 @@ namespace FFXIVModExractor {
                 }
 
                 try {
+                    var ttmp = Registry.ClassesRoot.OpenSubKey(".ttmp");
+                    var ttmpType = ttmp.GetValue("");
                     keyName = ttmpType + @"\shell\Open\command";
                     using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
                         key.SetValue("", command);
@@ -224,6 +223,8 @@ namespace FFXIVModExractor {
                 }
 
                 try {
+                    var ttmp2 = Registry.ClassesRoot.OpenSubKey(".ttmp2");
+                    var ttmp2Type = ttmp2.GetValue("");
                     keyName = ttmp2Type + @"\shell\Open\command";
                     using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
                         key.SetValue("", command);
@@ -249,6 +250,8 @@ namespace FFXIVModExractor {
 
         private void openConfigurationToolStripMenuItem_Click(object sender, EventArgs e) {
             Show();
+            TopMost = true;
+            BringToFront();
         }
 
         private void MainWindow_Activated(object sender, EventArgs e) {
@@ -260,6 +263,126 @@ namespace FFXIVModExractor {
                 TopMost = true;
                 BringToFront();
                 TopMost = false;
+            }
+        }
+
+        private void looseTextureCompilerToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://github.com/Sebane1/FFXIVLooseTextureCompiler/",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void voicePackCreatorToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://github.com/Sebane1/FFXIVVoicePackCreator/",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void heliosphereToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                if (MessageBox.Show("Heliosphere requires a seperate dalamud plugin to use.", Text) == DialogResult.OK) {
+                    Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                        FileName = "https://heliosphere.app/",
+                        UseShellExecute = true,
+                        Verb = "OPEN"
+                    });
+                }
+            } catch {
+
+            }
+        }
+
+        private void trayIcon_MouseDoubleClick(object sender, MouseEventArgs e) {
+            Show();
+            TopMost = true;
+            BringToFront();
+        }
+
+        private void soundsToolStripMenuItem_Click(object sender, EventArgs e) {
+
+        }
+
+        private void penumbraToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://www.xivmodarchive.com/",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void pixellatedsAssistancePlaceToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://discord.gg/9XtTqws2cJ",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void soundAndTextureResourceToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://discord.gg/rtGXwMn7pX",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void texToolsToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://discord.gg/ffxivtextools",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void xIVModsResourcesToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://discord.gg/8x2G75D46w",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void crossGenPortingToolToolStripMenuItem_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://www.xivmodarchive.com/modid/56505",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
             }
         }
     }
