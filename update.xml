@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>0.0.0.1</version>
+  <version>1.0.0.1</version>
   <url></url>
-  <changelog></changelog>
+  <changelog>https://github.com/Sebane1/PenumbraModForwarder/releases/download/v1.0.0.1/PenumbraModForwarder.zip</changelog>
   <mandatory>true</mandatory>
 </item>
