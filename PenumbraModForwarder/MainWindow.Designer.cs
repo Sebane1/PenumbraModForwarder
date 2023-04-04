@@ -54,6 +54,7 @@
             this.toBeExpandedToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.crossGenPortingToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toBeExpandedToolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
             this.discordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.penumbraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pixellatedsAssistancePlaceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -64,7 +65,7 @@
             this.openConfigurationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.heliopshereButton = new System.Windows.Forms.Button();
-            this.toBeExpandedToolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkForUpdateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             associateFileTypes = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher)).BeginInit();
             this.contextMenu.SuspendLayout();
@@ -84,8 +85,6 @@
             // 
             this.fileSystemWatcher.EnableRaisingEvents = true;
             this.fileSystemWatcher.SynchronizingObject = this;
-            this.fileSystemWatcher.Changed += new System.IO.FileSystemEventHandler(this.fileSystemWatcher_Created);
-            this.fileSystemWatcher.Created += new System.IO.FileSystemEventHandler(this.fileSystemWatcher_Created);
             this.fileSystemWatcher.Renamed += new System.IO.RenamedEventHandler(this.fileSystemWatcher_Renamed);
             // 
             // xma
@@ -154,7 +153,7 @@
             // 
             // cooldownTimer
             // 
-            this.cooldownTimer.Interval = 2000;
+            this.cooldownTimer.Interval = 10;
             this.cooldownTimer.Tick += new System.EventHandler(this.cooldownTimer_Tick);
             // 
             // autoLoadModCheckbox
@@ -192,9 +191,10 @@
             this.quickLinksToolStripMenuItem,
             this.moddingResourcesToolStripMenuItem,
             this.openConfigurationToolStripMenuItem,
+            this.checkForUpdateToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenu.Name = "contextMenuStrip1";
-            this.contextMenu.Size = new System.Drawing.Size(181, 114);
+            this.contextMenu.Size = new System.Drawing.Size(181, 136);
             // 
             // quickLinksToolStripMenuItem
             // 
@@ -298,7 +298,7 @@
             // voicePackCreatorToolStripMenuItem
             // 
             this.voicePackCreatorToolStripMenuItem.Name = "voicePackCreatorToolStripMenuItem";
-            this.voicePackCreatorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.voicePackCreatorToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
             this.voicePackCreatorToolStripMenuItem.Text = "Voice Pack Creator";
             this.voicePackCreatorToolStripMenuItem.Click += new System.EventHandler(this.voicePackCreatorToolStripMenuItem_Click);
             // 
@@ -306,7 +306,7 @@
             // 
             this.toBeExpandedToolStripMenuItem1.Enabled = false;
             this.toBeExpandedToolStripMenuItem1.Name = "toBeExpandedToolStripMenuItem1";
-            this.toBeExpandedToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.toBeExpandedToolStripMenuItem1.Size = new System.Drawing.Size(177, 22);
             this.toBeExpandedToolStripMenuItem1.Text = "--To Be Expanded--";
             // 
             // modelsToolStripMenuItem
@@ -324,6 +324,13 @@
             this.crossGenPortingToolToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
             this.crossGenPortingToolToolStripMenuItem.Text = "Cross Gen Porting Tool";
             this.crossGenPortingToolToolStripMenuItem.Click += new System.EventHandler(this.crossGenPortingToolToolStripMenuItem_Click);
+            // 
+            // toBeExpandedToolStripMenuItem3
+            // 
+            this.toBeExpandedToolStripMenuItem3.Enabled = false;
+            this.toBeExpandedToolStripMenuItem3.Name = "toBeExpandedToolStripMenuItem3";
+            this.toBeExpandedToolStripMenuItem3.Size = new System.Drawing.Size(194, 22);
+            this.toBeExpandedToolStripMenuItem3.Text = "--To Be Expanded--";
             // 
             // discordToolStripMenuItem
             // 
@@ -404,12 +411,12 @@
             this.heliopshereButton.UseVisualStyleBackColor = true;
             this.heliopshereButton.Click += new System.EventHandler(this.heliosphereToolStripMenuItem_Click);
             // 
-            // toBeExpandedToolStripMenuItem3
+            // checkForUpdateToolStripMenuItem
             // 
-            this.toBeExpandedToolStripMenuItem3.Enabled = false;
-            this.toBeExpandedToolStripMenuItem3.Name = "toBeExpandedToolStripMenuItem3";
-            this.toBeExpandedToolStripMenuItem3.Size = new System.Drawing.Size(194, 22);
-            this.toBeExpandedToolStripMenuItem3.Text = "--To Be Expanded--";
+            this.checkForUpdateToolStripMenuItem.Name = "checkForUpdateToolStripMenuItem";
+            this.checkForUpdateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.checkForUpdateToolStripMenuItem.Text = "Check For Update";
+            this.checkForUpdateToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdateToolStripMenuItem_Click);
             // 
             // MainWindow
             // 
@@ -482,5 +489,6 @@
         private ToolStripMenuItem modelsToolStripMenuItem;
         private ToolStripMenuItem crossGenPortingToolToolStripMenuItem;
         private ToolStripMenuItem toBeExpandedToolStripMenuItem3;
+        private ToolStripMenuItem checkForUpdateToolStripMenuItem;
     }
 }

@@ -110,16 +110,7 @@ namespace FFXIVModExractor {
                 this.Close();
                 Application.Exit();
             } else {
-                AutoUpdater.InstalledVersion = new Version(Application.ProductVersion);
-                AutoUpdater.DownloadPath = Application.StartupPath;
-                AutoUpdater.Synchronous = true;
-                AutoUpdater.Mandatory = true;
-                AutoUpdater.UpdateMode = Mode.ForcedDownload;
-                AutoUpdater.Start("https://raw.githubusercontent.com/Sebane1/PenumbraModForwarder/master/update.xml");
-                AutoUpdater.ApplicationExitEvent += delegate () {
-                    hideAfterLoad = true;
-                    exitInitiated = true;
-                };
+                CheckForUpdate();
                 GetAutoLoadOption();
                 if (autoLoadModCheckbox.Checked) {
                     hideAfterLoad = true;
@@ -128,11 +119,26 @@ namespace FFXIVModExractor {
             ContextMenuStrip = contextMenu;
         }
 
+        private void CheckForUpdate() {
+            AutoUpdater.InstalledVersion = new Version(Application.ProductVersion);
+            AutoUpdater.DownloadPath = Application.StartupPath;
+            AutoUpdater.Synchronous = true;
+            AutoUpdater.Mandatory = true;
+            AutoUpdater.UpdateMode = Mode.ForcedDownload;
+            AutoUpdater.Start("https://raw.githubusercontent.com/Sebane1/PenumbraModForwarder/master/update.xml");
+            AutoUpdater.ApplicationExitEvent += delegate () {
+                hideAfterLoad = true;
+                exitInitiated = true;
+            };
+        }
+
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e) {
             if (!cooldownTimer.Enabled) {
                 if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
                     cooldownTimer.Start();
+                    Thread.Sleep(50);
                     PenumbraHttpApi.Unpack(e.FullPath);
+                    PenumbraHttpApi.OpenWindow();
                 }
             }
         }
@@ -384,6 +390,10 @@ namespace FFXIVModExractor {
             } catch {
 
             }
+        }
+
+        private void checkForUpdateToolStripMenuItem_Click(object sender, EventArgs e) {
+            CheckForUpdate();
         }
     }
 }

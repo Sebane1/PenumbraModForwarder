@@ -28,6 +28,12 @@ public static partial class PenumbraHttpApi {
         await Task.Delay(500);
     }
 
+    public static async Task OpenWindow() {
+        await PenumbraApi.Post("/openwindow","");
+
+        await Task.Delay(500);
+    }
+
     private record ModReloadData(string Path, string Name) {
         public ModReloadData()
             : this(string.Empty, string.Empty) { }
