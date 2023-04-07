@@ -82,17 +82,6 @@ namespace FFXIVModExractor {
             WriteDownloadPath(downloads.FilePath.Text);
         }
 
-        private void fileSystemWatcher_Created(object sender, FileSystemEventArgs e) {
-            if (autoLoadModCheckbox.Checked) {
-                if (!cooldownTimer.Enabled) {
-                    if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
-                        cooldownTimer.Start();
-                        PenumbraHttpApi.Unpack(e.FullPath);
-                    }
-                }
-            }
-        }
-
         private void MainWindow_Load(object sender, EventArgs e) {
             string[] arguments = Environment.GetCommandLineArgs();
             bool foundValidFile = false;
@@ -100,6 +89,7 @@ namespace FFXIVModExractor {
                 for (int i = 1; i < arguments.Length; i++) {
                     if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
                         PenumbraHttpApi.Unpack(arguments[i]);
+                        PenumbraHttpApi.OpenWindow();
                         Thread.Sleep(10000);
                         foundValidFile = true;
                     }
@@ -133,14 +123,34 @@ namespace FFXIVModExractor {
         }
 
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e) {
-            if (!cooldownTimer.Enabled) {
-                if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
-                    cooldownTimer.Start();
-                    Thread.Sleep(50);
-                    PenumbraHttpApi.Unpack(e.FullPath);
-                    PenumbraHttpApi.OpenWindow();
+            ProcessModPackRequest(e);
+        }
+        async Task ProcessModPackRequest(RenamedEventArgs e) {
+            if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
+                Thread.Sleep(50);
+                while(IsFileLocked(e.FullPath)) {
+                    Thread.Sleep(100);
                 }
+                PenumbraHttpApi.Unpack(e.FullPath);
+                PenumbraHttpApi.OpenWindow();
             }
+        }
+
+        public static bool IsFileLocked(string file) {
+            try {
+                using (FileStream stream = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.None)) {
+                    stream.Close();
+                }
+            } catch (IOException) {
+                //the file is unavailable because it is:
+                //still being written to
+                //or being processed by another thread
+                //or does not exist (has already been processed)
+                return true;
+            }
+
+            //file is not locked
+            return false;
         }
         public void GetDownloadPath() {
             string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
@@ -200,9 +210,6 @@ namespace FFXIVModExractor {
         private void associateFileTypes_Click(object sender, EventArgs e) {
             if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redircted to penumbra via this program?",
                 Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
-
-
-
                 string myExecutable = Assembly.GetEntryAssembly().Location;
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
                 string keyName = "";
