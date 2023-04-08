@@ -21,9 +21,9 @@ public static partial class PenumbraHttpApi {
 
         await Task.Delay(500);
     }
-    public static async Task Unpack(string modPath) {
-        ModUnpackData data = new ModUnpackData(modPath);
-        await PenumbraApi.Post("/unpackmod", data);
+    public static async Task Install(string modPath) {
+        ModInstallData data = new ModInstallData(modPath);
+        await PenumbraApi.Post("/installmod", data);
 
         await Task.Delay(500);
     }
@@ -39,8 +39,8 @@ public static partial class PenumbraHttpApi {
             : this(string.Empty, string.Empty) { }
     }
 
-    private record ModUnpackData(string Path) {
-        public ModUnpackData()
+    private record ModInstallData(string Path) {
+        public ModInstallData()
             : this(string.Empty) { }
     }
 

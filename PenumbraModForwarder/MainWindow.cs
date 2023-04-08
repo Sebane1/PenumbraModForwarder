@@ -88,7 +88,7 @@ namespace FFXIVModExractor {
             if (arguments.Length > 0) {
                 for (int i = 1; i < arguments.Length; i++) {
                     if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
-                        PenumbraHttpApi.Unpack(arguments[i]);
+                        PenumbraHttpApi.Install(arguments[i]);
                         PenumbraHttpApi.OpenWindow();
                         Thread.Sleep(10000);
                         foundValidFile = true;
@@ -131,7 +131,7 @@ namespace FFXIVModExractor {
                 while(IsFileLocked(e.FullPath)) {
                     Thread.Sleep(100);
                 }
-                PenumbraHttpApi.Unpack(e.FullPath);
+                PenumbraHttpApi.Install(e.FullPath);
                 PenumbraHttpApi.OpenWindow();
             }
         }
