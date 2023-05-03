@@ -34,17 +34,6 @@ namespace FFXIVVoicePackCreator {
 
         [Category("Filter"), Description("Changes what type of selection is made")]
         public string Filter { get => filter; set => filter = value; }
-        //public bool Enabled {
-        //    get {
-        //        return filePath.Enabled;
-        //    }
-        //    set {
-        //        openButton.Enabled = filePath.Enabled = value;
-        //        if (!value) {
-        //            filePath.Text = "";
-        //        }
-        //    }
-        //}
 
         public string CurrentPath { get => currentPath; set { currentPath = value; filePath.Text = value; } }
 
@@ -105,25 +94,12 @@ namespace FFXIVVoicePackCreator {
 
         private void filePath_DragDrop(object sender, DragEventArgs e) {
             string file = ((string[])e.Data.GetData(DataFormats.FileDrop, false))[0];
-            // if (CheckExtentions(file)) {
             filePath.Text = file;
             currentPath = file;
             if (OnFileSelected != null) {
                 OnFileSelected.Invoke(this, EventArgs.Empty);
             }
-            //} else {
-            //    MessageBox.Show("This is not a media file this tool supports.", ParentForm.Text);
-            //}
         }
-        //public static bool CheckExtentions(string file) {
-        //    string[] extentions = new string[] { ".png", ".dds", ".bmp", ".tex" };
-        //    foreach (string extention in extentions) {
-        //        if (file.EndsWith(extention)) {
-        //            return true;
-        //        }
-        //    }
-        //    return false;
-        //}
 
         private void playButton_Click(object sender, EventArgs e) {
 

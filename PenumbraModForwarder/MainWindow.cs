@@ -7,6 +7,7 @@ using PenumbraModForwarder;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
 
+// TODO: Rename to FFXIVModExtractor
 namespace FFXIVModExractor {
     public partial class MainWindow : Form {
         bool exitInitiated = false;
@@ -272,7 +273,7 @@ namespace FFXIVModExractor {
         }
 
         private void associateFileTypes_Click(object sender, EventArgs e) {
-            if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redircted to penumbra via this program?",
+            if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redirected to penumbra via this program?",
                 Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
                 string myExecutable = Assembly.GetEntryAssembly().Location;
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
@@ -280,19 +281,19 @@ namespace FFXIVModExractor {
                 try {
                     RegisterForFileExtension(".pmp", command);
                 } catch {
-                    MessageBox.Show("Failed to set .pmp association. Try again with admin priviledges or set this manually.", Text);
+                    MessageBox.Show("Failed to set .pmp association. Try again with admin privileges or set this manually.", Text);
                 }
 
                 try {
                     RegisterForFileExtension(".ttmp", command);
                 } catch {
-                    MessageBox.Show("Failed to set .ttmp association. Try again with admin priviledges or set this manually.", Text);
+                    MessageBox.Show("Failed to set .ttmp association. Try again with admin privileges or set this manually.", Text);
                 }
 
                 try {
                     RegisterForFileExtension(".ttmp2", command);
                 } catch {
-                    MessageBox.Show("Failed to set .ttmp2 association. Try again with admin priviledges or set this manually.", Text);
+                    MessageBox.Show("Failed to set .ttmp2 association. Try again with admin privileges or set this manually.", Text);
                 }
                 MessageBox.Show("Associations have been set!", Text);
             }
@@ -354,7 +355,7 @@ namespace FFXIVModExractor {
 
         private void heliosphereToolStripMenuItem_Click(object sender, EventArgs e) {
             try {
-                if (MessageBox.Show("Heliosphere requires a seperate dalamud plugin to use.", Text) == DialogResult.OK) {
+                if (MessageBox.Show("Heliosphere requires a separate dalamud plugin to use.", Text) == DialogResult.OK) {
                     Process.Start(new System.Diagnostics.ProcessStartInfo() {
                         FileName = "https://heliosphere.app/",
                         UseShellExecute = true,
