@@ -4,6 +4,9 @@
     <Compile Update="FilePicker.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="AppSelectionsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="MainWindow.cs">
       <SubType>Form</SubType>
     </Compile>

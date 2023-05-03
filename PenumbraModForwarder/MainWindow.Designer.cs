@@ -63,9 +63,14 @@
             this.xIVModsResourcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toBeExpandedToolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.openConfigurationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkForUpdateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.heliopshereButton = new System.Windows.Forms.Button();
-            this.checkForUpdateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.textools = new FFXIVVoicePackCreator.FilePicker();
+            this.label2 = new System.Windows.Forms.Label();
+            this.donateButton = new System.Windows.Forms.Button();
+            this.discordButton = new System.Windows.Forms.Button();
+            this.donateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             associateFileTypes = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher)).BeginInit();
             this.contextMenu.SuspendLayout();
@@ -73,7 +78,7 @@
             // 
             // associateFileTypes
             // 
-            associateFileTypes.Location = new System.Drawing.Point(0, 32);
+            associateFileTypes.Location = new System.Drawing.Point(0, 36);
             associateFileTypes.Name = "associateFileTypes";
             associateFileTypes.Size = new System.Drawing.Size(120, 23);
             associateFileTypes.TabIndex = 9;
@@ -89,7 +94,7 @@
             // 
             // xma
             // 
-            this.xma.Location = new System.Drawing.Point(0, 92);
+            this.xma.Location = new System.Drawing.Point(0, 156);
             this.xma.Name = "xma";
             this.xma.Size = new System.Drawing.Size(104, 23);
             this.xma.TabIndex = 2;
@@ -99,7 +104,7 @@
             // 
             // glamourDresser
             // 
-            this.glamourDresser.Location = new System.Drawing.Point(104, 92);
+            this.glamourDresser.Location = new System.Drawing.Point(104, 156);
             this.glamourDresser.Name = "glamourDresser";
             this.glamourDresser.Size = new System.Drawing.Size(124, 23);
             this.glamourDresser.TabIndex = 3;
@@ -109,7 +114,7 @@
             // 
             // nexusMods
             // 
-            this.nexusMods.Location = new System.Drawing.Point(228, 92);
+            this.nexusMods.Location = new System.Drawing.Point(228, 156);
             this.nexusMods.Name = "nexusMods";
             this.nexusMods.Size = new System.Drawing.Size(84, 23);
             this.nexusMods.TabIndex = 4;
@@ -119,7 +124,7 @@
             // 
             // aetherlink
             // 
-            this.aetherlink.Location = new System.Drawing.Point(0, 116);
+            this.aetherlink.Location = new System.Drawing.Point(0, 180);
             this.aetherlink.Name = "aetherlink";
             this.aetherlink.Size = new System.Drawing.Size(72, 23);
             this.aetherlink.TabIndex = 5;
@@ -129,7 +134,7 @@
             // 
             // kittyEmporium
             // 
-            this.kittyEmporium.Location = new System.Drawing.Point(156, 116);
+            this.kittyEmporium.Location = new System.Drawing.Point(156, 180);
             this.kittyEmporium.Name = "kittyEmporium";
             this.kittyEmporium.Size = new System.Drawing.Size(156, 23);
             this.kittyEmporium.TabIndex = 6;
@@ -159,7 +164,7 @@
             // autoLoadModCheckbox
             // 
             this.autoLoadModCheckbox.AutoSize = true;
-            this.autoLoadModCheckbox.Location = new System.Drawing.Point(180, 36);
+            this.autoLoadModCheckbox.Location = new System.Drawing.Point(180, 40);
             this.autoLoadModCheckbox.Name = "autoLoadModCheckbox";
             this.autoLoadModCheckbox.Size = new System.Drawing.Size(131, 19);
             this.autoLoadModCheckbox.TabIndex = 10;
@@ -171,7 +176,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label1.Location = new System.Drawing.Point(0, 60);
+            this.label1.Location = new System.Drawing.Point(0, 128);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(109, 25);
             this.label1.TabIndex = 12;
@@ -192,6 +197,7 @@
             this.moddingResourcesToolStripMenuItem,
             this.openConfigurationToolStripMenuItem,
             this.checkForUpdateToolStripMenuItem,
+            this.donateToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenu.Name = "contextMenuStrip1";
             this.contextMenu.Size = new System.Drawing.Size(181, 136);
@@ -268,7 +274,7 @@
             this.looseTextureCompilerToolStripMenuItem,
             this.toBeExpandedToolStripMenuItem});
             this.texturesToolStripMenuItem.Name = "texturesToolStripMenuItem";
-            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.texturesToolStripMenuItem.Text = "Textures";
             // 
             // looseTextureCompilerToolStripMenuItem
@@ -291,14 +297,14 @@
             this.voicePackCreatorToolStripMenuItem,
             this.toBeExpandedToolStripMenuItem1});
             this.soundsToolStripMenuItem.Name = "soundsToolStripMenuItem";
-            this.soundsToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+            this.soundsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.soundsToolStripMenuItem.Text = "Sounds";
             this.soundsToolStripMenuItem.Click += new System.EventHandler(this.soundsToolStripMenuItem_Click);
             // 
             // voicePackCreatorToolStripMenuItem
             // 
             this.voicePackCreatorToolStripMenuItem.Name = "voicePackCreatorToolStripMenuItem";
-            this.voicePackCreatorToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
+            this.voicePackCreatorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.voicePackCreatorToolStripMenuItem.Text = "Voice Pack Creator";
             this.voicePackCreatorToolStripMenuItem.Click += new System.EventHandler(this.voicePackCreatorToolStripMenuItem_Click);
             // 
@@ -306,7 +312,7 @@
             // 
             this.toBeExpandedToolStripMenuItem1.Enabled = false;
             this.toBeExpandedToolStripMenuItem1.Name = "toBeExpandedToolStripMenuItem1";
-            this.toBeExpandedToolStripMenuItem1.Size = new System.Drawing.Size(177, 22);
+            this.toBeExpandedToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
             this.toBeExpandedToolStripMenuItem1.Text = "--To Be Expanded--";
             // 
             // modelsToolStripMenuItem
@@ -315,7 +321,7 @@
             this.crossGenPortingToolToolStripMenuItem,
             this.toBeExpandedToolStripMenuItem3});
             this.modelsToolStripMenuItem.Name = "modelsToolStripMenuItem";
-            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.modelsToolStripMenuItem.Text = "Models";
             // 
             // crossGenPortingToolToolStripMenuItem
@@ -342,7 +348,7 @@
             this.xIVModsResourcesToolStripMenuItem,
             this.toBeExpandedToolStripMenuItem2});
             this.discordToolStripMenuItem.Name = "discordToolStripMenuItem";
-            this.discordToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+            this.discordToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.discordToolStripMenuItem.Text = "Discords";
             // 
             // penumbraToolStripMenuItem
@@ -394,6 +400,13 @@
             this.openConfigurationToolStripMenuItem.Text = "Open Configuration";
             this.openConfigurationToolStripMenuItem.Click += new System.EventHandler(this.openConfigurationToolStripMenuItem_Click);
             // 
+            // checkForUpdateToolStripMenuItem
+            // 
+            this.checkForUpdateToolStripMenuItem.Name = "checkForUpdateToolStripMenuItem";
+            this.checkForUpdateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.checkForUpdateToolStripMenuItem.Text = "Check For Update";
+            this.checkForUpdateToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdateToolStripMenuItem_Click);
+            // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
@@ -403,7 +416,7 @@
             // 
             // heliopshereButton
             // 
-            this.heliopshereButton.Location = new System.Drawing.Point(72, 116);
+            this.heliopshereButton.Location = new System.Drawing.Point(72, 180);
             this.heliopshereButton.Name = "heliopshereButton";
             this.heliopshereButton.Size = new System.Drawing.Size(84, 23);
             this.heliopshereButton.TabIndex = 13;
@@ -411,18 +424,70 @@
             this.heliopshereButton.UseVisualStyleBackColor = true;
             this.heliopshereButton.Click += new System.EventHandler(this.heliosphereToolStripMenuItem_Click);
             // 
-            // checkForUpdateToolStripMenuItem
+            // textools
             // 
-            this.checkForUpdateToolStripMenuItem.Name = "checkForUpdateToolStripMenuItem";
-            this.checkForUpdateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.checkForUpdateToolStripMenuItem.Text = "Check For Update";
-            this.checkForUpdateToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdateToolStripMenuItem_Click);
+            this.textools.CurrentPath = null;
+            this.textools.Filter = null;
+            this.textools.Index = -1;
+            this.textools.Location = new System.Drawing.Point(4, 96);
+            this.textools.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            this.textools.MinimumSize = new System.Drawing.Size(300, 28);
+            this.textools.Name = "textools";
+            this.textools.Size = new System.Drawing.Size(312, 28);
+            this.textools.TabIndex = 14;
+            this.textools.OnFileSelected += new System.EventHandler(this.textools_OnFileSelected);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.label2.Location = new System.Drawing.Point(0, 64);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(276, 25);
+            this.label2.TabIndex = 15;
+            this.label2.Text = "Mod Creators Only (Optional)";
+            // 
+            // donateButton
+            // 
+            this.donateButton.BackColor = System.Drawing.Color.LightCoral;
+            this.donateButton.ForeColor = System.Drawing.Color.White;
+            this.donateButton.Location = new System.Drawing.Point(156, 204);
+            this.donateButton.Name = "donateButton";
+            this.donateButton.Size = new System.Drawing.Size(156, 28);
+            this.donateButton.TabIndex = 16;
+            this.donateButton.Text = "Donate";
+            this.donateButton.UseVisualStyleBackColor = false;
+            this.donateButton.Click += new System.EventHandler(this.donateButton_Click);
+            // 
+            // discordButton
+            // 
+            this.discordButton.BackColor = System.Drawing.Color.SlateBlue;
+            this.discordButton.ForeColor = System.Drawing.Color.White;
+            this.discordButton.Location = new System.Drawing.Point(0, 204);
+            this.discordButton.Name = "discordButton";
+            this.discordButton.Size = new System.Drawing.Size(156, 28);
+            this.discordButton.TabIndex = 17;
+            this.discordButton.Text = "Discord";
+            this.discordButton.UseVisualStyleBackColor = false;
+            this.discordButton.Click += new System.EventHandler(this.discordButton_Click);
+            // 
+            // donateToolStripMenuItem
+            // 
+            this.donateToolStripMenuItem.BackColor = System.Drawing.Color.MistyRose;
+            this.donateToolStripMenuItem.Name = "donateToolStripMenuItem";
+            this.donateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.donateToolStripMenuItem.Text = "Donate";
+            this.donateToolStripMenuItem.Click += new System.EventHandler(this.donateButton_Click);
             // 
             // MainWindow
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(316, 140);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.ClientSize = new System.Drawing.Size(313, 231);
+            this.Controls.Add(this.discordButton);
+            this.Controls.Add(this.donateButton);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.textools);
             this.Controls.Add(this.heliopshereButton);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.autoLoadModCheckbox);
@@ -490,5 +555,10 @@
         private ToolStripMenuItem crossGenPortingToolToolStripMenuItem;
         private ToolStripMenuItem toBeExpandedToolStripMenuItem3;
         private ToolStripMenuItem checkForUpdateToolStripMenuItem;
+        private FFXIVVoicePackCreator.FilePicker textools;
+        private Label label2;
+        private Button discordButton;
+        private Button donateButton;
+        private ToolStripMenuItem donateToolStripMenuItem;
     }
 }

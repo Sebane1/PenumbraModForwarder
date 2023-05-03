@@ -3,6 +3,9 @@ using System.Diagnostics;
 using Microsoft.Win32;
 using System.Reflection;
 using AutoUpdaterDotNET;
+using PenumbraModForwarder;
+using System.Runtime.InteropServices;
+using System.Security.Policy;
 
 namespace FFXIVModExractor {
     public partial class MainWindow : Form {
@@ -11,6 +14,8 @@ namespace FFXIVModExractor {
         public MainWindow() {
             InitializeComponent();
             GetDownloadPath();
+            GetTexToolsPath();
+            AutoScaleDimensions = new SizeF(96, 96);
         }
 
         private void filePicker1_Load(object sender, EventArgs e) {
@@ -87,11 +92,33 @@ namespace FFXIVModExractor {
             bool foundValidFile = false;
             if (arguments.Length > 0) {
                 for (int i = 1; i < arguments.Length; i++) {
-                    if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
+                    if (arguments[i].EndsWith(".pmp")) {
                         PenumbraHttpApi.Install(arguments[i]);
                         PenumbraHttpApi.OpenWindow();
                         Thread.Sleep(10000);
                         foundValidFile = true;
+                    }
+                    if (arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
+                        AppSelectionsWindow appSelectionsWindow = new AppSelectionsWindow();
+                        if (string.IsNullOrEmpty(textools.FilePath.Text) || appSelectionsWindow.ShowDialog() == DialogResult.OK) {
+                            switch (appSelectionsWindow.AppSelection) {
+                                case AppSelectionsWindow.AppSelectionType.penumbra:
+                                    PenumbraHttpApi.Install(arguments[i]);
+                                    PenumbraHttpApi.OpenWindow();
+                                    Thread.Sleep(10000);
+                                    foundValidFile = true;
+                                    break;
+                                case AppSelectionsWindow.AppSelectionType.textools:
+                                    Process process = new Process();
+                                    process.StartInfo.FileName = Path.Combine(textools.FilePath.Text, "FFXIV_TexTools.exe");
+                                    process.StartInfo.Verb = "runas";
+                                    process.StartInfo.UseShellExecute = true;
+                                    process.StartInfo.Arguments = @"""" + arguments[i] + @"""";
+                                    process.Start();
+                                    foundValidFile = true;
+                                    break;
+                            }
+                        }
                     }
                 }
             }
@@ -100,10 +127,18 @@ namespace FFXIVModExractor {
                 this.Close();
                 Application.Exit();
             } else {
-                CheckForUpdate();
-                GetAutoLoadOption();
-                if (autoLoadModCheckbox.Checked) {
-                    hideAfterLoad = true;
+                Process[] processes = Process.GetProcessesByName(Application.ProductName);
+                if (processes.Length == 1) {
+                    CheckForUpdate();
+                    GetAutoLoadOption();
+                    if (autoLoadModCheckbox.Checked) {
+                        hideAfterLoad = true;
+                    }
+                } else {
+                    MessageBox.Show("Penumbra Mod Forward is already running.", Text);
+                    exitInitiated = true;
+                    this.Close();
+                    Application.Exit();
                 }
             }
             ContextMenuStrip = contextMenu;
@@ -128,11 +163,11 @@ namespace FFXIVModExractor {
         async Task ProcessModPackRequest(RenamedEventArgs e) {
             if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
                 Thread.Sleep(50);
-                while(IsFileLocked(e.FullPath)) {
+                while (IsFileLocked(e.FullPath)) {
                     Thread.Sleep(100);
                 }
-                PenumbraHttpApi.Install(e.FullPath);
                 PenumbraHttpApi.OpenWindow();
+                PenumbraHttpApi.Install(e.FullPath);
             }
         }
 
@@ -170,6 +205,33 @@ namespace FFXIVModExractor {
             }
         }
 
+        public void WriteTexToolsPath(string path) {
+            string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
+            using (StreamWriter writer = new StreamWriter(Path.Combine(dataPath, @"TexTools.config"))) {
+                writer.WriteLine(path);
+            }
+        }
+
+        public void GetTexToolsPath() {
+            string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
+            string path = Path.Combine(dataPath, @"TexTools.config");
+            if (File.Exists(path)) {
+                using (StreamReader reader = new StreamReader(path)) {
+                    textools.CurrentPath = reader.ReadLine();
+                }
+            }
+        }
+
+        private static void RegisterForFileExtension(string extension, string applicationPath) {
+            RegistryKey FileReg = Registry.CurrentUser.CreateSubKey("Software\\Classes\\" + extension);
+            FileReg.CreateSubKey("shell\\open\\command").SetValue("", $"\"{applicationPath}\" \"%1\"");
+            FileReg.Close();
+
+            SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
+        }
+        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
         public void GetAutoLoadOption() {
             string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
             string path = Path.Combine(dataPath, @"AutoLoad.config");
@@ -201,6 +263,8 @@ namespace FFXIVModExractor {
             RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             if (autoLoadModCheckbox.Checked) {
                 rk.SetValue(Text, Application.ExecutablePath);
+                trayIcon.BalloonTipText = "Penumbra Mod Forwarder will now appear in the system tray!";
+                trayIcon.ShowBalloonTip(5000);
             } else {
                 rk.DeleteValue(Text, false);
             }
@@ -214,34 +278,19 @@ namespace FFXIVModExractor {
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
                 string keyName = "";
                 try {
-                    var pmp = Registry.ClassesRoot.OpenSubKey(".pmp");
-                    var pmpType = pmp.GetValue("");
-                    keyName = pmpType + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
-                        key.SetValue("", command);
-                    }
+                    RegisterForFileExtension(".pmp", command);
                 } catch {
                     MessageBox.Show("Failed to set .pmp association. Try again with admin priviledges or set this manually.", Text);
                 }
 
                 try {
-                    var ttmp = Registry.ClassesRoot.OpenSubKey(".ttmp");
-                    var ttmpType = ttmp.GetValue("");
-                    keyName = ttmpType + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
-                        key.SetValue("", command);
-                    }
+                    RegisterForFileExtension(".ttmp", command);
                 } catch {
                     MessageBox.Show("Failed to set .ttmp association. Try again with admin priviledges or set this manually.", Text);
                 }
 
                 try {
-                    var ttmp2 = Registry.ClassesRoot.OpenSubKey(".ttmp2");
-                    var ttmp2Type = ttmp2.GetValue("");
-                    keyName = ttmp2Type + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
-                        key.SetValue("", command);
-                    }
+                    RegisterForFileExtension(".ttmp2", command);
                 } catch {
                     MessageBox.Show("Failed to set .ttmp2 association. Try again with admin priviledges or set this manually.", Text);
                 }
@@ -401,6 +450,49 @@ namespace FFXIVModExractor {
 
         private void checkForUpdateToolStripMenuItem_Click(object sender, EventArgs e) {
             CheckForUpdate();
+        }
+
+        private void textools_OnFileSelected(object sender, EventArgs e) {
+            string path = Path.Combine(textools.FilePath.Text, "FFXIV_TexTools.exe");
+            if (File.Exists(path)) {
+                if (MessageBox.Show("By using this feature you claim to be a mod creator or are otherwise making mod edits," +
+                    " and are not using TexTools to install mods at a consumer level.\r\n\r\n" + "WARNING: Using TexTools to install mods at a consumer level permanantly damages game files! By using TexTools you understand you may be asked to re-install the game by any Penumbra support if you have a TexTools corrupted game install.\r\n\r\nDo you accept the risks of using TexTools?", Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
+                    WriteTexToolsPath(textools.FilePath.Text);
+                } else {
+                    textools.FilePath.Text = "";
+                }
+            } else {
+                if (!string.IsNullOrEmpty(textools.FilePath.Text)) {
+                    MessageBox.Show("Textools not found in selected folder", Text);
+                    textools.FilePath.Text = "";
+                } else {
+                    WriteTexToolsPath(textools.FilePath.Text);
+                }
+            }
+        }
+
+        private void donateButton_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://ko-fi.com/sebastina",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
+        }
+
+        private void discordButton_Click(object sender, EventArgs e) {
+            try {
+                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                    FileName = "https://discord.gg/rtGXwMn7pX",
+                    UseShellExecute = true,
+                    Verb = "OPEN"
+                });
+            } catch {
+
+            }
         }
     }
 }
