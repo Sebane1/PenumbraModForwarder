@@ -105,7 +105,7 @@ namespace FFXIVVoicePackCreator {
 
         private void filePath_DragDrop(object sender, DragEventArgs e) {
             string file = ((string[])e.Data.GetData(DataFormats.FileDrop, false))[0];
-            // if (CheckExtentions(file)) {
+            // if (CheckExtensions(file)) {
             filePath.Text = file;
             currentPath = file;
             if (OnFileSelected != null) {
@@ -115,10 +115,10 @@ namespace FFXIVVoicePackCreator {
             //    MessageBox.Show("This is not a media file this tool supports.", ParentForm.Text);
             //}
         }
-        //public static bool CheckExtentions(string file) {
-        //    string[] extentions = new string[] { ".png", ".dds", ".bmp", ".tex" };
-        //    foreach (string extention in extentions) {
-        //        if (file.EndsWith(extention)) {
+        //public static bool CheckExtensions(string file) {
+        //    string[] extensions = new string[] { ".png", ".dds", ".bmp", ".tex" };
+        //    foreach (string extension in extensions) {
+        //        if (file.EndsWith(extension)) {
         //            return true;
         //        }
         //    }
