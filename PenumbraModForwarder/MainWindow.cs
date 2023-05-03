@@ -207,45 +207,73 @@ namespace FFXIVModExractor {
             WriteAutoLoadOption(autoLoadModCheckbox.Checked);
         }
 
+        private string? GetAssembly => Assembly.GetAssembly(typeof(Program))?.Location.Replace(".dll", ".exe");
+
         private void associateFileTypes_Click(object sender, EventArgs e) {
             if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redircted to penumbra via this program?",
                 Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
-                string myExecutable = Assembly.GetEntryAssembly().Location;
+                string myExecutable = GetAssembly ?? throw new NullReferenceException("Failed to get entry assembly location");
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
                 string keyName = "";
+                bool failed = false;
                 try {
-                    var pmp = Registry.ClassesRoot.OpenSubKey(".pmp");
-                    var pmpType = pmp.GetValue("");
-                    keyName = pmpType + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
+                    object? pmpType = null;
+                    using (var pmp = Registry.ClassesRoot.OpenSubKey($".pmp", true) ?? Registry.ClassesRoot.CreateSubKey($".pmp", true)) {
+                        pmpType = pmp.GetValue(null);
+                        if (pmpType is null) {
+                            pmp.SetValue(null, $"PenumrbaModForwarder.pmp");
+                            pmpType = pmp.GetValue(null);
+                        }
+                        keyName = pmpType + @"\shell\Open\command";
+                    }
+                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName, true)) {
                         key.SetValue("", command);
                     }
                 } catch {
                     MessageBox.Show("Failed to set .pmp association. Try again with admin priviledges or set this manually.", Text);
+                    failed = true;
                 }
 
                 try {
-                    var ttmp = Registry.ClassesRoot.OpenSubKey(".ttmp");
-                    var ttmpType = ttmp.GetValue("");
-                    keyName = ttmpType + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
+                    object? ttmpType = null;
+                    using (var ttmp = Registry.ClassesRoot.OpenSubKey($".ttmp", true) ?? Registry.ClassesRoot.CreateSubKey($".ttmp", true)) {
+                        ttmpType = ttmp.GetValue(null);
+                        if (ttmpType is null) {
+                            ttmp.SetValue(null, $"PenumrbaModForwarder.ttmp");
+                            ttmpType = ttmp.GetValue(null);
+                        }
+                        keyName = ttmpType + @"\shell\Open\command";
+                    }
+                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName, true)) {
                         key.SetValue("", command);
                     }
                 } catch {
                     MessageBox.Show("Failed to set .ttmp association. Try again with admin priviledges or set this manually.", Text);
+                    failed = true;
                 }
 
                 try {
-                    var ttmp2 = Registry.ClassesRoot.OpenSubKey(".ttmp2");
-                    var ttmp2Type = ttmp2.GetValue("");
-                    keyName = ttmp2Type + @"\shell\Open\command";
-                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName)) {
+                    object? ttmp2Type = null;
+                    using (var ttmp2 = Registry.ClassesRoot.OpenSubKey($".ttmp2", true) ?? Registry.ClassesRoot.CreateSubKey($".ttmp2", true)) {
+                        ttmp2Type = ttmp2.GetValue(null);
+                        if (ttmp2Type is null) {
+                            ttmp2.SetValue(null, $"PenumrbaModForwarder.ttmp2");
+                            ttmp2Type = ttmp2.GetValue(null);
+                        }
+                        keyName = ttmp2Type + @"\shell\Open\command";
+                    }
+                    using (var key = Registry.ClassesRoot.CreateSubKey(keyName, true)) {
                         key.SetValue("", command);
                     }
                 } catch {
                     MessageBox.Show("Failed to set .ttmp2 association. Try again with admin priviledges or set this manually.", Text);
+                    failed = true;
                 }
-                MessageBox.Show("Associations have been set!", Text);
+                if (failed) {
+                    MessageBox.Show("One or more associations have not been set...", Text);
+                } else {
+                    MessageBox.Show("Associations have been set!", Text);
+                }
             }
         }
 
