@@ -20,9 +20,5 @@ Instructions:
 3. Inside penumbra, enable HTTP API
 4. Download mods from your favourite sites.
 
-General notice:
-There's a chance this tool may cause certain antivirus to falsely flag it because it has an auto updater.
-Simply whitelist this program in your software.
-
 This program requires .net 7.0 desktop runtime to be installed. Download it here.
 https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-7.0.1-windows-x64-installer
