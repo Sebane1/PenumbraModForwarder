@@ -6,12 +6,18 @@ using AutoUpdaterDotNET;
 using PenumbraModForwarder;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
+using System.Configuration;
+using System.IO.Compression;
+using FFXIVVoicePackCreator.Json;
+using Newtonsoft.Json;
 
 // TODO: Rename to FFXIVModExtractor
 namespace FFXIVModExractor {
     public partial class MainWindow : Form {
         bool exitInitiated = false;
         bool hideAfterLoad = false;
+        private string roleplayingVoiceCache;
+
         public MainWindow() {
             InitializeComponent();
             GetDownloadPath();
@@ -94,8 +100,10 @@ namespace FFXIVModExractor {
             if (arguments.Length > 0) {
                 for (int i = 1; i < arguments.Length; i++) {
                     if (arguments[i].EndsWith(".pmp")) {
-                        PenumbraHttpApi.Install(arguments[i]);
                         PenumbraHttpApi.OpenWindow();
+                        PenumbraHttpApi.Install(arguments[i]);
+                        trayIcon.BalloonTipText = "Mod has been sent to penumbra.";
+                        trayIcon.ShowBalloonTip(5000);
                         Thread.Sleep(10000);
                         foundValidFile = true;
                     }
@@ -104,8 +112,10 @@ namespace FFXIVModExractor {
                         if (string.IsNullOrEmpty(textools.FilePath.Text) || appSelectionsWindow.ShowDialog() == DialogResult.OK) {
                             switch (appSelectionsWindow.AppSelection) {
                                 case AppSelectionsWindow.AppSelectionType.penumbra:
-                                    PenumbraHttpApi.Install(arguments[i]);
                                     PenumbraHttpApi.OpenWindow();
+                                    PenumbraHttpApi.Install(arguments[i]);
+                                    trayIcon.BalloonTipText = "Mod has been sent to penumbra.";
+                                    trayIcon.ShowBalloonTip(5000);
                                     Thread.Sleep(10000);
                                     foundValidFile = true;
                                     break;
@@ -161,6 +171,15 @@ namespace FFXIVModExractor {
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e) {
             ProcessModPackRequest(e);
         }
+        private void RoleplayingVoiceCheck() {
+            string roleplayingVoiceConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+         + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
+            if (File.Exists(roleplayingVoiceConfig)) {
+                RoleplayingVoiceConfig file = JsonConvert.DeserializeObject<RoleplayingVoiceConfig>(
+                    File.OpenText(roleplayingVoiceConfig).ReadToEnd());
+                roleplayingVoiceCache = file.CacheFolder;
+            }
+        }
         async Task ProcessModPackRequest(RenamedEventArgs e) {
             if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
                 Thread.Sleep(50);
@@ -169,6 +188,33 @@ namespace FFXIVModExractor {
                 }
                 PenumbraHttpApi.OpenWindow();
                 PenumbraHttpApi.Install(e.FullPath);
+                trayIcon.BalloonTipText = "Mod has been sent to Penumbra.";
+                trayIcon.ShowBalloonTip(5000);
+            } else if (e.FullPath.EndsWith(".rpvsp")) {
+                RoleplayingVoiceCheck();
+                if (!string.IsNullOrEmpty(roleplayingVoiceCache)) {
+                    Thread.Sleep(50);
+                    while (IsFileLocked(e.FullPath)) {
+                        Thread.Sleep(100);
+                    }
+                    string directory = roleplayingVoiceCache + @"\VoicePack\" + Path.GetFileNameWithoutExtension(e.FullPath);
+                    ZipFile.ExtractToDirectory(e.FullPath, directory);
+                    trayIcon.BalloonTipText = "Mod has been sent to Roleplaying Voice.";
+                    trayIcon.ShowBalloonTip(5000);
+                } else {
+                    if(MessageBox.Show("This mod requires the Roleplaying Voice dalamud plugin to be installed. Would you like to install it now?",
+                        "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes) {
+                        try {
+                            Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                                FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
+                                UseShellExecute = true,
+                                Verb = "OPEN"
+                            });
+                        } catch {
+
+                        }
+                    }
+                }
             }
         }
 
@@ -273,7 +319,7 @@ namespace FFXIVModExractor {
         }
 
         private void associateFileTypes_Click(object sender, EventArgs e) {
-            if (MessageBox.Show("Associate all .pmp, .ttmp, and .ttmp2 files to be redirected to penumbra via this program?",
+            if (MessageBox.Show("Associate all .pmp, .ttmp, .ttmp2, and .rpvsp files to be redirected via this program?",
                 Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
                 string myExecutable = Assembly.GetEntryAssembly().Location;
                 string command = "\"" + myExecutable + "\"" + " \"%1\"";
@@ -295,7 +341,12 @@ namespace FFXIVModExractor {
                 } catch {
                     MessageBox.Show("Failed to set .ttmp2 association. Try again with admin privileges or set this manually.", Text);
                 }
-                MessageBox.Show("Associations have been set!", Text);
+                try {
+                    RegisterForFileExtension(".rpvsp", command);
+                } catch {
+                    MessageBox.Show("Failed to set .rpvsp association. Try again with admin privileges or set this manually.", Text);
+                }
+                MessageBox.Show("Associations have been added!", Text);
             }
         }
 
