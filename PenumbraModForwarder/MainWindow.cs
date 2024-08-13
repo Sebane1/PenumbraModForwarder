@@ -10,6 +10,7 @@ using System.Configuration;
 using System.IO.Compression;
 using FFXIVVoicePackCreator.Json;
 using Newtonsoft.Json;
+using SevenZip;
 
 // TODO: Rename to FFXIVModExtractor
 namespace FFXIVModExractor {
@@ -169,7 +170,7 @@ namespace FFXIVModExractor {
                 process.WaitForExit();
                 if (!File.Exists(finalModPath)) {
                     finalModPath = modPackPath;
-                    trayIcon.BalloonTipText = "Mod pac was not converted to Dawntrail.";
+                    trayIcon.BalloonTipText = "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
                     trayIcon.ShowBalloonTip(5000);
                 }
             }
@@ -177,7 +178,7 @@ namespace FFXIVModExractor {
             PenumbraHttpApi.Install(finalModPath);
             trayIcon.BalloonTipText = "Mod pack has been sent to penumbra.";
             trayIcon.ShowBalloonTip(5000);
-            Thread.Sleep(10000);
+            Thread.Sleep(6000);
             foundValidFile = true;
         }
 
@@ -238,6 +239,57 @@ namespace FFXIVModExractor {
 
                         }
                     }
+                }
+            } else if (e.FullPath.EndsWith(".zip")) {
+                while (IsFileLocked(e.FullPath)) {
+                    Thread.Sleep(100);
+                }
+                List<string> extractedMods = new List<string>();
+                using (var zip = ZipFile.OpenRead(e.FullPath)) {
+                    foreach (var item in zip.Entries) {
+                        if (item.FullName.EndsWith(".pmp") || item.FullName.EndsWith(".ttmp") || item.FullName.EndsWith(".ttmp2") || item.FullName.EndsWith(".rpvsp")) {
+                            string outputFile = Path.Combine(Path.GetDirectoryName(e.FullPath), Path.GetFileName(item.FullName));
+                            item.ExtractToFile(outputFile);
+                            extractedMods.Add(outputFile);
+                        }
+                    }
+                }
+                foreach (var item in extractedMods) {
+                    bool success = false;
+                    while (IsFileLocked(item)) {
+                        Thread.Sleep(100);
+                    }
+                    SendModToPenumbra(item, ref success);
+                }
+            } else if (e.FullPath.EndsWith(".7z") || e.FullPath.EndsWith(".rar") || e.FullPath.EndsWith(".zip")) {
+                while (IsFileLocked(e.FullPath)) {
+                    Thread.Sleep(100);
+                }
+                List<string> extractedMods = new List<string>();
+                try {
+                    SevenZipExtractor.SetLibraryPath(AppDomain.CurrentDomain.BaseDirectory + @"\7z.dll");
+                    using (var zip = new SevenZipExtractor(e.FullPath)) {
+                        int index = 0;
+                        foreach (var item in zip.ArchiveFileNames) {
+                            if (item.EndsWith(".pmp") || item.EndsWith(".ttmp") || item.EndsWith(".ttmp2") || item.EndsWith(".rpvsp")) {
+                                string outputFile = Path.Combine(Path.GetDirectoryName(e.FullPath), Path.GetFileName(item));
+                                using (FileStream outputFileStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write)) {
+                                    zip.ExtractFile(index, outputFileStream);
+                                    extractedMods.Add(outputFile);
+                                }
+                            }
+                            index++;
+                        }
+                    }
+                } catch (Exception ex) {
+                    string error = ex.Message;
+                }
+                foreach (var item in extractedMods) {
+                    bool success = false;
+                    while (IsFileLocked(item)) {
+                        Thread.Sleep(100);
+                    }
+                    SendModToPenumbra(item, ref success);
                 }
             }
         }
