@@ -19,6 +19,7 @@ Instructions:
 2. Select your default downloads folder
 3. Inside penumbra, enable HTTP API
 4. Download mods from your favourite sites.
+
 (Optional) 5. Install and configure TexTools at least once for mods to be automatically converted from Endwalker to Dawntrail.
 
 This program requires .net 7.0 desktop runtime to be installed. Download it here.
