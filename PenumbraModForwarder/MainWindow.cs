@@ -17,11 +17,11 @@ namespace FFXIVModExractor {
         bool exitInitiated = false;
         bool hideAfterLoad = false;
         private string roleplayingVoiceCache;
+        private string _textoolsPath;
 
         public MainWindow() {
             InitializeComponent();
             GetDownloadPath();
-            GetTexToolsPath();
             AutoScaleDimensions = new SizeF(96, 96);
         }
 
@@ -95,42 +95,36 @@ namespace FFXIVModExractor {
         }
 
         private void MainWindow_Load(object sender, EventArgs e) {
+            // If this path is not found textools reliant functions will be disabled until textools is installed.
+            var textoolsInk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                @"Microsoft\Windows\Start Menu\Programs\FFXIV TexTools\FFXIV TexTools.lnk");
+            if (File.Exists(textoolsInk)) {
+                IWshRuntimeLibrary.IWshShell wsh = new IWshRuntimeLibrary.WshShellClass();
+                IWshRuntimeLibrary.IWshShortcut sc = (IWshRuntimeLibrary.IWshShortcut)wsh.CreateShortcut(textoolsInk);
+                var texToolsDirectory = Path.GetDirectoryName(sc.TargetPath);
+                _textoolsPath = Path.Combine(texToolsDirectory, "ConsoleTools.exe");
+            }
             string[] arguments = Environment.GetCommandLineArgs();
             bool foundValidFile = false;
             if (arguments.Length > 0) {
                 for (int i = 1; i < arguments.Length; i++) {
-                    if (arguments[i].EndsWith(".pmp")) {
-                        PenumbraHttpApi.OpenWindow();
-                        PenumbraHttpApi.Install(arguments[i]);
-                        trayIcon.BalloonTipText = "Mod has been sent to penumbra.";
-                        trayIcon.ShowBalloonTip(5000);
-                        Thread.Sleep(10000);
-                        foundValidFile = true;
+                    if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
+                        SendModToPenumbra(arguments[i], ref foundValidFile);
                     }
-                    if (arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
-                        AppSelectionsWindow appSelectionsWindow = new AppSelectionsWindow();
-                        if (string.IsNullOrEmpty(textools.FilePath.Text) || appSelectionsWindow.ShowDialog() == DialogResult.OK) {
-                            switch (appSelectionsWindow.AppSelection) {
-                                case AppSelectionsWindow.AppSelectionType.penumbra:
-                                    PenumbraHttpApi.OpenWindow();
-                                    PenumbraHttpApi.Install(arguments[i]);
-                                    trayIcon.BalloonTipText = "Mod has been sent to penumbra.";
-                                    trayIcon.ShowBalloonTip(5000);
-                                    Thread.Sleep(10000);
-                                    foundValidFile = true;
-                                    break;
-                                case AppSelectionsWindow.AppSelectionType.textools:
-                                    Process process = new Process();
-                                    process.StartInfo.FileName = Path.Combine(textools.FilePath.Text, "FFXIV_TexTools.exe");
-                                    process.StartInfo.Verb = "runas";
-                                    process.StartInfo.UseShellExecute = true;
-                                    process.StartInfo.Arguments = @"""" + arguments[i] + @"""";
-                                    process.Start();
-                                    foundValidFile = true;
-                                    break;
-                            }
-                        }
-                    }
+                    //if (arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2")) {
+                    //    AppSelectionsWindow appSelectionsWindow = new AppSelectionsWindow();
+                    //    if (File.Exists(_textoolsPath) || appSelectionsWindow.ShowDialog() == DialogResult.OK) {
+                    //        switch (appSelectionsWindow.AppSelection) {
+                    //            case AppSelectionsWindow.AppSelectionType.penumbra:
+                    //                SendModToPenumbra(arguments[i], ref foundValidFile);
+                    //                break;
+                    //            case AppSelectionsWindow.AppSelectionType.textools:
+
+                    //                foundValidFile = true;
+                    //                break;
+                    //        }
+                    //    }
+                    //}
                 }
             }
             if (foundValidFile) {
@@ -155,8 +149,39 @@ namespace FFXIVModExractor {
             ContextMenuStrip = contextMenu;
         }
 
+        private void SendModToPenumbra(string modPackPath, ref bool foundValidFile) {
+            string finalModPath = modPackPath;
+            if (File.Exists(_textoolsPath)) {
+                string originatingModDirectory = Path.GetDirectoryName(modPackPath);
+                var outputModName = modPackPath
+                .Replace(".pmp", "_dt.pmp").Replace(".ttmp", "_dt.ttmp");
+                Directory.CreateDirectory(Path.Combine(originatingModDirectory, @"Dawntrail Converted\"));
+                finalModPath = Path.Combine(originatingModDirectory, @"Dawntrail Converted\" + Path.GetFileName(outputModName));
+                trayIcon.BalloonTipText = "Mod pack has been sent to textools for Dawntrail conversion.";
+                trayIcon.ShowBalloonTip(5000);
+                Process process = new Process();
+                process.StartInfo.FileName = _textoolsPath;
+                //process.StartInfo.Verb = "runas";
+                process.StartInfo.UseShellExecute = true;
+                process.StartInfo.Arguments = @"/upgrade """ + modPackPath + @""" " + @"""" + finalModPath + @"""";
+                process.Start();
+                process.WaitForExit();
+                if (!File.Exists(finalModPath)) {
+                    finalModPath = modPackPath;
+                    trayIcon.BalloonTipText = "Mod pac was not converted to Dawntrail.";
+                    trayIcon.ShowBalloonTip(5000);
+                }
+            }
+            PenumbraHttpApi.OpenWindow();
+            PenumbraHttpApi.Install(finalModPath);
+            trayIcon.BalloonTipText = "Mod pack has been sent to penumbra.";
+            trayIcon.ShowBalloonTip(5000);
+            Thread.Sleep(10000);
+            foundValidFile = true;
+        }
+
         private void CheckForUpdate() {
-            AutoUpdater.InstalledVersion = new Version(Application.ProductVersion);
+            AutoUpdater.InstalledVersion = new Version(Application.ProductVersion.Split("+")[0]);
             AutoUpdater.DownloadPath = Application.StartupPath;
             AutoUpdater.Synchronous = true;
             AutoUpdater.Mandatory = true;
@@ -186,10 +211,8 @@ namespace FFXIVModExractor {
                 while (IsFileLocked(e.FullPath)) {
                     Thread.Sleep(100);
                 }
-                PenumbraHttpApi.OpenWindow();
-                PenumbraHttpApi.Install(e.FullPath);
-                trayIcon.BalloonTipText = "Mod has been sent to Penumbra.";
-                trayIcon.ShowBalloonTip(5000);
+                bool value = false;
+                SendModToPenumbra(e.FullPath, ref value);
             } else if (e.FullPath.EndsWith(".rpvsp")) {
                 RoleplayingVoiceCheck();
                 if (!string.IsNullOrEmpty(roleplayingVoiceCache)) {
@@ -199,10 +222,10 @@ namespace FFXIVModExractor {
                     }
                     string directory = roleplayingVoiceCache + @"\VoicePack\" + Path.GetFileNameWithoutExtension(e.FullPath);
                     ZipFile.ExtractToDirectory(e.FullPath, directory);
-                    trayIcon.BalloonTipText = "Mod has been sent to Roleplaying Voice.";
+                    trayIcon.BalloonTipText = "Mod has been sent to Artemis Roleplaying Kit";
                     trayIcon.ShowBalloonTip(5000);
                 } else {
-                    if(MessageBox.Show("This mod requires the Roleplaying Voice dalamud plugin to be installed. Would you like to install it now?",
+                    if (MessageBox.Show("This mod requires the Artemis Roleplaying Kit dalamud plugin to be installed. Would you like to install it now?",
                         "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes) {
                         try {
                             Process.Start(new System.Diagnostics.ProcessStartInfo() {
@@ -256,16 +279,6 @@ namespace FFXIVModExractor {
             string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
             using (StreamWriter writer = new StreamWriter(Path.Combine(dataPath, @"TexTools.config"))) {
                 writer.WriteLine(path);
-            }
-        }
-
-        public void GetTexToolsPath() {
-            string dataPath = Application.UserAppDataPath.Replace(Application.ProductVersion, null);
-            string path = Path.Combine(dataPath, @"TexTools.config");
-            if (File.Exists(path)) {
-                using (StreamReader reader = new StreamReader(path)) {
-                    textools.CurrentPath = reader.ReadLine();
-                }
             }
         }
 
@@ -502,25 +515,6 @@ namespace FFXIVModExractor {
 
         private void checkForUpdateToolStripMenuItem_Click(object sender, EventArgs e) {
             CheckForUpdate();
-        }
-
-        private void textools_OnFileSelected(object sender, EventArgs e) {
-            string path = Path.Combine(textools.FilePath.Text, "FFXIV_TexTools.exe");
-            if (File.Exists(path)) {
-                if (MessageBox.Show("By using this feature you claim to be a mod creator or are otherwise making mod edits," +
-                    " and are not using TexTools to install mods at a consumer level.\r\n\r\n" + "WARNING: Using TexTools to install mods at a consumer level permanantly damages game files! By using TexTools you understand you may be asked to re-install the game by any Penumbra support if you have a TexTools corrupted game install.\r\n\r\nDo you accept the risks of using TexTools?", Text, MessageBoxButtons.YesNo) == DialogResult.Yes) {
-                    WriteTexToolsPath(textools.FilePath.Text);
-                } else {
-                    textools.FilePath.Text = "";
-                }
-            } else {
-                if (!string.IsNullOrEmpty(textools.FilePath.Text)) {
-                    MessageBox.Show("Textools not found in selected folder", Text);
-                    textools.FilePath.Text = "";
-                } else {
-                    WriteTexToolsPath(textools.FilePath.Text);
-                }
-            }
         }
 
         private void donateButton_Click(object sender, EventArgs e) {

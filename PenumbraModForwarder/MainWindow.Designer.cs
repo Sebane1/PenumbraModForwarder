@@ -23,494 +23,438 @@
         ///  the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent() {
-            this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.Button associateFileTypes;
+            components = new System.ComponentModel.Container();
+            Button associateFileTypes;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
-            this.fileSystemWatcher = new System.IO.FileSystemWatcher();
-            this.xma = new System.Windows.Forms.Button();
-            this.glamourDresser = new System.Windows.Forms.Button();
-            this.nexusMods = new System.Windows.Forms.Button();
-            this.aetherlink = new System.Windows.Forms.Button();
-            this.kittyEmporium = new System.Windows.Forms.Button();
-            this.downloads = new FFXIVVoicePackCreator.FilePicker();
-            this.cooldownTimer = new System.Windows.Forms.Timer(this.components);
-            this.autoLoadModCheckbox = new System.Windows.Forms.CheckBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.trayIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.contextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.quickLinksToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.aetherlinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.heliosphereToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.nexusModsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.theGlamourDresserToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.thePrettyKittyEmporiumToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.xIVModArchiveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.moddingResourcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.texturesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.looseTextureCompilerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toBeExpandedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.soundsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.voicePackCreatorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toBeExpandedToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.crossGenPortingToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toBeExpandedToolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
-            this.discordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.penumbraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.pixellatedsAssistancePlaceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.soundAndTextureResourceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.texToolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.xIVModsResourcesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toBeExpandedToolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
-            this.openConfigurationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.checkForUpdateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.heliopshereButton = new System.Windows.Forms.Button();
-            this.textools = new FFXIVVoicePackCreator.FilePicker();
-            this.label2 = new System.Windows.Forms.Label();
-            this.donateButton = new System.Windows.Forms.Button();
-            this.discordButton = new System.Windows.Forms.Button();
-            this.donateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            associateFileTypes = new System.Windows.Forms.Button();
-            ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher)).BeginInit();
-            this.contextMenu.SuspendLayout();
-            this.SuspendLayout();
+            fileSystemWatcher = new FileSystemWatcher();
+            xma = new Button();
+            glamourDresser = new Button();
+            nexusMods = new Button();
+            aetherlink = new Button();
+            kittyEmporium = new Button();
+            downloads = new FFXIVVoicePackCreator.FilePicker();
+            cooldownTimer = new System.Windows.Forms.Timer(components);
+            autoLoadModCheckbox = new CheckBox();
+            label1 = new Label();
+            trayIcon = new NotifyIcon(components);
+            contextMenu = new ContextMenuStrip(components);
+            quickLinksToolStripMenuItem = new ToolStripMenuItem();
+            aetherlinkToolStripMenuItem = new ToolStripMenuItem();
+            heliosphereToolStripMenuItem = new ToolStripMenuItem();
+            nexusModsToolStripMenuItem = new ToolStripMenuItem();
+            theGlamourDresserToolStripMenuItem = new ToolStripMenuItem();
+            thePrettyKittyEmporiumToolStripMenuItem = new ToolStripMenuItem();
+            xIVModArchiveToolStripMenuItem = new ToolStripMenuItem();
+            moddingResourcesToolStripMenuItem = new ToolStripMenuItem();
+            texturesToolStripMenuItem = new ToolStripMenuItem();
+            looseTextureCompilerToolStripMenuItem = new ToolStripMenuItem();
+            toBeExpandedToolStripMenuItem = new ToolStripMenuItem();
+            soundsToolStripMenuItem = new ToolStripMenuItem();
+            voicePackCreatorToolStripMenuItem = new ToolStripMenuItem();
+            toBeExpandedToolStripMenuItem1 = new ToolStripMenuItem();
+            modelsToolStripMenuItem = new ToolStripMenuItem();
+            crossGenPortingToolToolStripMenuItem = new ToolStripMenuItem();
+            toBeExpandedToolStripMenuItem3 = new ToolStripMenuItem();
+            discordToolStripMenuItem = new ToolStripMenuItem();
+            penumbraToolStripMenuItem = new ToolStripMenuItem();
+            pixellatedsAssistancePlaceToolStripMenuItem = new ToolStripMenuItem();
+            soundAndTextureResourceToolStripMenuItem = new ToolStripMenuItem();
+            texToolsToolStripMenuItem = new ToolStripMenuItem();
+            xIVModsResourcesToolStripMenuItem = new ToolStripMenuItem();
+            toBeExpandedToolStripMenuItem2 = new ToolStripMenuItem();
+            openConfigurationToolStripMenuItem = new ToolStripMenuItem();
+            checkForUpdateToolStripMenuItem = new ToolStripMenuItem();
+            donateToolStripMenuItem = new ToolStripMenuItem();
+            exitToolStripMenuItem = new ToolStripMenuItem();
+            heliopshereButton = new Button();
+            donateButton = new Button();
+            discordButton = new Button();
+            associateFileTypes = new Button();
+            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).BeginInit();
+            contextMenu.SuspendLayout();
+            SuspendLayout();
             // 
             // associateFileTypes
             // 
-            associateFileTypes.Location = new System.Drawing.Point(0, 36);
+            associateFileTypes.Location = new Point(0, 36);
             associateFileTypes.Name = "associateFileTypes";
-            associateFileTypes.Size = new System.Drawing.Size(120, 23);
+            associateFileTypes.Size = new Size(120, 23);
             associateFileTypes.TabIndex = 9;
             associateFileTypes.Text = "Associate Mod Files";
             associateFileTypes.UseVisualStyleBackColor = true;
-            associateFileTypes.Click += new System.EventHandler(this.associateFileTypes_Click);
+            associateFileTypes.Click += associateFileTypes_Click;
             // 
             // fileSystemWatcher
             // 
-            this.fileSystemWatcher.EnableRaisingEvents = true;
-            this.fileSystemWatcher.SynchronizingObject = this;
-            this.fileSystemWatcher.Renamed += new System.IO.RenamedEventHandler(this.fileSystemWatcher_Renamed);
+            fileSystemWatcher.EnableRaisingEvents = true;
+            fileSystemWatcher.SynchronizingObject = this;
+            fileSystemWatcher.Renamed += fileSystemWatcher_Renamed;
             // 
             // xma
             // 
-            this.xma.Location = new System.Drawing.Point(0, 156);
-            this.xma.Name = "xma";
-            this.xma.Size = new System.Drawing.Size(104, 23);
-            this.xma.TabIndex = 2;
-            this.xma.Text = "XIV Mod Archive";
-            this.xma.UseVisualStyleBackColor = true;
-            this.xma.Click += new System.EventHandler(this.xma_Click);
+            xma.Location = new Point(0, 90);
+            xma.Name = "xma";
+            xma.Size = new Size(104, 23);
+            xma.TabIndex = 2;
+            xma.Text = "XIV Mod Archive";
+            xma.UseVisualStyleBackColor = true;
+            xma.Click += xma_Click;
             // 
             // glamourDresser
             // 
-            this.glamourDresser.Location = new System.Drawing.Point(104, 156);
-            this.glamourDresser.Name = "glamourDresser";
-            this.glamourDresser.Size = new System.Drawing.Size(124, 23);
-            this.glamourDresser.TabIndex = 3;
-            this.glamourDresser.Text = "The Glamour Dresser";
-            this.glamourDresser.UseVisualStyleBackColor = true;
-            this.glamourDresser.Click += new System.EventHandler(this.glamourDresser_Click);
+            glamourDresser.Location = new Point(104, 90);
+            glamourDresser.Name = "glamourDresser";
+            glamourDresser.Size = new Size(124, 23);
+            glamourDresser.TabIndex = 3;
+            glamourDresser.Text = "The Glamour Dresser";
+            glamourDresser.UseVisualStyleBackColor = true;
+            glamourDresser.Click += glamourDresser_Click;
             // 
             // nexusMods
             // 
-            this.nexusMods.Location = new System.Drawing.Point(228, 156);
-            this.nexusMods.Name = "nexusMods";
-            this.nexusMods.Size = new System.Drawing.Size(84, 23);
-            this.nexusMods.TabIndex = 4;
-            this.nexusMods.Text = "Nexus Mods";
-            this.nexusMods.UseVisualStyleBackColor = true;
-            this.nexusMods.Click += new System.EventHandler(this.nexusMods_Click);
+            nexusMods.Location = new Point(228, 90);
+            nexusMods.Name = "nexusMods";
+            nexusMods.Size = new Size(84, 23);
+            nexusMods.TabIndex = 4;
+            nexusMods.Text = "Nexus Mods";
+            nexusMods.UseVisualStyleBackColor = true;
+            nexusMods.Click += nexusMods_Click;
             // 
             // aetherlink
             // 
-            this.aetherlink.Location = new System.Drawing.Point(0, 180);
-            this.aetherlink.Name = "aetherlink";
-            this.aetherlink.Size = new System.Drawing.Size(72, 23);
-            this.aetherlink.TabIndex = 5;
-            this.aetherlink.Text = "Aetherlink";
-            this.aetherlink.UseVisualStyleBackColor = true;
-            this.aetherlink.Click += new System.EventHandler(this.aetherlink_Click);
+            aetherlink.Location = new Point(0, 114);
+            aetherlink.Name = "aetherlink";
+            aetherlink.Size = new Size(72, 23);
+            aetherlink.TabIndex = 5;
+            aetherlink.Text = "Aetherlink";
+            aetherlink.UseVisualStyleBackColor = true;
+            aetherlink.Click += aetherlink_Click;
             // 
             // kittyEmporium
             // 
-            this.kittyEmporium.Location = new System.Drawing.Point(156, 180);
-            this.kittyEmporium.Name = "kittyEmporium";
-            this.kittyEmporium.Size = new System.Drawing.Size(156, 23);
-            this.kittyEmporium.TabIndex = 6;
-            this.kittyEmporium.Text = "The Pretty Kitty Emporium";
-            this.kittyEmporium.UseVisualStyleBackColor = true;
-            this.kittyEmporium.Click += new System.EventHandler(this.kittyEmporium_Click);
+            kittyEmporium.Location = new Point(156, 114);
+            kittyEmporium.Name = "kittyEmporium";
+            kittyEmporium.Size = new Size(156, 23);
+            kittyEmporium.TabIndex = 6;
+            kittyEmporium.Text = "The Pretty Kitty Emporium";
+            kittyEmporium.UseVisualStyleBackColor = true;
+            kittyEmporium.Click += kittyEmporium_Click;
             // 
             // downloads
             // 
-            this.downloads.CurrentPath = null;
-            this.downloads.Enabled = false;
-            this.downloads.Filter = null;
-            this.downloads.Index = -1;
-            this.downloads.Location = new System.Drawing.Point(4, 4);
-            this.downloads.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.downloads.MinimumSize = new System.Drawing.Size(300, 28);
-            this.downloads.Name = "downloads";
-            this.downloads.Size = new System.Drawing.Size(312, 28);
-            this.downloads.TabIndex = 8;
-            this.downloads.OnFileSelected += new System.EventHandler(this.downloads_OnFileSelected);
+            downloads.CurrentPath = null;
+            downloads.Enabled = false;
+            downloads.Filter = null;
+            downloads.Index = -1;
+            downloads.Location = new Point(4, 4);
+            downloads.Margin = new Padding(4, 3, 4, 3);
+            downloads.MinimumSize = new Size(300, 28);
+            downloads.Name = "downloads";
+            downloads.Size = new Size(312, 28);
+            downloads.TabIndex = 8;
+            downloads.OnFileSelected += downloads_OnFileSelected;
             // 
             // cooldownTimer
             // 
-            this.cooldownTimer.Interval = 10;
-            this.cooldownTimer.Tick += new System.EventHandler(this.cooldownTimer_Tick);
+            cooldownTimer.Interval = 10;
+            cooldownTimer.Tick += cooldownTimer_Tick;
             // 
             // autoLoadModCheckbox
             // 
-            this.autoLoadModCheckbox.AutoSize = true;
-            this.autoLoadModCheckbox.Location = new System.Drawing.Point(180, 40);
-            this.autoLoadModCheckbox.Name = "autoLoadModCheckbox";
-            this.autoLoadModCheckbox.Size = new System.Drawing.Size(131, 19);
-            this.autoLoadModCheckbox.TabIndex = 10;
-            this.autoLoadModCheckbox.Text = "Auto Forward Mods";
-            this.autoLoadModCheckbox.UseVisualStyleBackColor = true;
-            this.autoLoadModCheckbox.CheckedChanged += new System.EventHandler(this.autoLoadModCheckbox_CheckedChanged);
+            autoLoadModCheckbox.AutoSize = true;
+            autoLoadModCheckbox.Location = new Point(180, 40);
+            autoLoadModCheckbox.Name = "autoLoadModCheckbox";
+            autoLoadModCheckbox.Size = new Size(131, 19);
+            autoLoadModCheckbox.TabIndex = 10;
+            autoLoadModCheckbox.Text = "Auto Forward Mods";
+            autoLoadModCheckbox.UseVisualStyleBackColor = true;
+            autoLoadModCheckbox.CheckedChanged += autoLoadModCheckbox_CheckedChanged;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label1.Location = new System.Drawing.Point(0, 128);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(109, 25);
-            this.label1.TabIndex = 12;
-            this.label1.Text = "Quick links";
+            label1.AutoSize = true;
+            label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
+            label1.Location = new Point(0, 62);
+            label1.Name = "label1";
+            label1.Size = new Size(109, 25);
+            label1.TabIndex = 12;
+            label1.Text = "Quick links";
             // 
             // trayIcon
             // 
-            this.trayIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
-            this.trayIcon.ContextMenuStrip = this.contextMenu;
-            this.trayIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("trayIcon.Icon")));
-            this.trayIcon.Text = "Penumbra Mod Forwarder";
-            this.trayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.trayIcon_MouseDoubleClick);
+            trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+            trayIcon.ContextMenuStrip = contextMenu;
+            trayIcon.Icon = (Icon)resources.GetObject("trayIcon.Icon");
+            trayIcon.Text = "Penumbra Mod Forwarder";
+            trayIcon.MouseDoubleClick += trayIcon_MouseDoubleClick;
             // 
             // contextMenu
             // 
-            this.contextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.quickLinksToolStripMenuItem,
-            this.moddingResourcesToolStripMenuItem,
-            this.openConfigurationToolStripMenuItem,
-            this.checkForUpdateToolStripMenuItem,
-            this.donateToolStripMenuItem,
-            this.exitToolStripMenuItem});
-            this.contextMenu.Name = "contextMenuStrip1";
-            this.contextMenu.Size = new System.Drawing.Size(181, 136);
+            contextMenu.Items.AddRange(new ToolStripItem[] { quickLinksToolStripMenuItem, moddingResourcesToolStripMenuItem, openConfigurationToolStripMenuItem, checkForUpdateToolStripMenuItem, donateToolStripMenuItem, exitToolStripMenuItem });
+            contextMenu.Name = "contextMenuStrip1";
+            contextMenu.Size = new Size(181, 136);
             // 
             // quickLinksToolStripMenuItem
             // 
-            this.quickLinksToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.aetherlinkToolStripMenuItem,
-            this.heliosphereToolStripMenuItem,
-            this.nexusModsToolStripMenuItem,
-            this.theGlamourDresserToolStripMenuItem,
-            this.thePrettyKittyEmporiumToolStripMenuItem,
-            this.xIVModArchiveToolStripMenuItem});
-            this.quickLinksToolStripMenuItem.Name = "quickLinksToolStripMenuItem";
-            this.quickLinksToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.quickLinksToolStripMenuItem.Text = "Quick Links";
+            quickLinksToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aetherlinkToolStripMenuItem, heliosphereToolStripMenuItem, nexusModsToolStripMenuItem, theGlamourDresserToolStripMenuItem, thePrettyKittyEmporiumToolStripMenuItem, xIVModArchiveToolStripMenuItem });
+            quickLinksToolStripMenuItem.Name = "quickLinksToolStripMenuItem";
+            quickLinksToolStripMenuItem.Size = new Size(180, 22);
+            quickLinksToolStripMenuItem.Text = "Quick Links";
             // 
             // aetherlinkToolStripMenuItem
             // 
-            this.aetherlinkToolStripMenuItem.Name = "aetherlinkToolStripMenuItem";
-            this.aetherlinkToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.aetherlinkToolStripMenuItem.Text = "Aetherlink";
-            this.aetherlinkToolStripMenuItem.Click += new System.EventHandler(this.aetherlink_Click);
+            aetherlinkToolStripMenuItem.Name = "aetherlinkToolStripMenuItem";
+            aetherlinkToolStripMenuItem.Size = new Size(213, 22);
+            aetherlinkToolStripMenuItem.Text = "Aetherlink";
+            aetherlinkToolStripMenuItem.Click += aetherlink_Click;
             // 
             // heliosphereToolStripMenuItem
             // 
-            this.heliosphereToolStripMenuItem.Name = "heliosphereToolStripMenuItem";
-            this.heliosphereToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.heliosphereToolStripMenuItem.Text = "Heliosphere";
-            this.heliosphereToolStripMenuItem.Click += new System.EventHandler(this.heliosphereToolStripMenuItem_Click);
+            heliosphereToolStripMenuItem.Name = "heliosphereToolStripMenuItem";
+            heliosphereToolStripMenuItem.Size = new Size(213, 22);
+            heliosphereToolStripMenuItem.Text = "Heliosphere";
+            heliosphereToolStripMenuItem.Click += heliosphereToolStripMenuItem_Click;
             // 
             // nexusModsToolStripMenuItem
             // 
-            this.nexusModsToolStripMenuItem.Name = "nexusModsToolStripMenuItem";
-            this.nexusModsToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.nexusModsToolStripMenuItem.Text = "Nexus Mods";
-            this.nexusModsToolStripMenuItem.Click += new System.EventHandler(this.nexusMods_Click);
+            nexusModsToolStripMenuItem.Name = "nexusModsToolStripMenuItem";
+            nexusModsToolStripMenuItem.Size = new Size(213, 22);
+            nexusModsToolStripMenuItem.Text = "Nexus Mods";
+            nexusModsToolStripMenuItem.Click += nexusMods_Click;
             // 
             // theGlamourDresserToolStripMenuItem
             // 
-            this.theGlamourDresserToolStripMenuItem.Name = "theGlamourDresserToolStripMenuItem";
-            this.theGlamourDresserToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.theGlamourDresserToolStripMenuItem.Text = "The Glamour Dresser";
-            this.theGlamourDresserToolStripMenuItem.Click += new System.EventHandler(this.glamourDresser_Click);
+            theGlamourDresserToolStripMenuItem.Name = "theGlamourDresserToolStripMenuItem";
+            theGlamourDresserToolStripMenuItem.Size = new Size(213, 22);
+            theGlamourDresserToolStripMenuItem.Text = "The Glamour Dresser";
+            theGlamourDresserToolStripMenuItem.Click += glamourDresser_Click;
             // 
             // thePrettyKittyEmporiumToolStripMenuItem
             // 
-            this.thePrettyKittyEmporiumToolStripMenuItem.Name = "thePrettyKittyEmporiumToolStripMenuItem";
-            this.thePrettyKittyEmporiumToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.thePrettyKittyEmporiumToolStripMenuItem.Text = "The Pretty Kitty Emporium";
-            this.thePrettyKittyEmporiumToolStripMenuItem.Click += new System.EventHandler(this.kittyEmporium_Click);
+            thePrettyKittyEmporiumToolStripMenuItem.Name = "thePrettyKittyEmporiumToolStripMenuItem";
+            thePrettyKittyEmporiumToolStripMenuItem.Size = new Size(213, 22);
+            thePrettyKittyEmporiumToolStripMenuItem.Text = "The Pretty Kitty Emporium";
+            thePrettyKittyEmporiumToolStripMenuItem.Click += kittyEmporium_Click;
             // 
             // xIVModArchiveToolStripMenuItem
             // 
-            this.xIVModArchiveToolStripMenuItem.Name = "xIVModArchiveToolStripMenuItem";
-            this.xIVModArchiveToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.xIVModArchiveToolStripMenuItem.Text = "XIV Mod Archive";
-            this.xIVModArchiveToolStripMenuItem.Click += new System.EventHandler(this.xma_Click);
+            xIVModArchiveToolStripMenuItem.Name = "xIVModArchiveToolStripMenuItem";
+            xIVModArchiveToolStripMenuItem.Size = new Size(213, 22);
+            xIVModArchiveToolStripMenuItem.Text = "XIV Mod Archive";
+            xIVModArchiveToolStripMenuItem.Click += xma_Click;
             // 
             // moddingResourcesToolStripMenuItem
             // 
-            this.moddingResourcesToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.texturesToolStripMenuItem,
-            this.soundsToolStripMenuItem,
-            this.modelsToolStripMenuItem,
-            this.discordToolStripMenuItem});
-            this.moddingResourcesToolStripMenuItem.Name = "moddingResourcesToolStripMenuItem";
-            this.moddingResourcesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.moddingResourcesToolStripMenuItem.Text = "Modding Resources";
+            moddingResourcesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { texturesToolStripMenuItem, soundsToolStripMenuItem, modelsToolStripMenuItem, discordToolStripMenuItem });
+            moddingResourcesToolStripMenuItem.Name = "moddingResourcesToolStripMenuItem";
+            moddingResourcesToolStripMenuItem.Size = new Size(180, 22);
+            moddingResourcesToolStripMenuItem.Text = "Modding Resources";
             // 
             // texturesToolStripMenuItem
             // 
-            this.texturesToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.looseTextureCompilerToolStripMenuItem,
-            this.toBeExpandedToolStripMenuItem});
-            this.texturesToolStripMenuItem.Name = "texturesToolStripMenuItem";
-            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.texturesToolStripMenuItem.Text = "Textures";
+            texturesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { looseTextureCompilerToolStripMenuItem, toBeExpandedToolStripMenuItem });
+            texturesToolStripMenuItem.Name = "texturesToolStripMenuItem";
+            texturesToolStripMenuItem.Size = new Size(119, 22);
+            texturesToolStripMenuItem.Text = "Textures";
             // 
             // looseTextureCompilerToolStripMenuItem
             // 
-            this.looseTextureCompilerToolStripMenuItem.Name = "looseTextureCompilerToolStripMenuItem";
-            this.looseTextureCompilerToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
-            this.looseTextureCompilerToolStripMenuItem.Text = "Loose Texture Compiler";
-            this.looseTextureCompilerToolStripMenuItem.Click += new System.EventHandler(this.looseTextureCompilerToolStripMenuItem_Click);
+            looseTextureCompilerToolStripMenuItem.Name = "looseTextureCompilerToolStripMenuItem";
+            looseTextureCompilerToolStripMenuItem.Size = new Size(198, 22);
+            looseTextureCompilerToolStripMenuItem.Text = "Loose Texture Compiler";
+            looseTextureCompilerToolStripMenuItem.Click += looseTextureCompilerToolStripMenuItem_Click;
             // 
             // toBeExpandedToolStripMenuItem
             // 
-            this.toBeExpandedToolStripMenuItem.Enabled = false;
-            this.toBeExpandedToolStripMenuItem.Name = "toBeExpandedToolStripMenuItem";
-            this.toBeExpandedToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
-            this.toBeExpandedToolStripMenuItem.Text = "--To Be Expanded--";
+            toBeExpandedToolStripMenuItem.Enabled = false;
+            toBeExpandedToolStripMenuItem.Name = "toBeExpandedToolStripMenuItem";
+            toBeExpandedToolStripMenuItem.Size = new Size(198, 22);
+            toBeExpandedToolStripMenuItem.Text = "--To Be Expanded--";
             // 
             // soundsToolStripMenuItem
             // 
-            this.soundsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.voicePackCreatorToolStripMenuItem,
-            this.toBeExpandedToolStripMenuItem1});
-            this.soundsToolStripMenuItem.Name = "soundsToolStripMenuItem";
-            this.soundsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.soundsToolStripMenuItem.Text = "Sounds";
-            this.soundsToolStripMenuItem.Click += new System.EventHandler(this.soundsToolStripMenuItem_Click);
+            soundsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { voicePackCreatorToolStripMenuItem, toBeExpandedToolStripMenuItem1 });
+            soundsToolStripMenuItem.Name = "soundsToolStripMenuItem";
+            soundsToolStripMenuItem.Size = new Size(119, 22);
+            soundsToolStripMenuItem.Text = "Sounds";
+            soundsToolStripMenuItem.Click += soundsToolStripMenuItem_Click;
             // 
             // voicePackCreatorToolStripMenuItem
             // 
-            this.voicePackCreatorToolStripMenuItem.Name = "voicePackCreatorToolStripMenuItem";
-            this.voicePackCreatorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.voicePackCreatorToolStripMenuItem.Text = "Voice Pack Creator";
-            this.voicePackCreatorToolStripMenuItem.Click += new System.EventHandler(this.voicePackCreatorToolStripMenuItem_Click);
+            voicePackCreatorToolStripMenuItem.Name = "voicePackCreatorToolStripMenuItem";
+            voicePackCreatorToolStripMenuItem.Size = new Size(177, 22);
+            voicePackCreatorToolStripMenuItem.Text = "Voice Pack Creator";
+            voicePackCreatorToolStripMenuItem.Click += voicePackCreatorToolStripMenuItem_Click;
             // 
             // toBeExpandedToolStripMenuItem1
             // 
-            this.toBeExpandedToolStripMenuItem1.Enabled = false;
-            this.toBeExpandedToolStripMenuItem1.Name = "toBeExpandedToolStripMenuItem1";
-            this.toBeExpandedToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
-            this.toBeExpandedToolStripMenuItem1.Text = "--To Be Expanded--";
+            toBeExpandedToolStripMenuItem1.Enabled = false;
+            toBeExpandedToolStripMenuItem1.Name = "toBeExpandedToolStripMenuItem1";
+            toBeExpandedToolStripMenuItem1.Size = new Size(177, 22);
+            toBeExpandedToolStripMenuItem1.Text = "--To Be Expanded--";
             // 
             // modelsToolStripMenuItem
             // 
-            this.modelsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.crossGenPortingToolToolStripMenuItem,
-            this.toBeExpandedToolStripMenuItem3});
-            this.modelsToolStripMenuItem.Name = "modelsToolStripMenuItem";
-            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.modelsToolStripMenuItem.Text = "Models";
+            modelsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { crossGenPortingToolToolStripMenuItem, toBeExpandedToolStripMenuItem3 });
+            modelsToolStripMenuItem.Name = "modelsToolStripMenuItem";
+            modelsToolStripMenuItem.Size = new Size(119, 22);
+            modelsToolStripMenuItem.Text = "Models";
             // 
             // crossGenPortingToolToolStripMenuItem
             // 
-            this.crossGenPortingToolToolStripMenuItem.Name = "crossGenPortingToolToolStripMenuItem";
-            this.crossGenPortingToolToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
-            this.crossGenPortingToolToolStripMenuItem.Text = "Cross Gen Porting Tool";
-            this.crossGenPortingToolToolStripMenuItem.Click += new System.EventHandler(this.crossGenPortingToolToolStripMenuItem_Click);
+            crossGenPortingToolToolStripMenuItem.Name = "crossGenPortingToolToolStripMenuItem";
+            crossGenPortingToolToolStripMenuItem.Size = new Size(194, 22);
+            crossGenPortingToolToolStripMenuItem.Text = "Cross Gen Porting Tool";
+            crossGenPortingToolToolStripMenuItem.Click += crossGenPortingToolToolStripMenuItem_Click;
             // 
             // toBeExpandedToolStripMenuItem3
             // 
-            this.toBeExpandedToolStripMenuItem3.Enabled = false;
-            this.toBeExpandedToolStripMenuItem3.Name = "toBeExpandedToolStripMenuItem3";
-            this.toBeExpandedToolStripMenuItem3.Size = new System.Drawing.Size(194, 22);
-            this.toBeExpandedToolStripMenuItem3.Text = "--To Be Expanded--";
+            toBeExpandedToolStripMenuItem3.Enabled = false;
+            toBeExpandedToolStripMenuItem3.Name = "toBeExpandedToolStripMenuItem3";
+            toBeExpandedToolStripMenuItem3.Size = new Size(194, 22);
+            toBeExpandedToolStripMenuItem3.Text = "--To Be Expanded--";
             // 
             // discordToolStripMenuItem
             // 
-            this.discordToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.penumbraToolStripMenuItem,
-            this.pixellatedsAssistancePlaceToolStripMenuItem,
-            this.soundAndTextureResourceToolStripMenuItem,
-            this.texToolsToolStripMenuItem,
-            this.xIVModsResourcesToolStripMenuItem,
-            this.toBeExpandedToolStripMenuItem2});
-            this.discordToolStripMenuItem.Name = "discordToolStripMenuItem";
-            this.discordToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.discordToolStripMenuItem.Text = "Discords";
+            discordToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { penumbraToolStripMenuItem, pixellatedsAssistancePlaceToolStripMenuItem, soundAndTextureResourceToolStripMenuItem, texToolsToolStripMenuItem, xIVModsResourcesToolStripMenuItem, toBeExpandedToolStripMenuItem2 });
+            discordToolStripMenuItem.Name = "discordToolStripMenuItem";
+            discordToolStripMenuItem.Size = new Size(119, 22);
+            discordToolStripMenuItem.Text = "Discords";
             // 
             // penumbraToolStripMenuItem
             // 
-            this.penumbraToolStripMenuItem.Name = "penumbraToolStripMenuItem";
-            this.penumbraToolStripMenuItem.Size = new System.Drawing.Size(222, 22);
-            this.penumbraToolStripMenuItem.Text = "Penumbra";
-            this.penumbraToolStripMenuItem.Click += new System.EventHandler(this.penumbraToolStripMenuItem_Click);
+            penumbraToolStripMenuItem.Name = "penumbraToolStripMenuItem";
+            penumbraToolStripMenuItem.Size = new Size(222, 22);
+            penumbraToolStripMenuItem.Text = "Penumbra";
+            penumbraToolStripMenuItem.Click += penumbraToolStripMenuItem_Click;
             // 
             // pixellatedsAssistancePlaceToolStripMenuItem
             // 
-            this.pixellatedsAssistancePlaceToolStripMenuItem.Name = "pixellatedsAssistancePlaceToolStripMenuItem";
-            this.pixellatedsAssistancePlaceToolStripMenuItem.Size = new System.Drawing.Size(222, 22);
-            this.pixellatedsAssistancePlaceToolStripMenuItem.Text = "Pixellated\'s Assistance Place";
-            this.pixellatedsAssistancePlaceToolStripMenuItem.Click += new System.EventHandler(this.pixellatedsAssistancePlaceToolStripMenuItem_Click);
+            pixellatedsAssistancePlaceToolStripMenuItem.Name = "pixellatedsAssistancePlaceToolStripMenuItem";
+            pixellatedsAssistancePlaceToolStripMenuItem.Size = new Size(222, 22);
+            pixellatedsAssistancePlaceToolStripMenuItem.Text = "Pixellated's Assistance Place";
+            pixellatedsAssistancePlaceToolStripMenuItem.Click += pixellatedsAssistancePlaceToolStripMenuItem_Click;
             // 
             // soundAndTextureResourceToolStripMenuItem
             // 
-            this.soundAndTextureResourceToolStripMenuItem.Name = "soundAndTextureResourceToolStripMenuItem";
-            this.soundAndTextureResourceToolStripMenuItem.Size = new System.Drawing.Size(222, 22);
-            this.soundAndTextureResourceToolStripMenuItem.Text = "Sound && Texture Resource";
-            this.soundAndTextureResourceToolStripMenuItem.Click += new System.EventHandler(this.soundAndTextureResourceToolStripMenuItem_Click);
+            soundAndTextureResourceToolStripMenuItem.Name = "soundAndTextureResourceToolStripMenuItem";
+            soundAndTextureResourceToolStripMenuItem.Size = new Size(222, 22);
+            soundAndTextureResourceToolStripMenuItem.Text = "Sound && Texture Resource";
+            soundAndTextureResourceToolStripMenuItem.Click += soundAndTextureResourceToolStripMenuItem_Click;
             // 
             // texToolsToolStripMenuItem
             // 
-            this.texToolsToolStripMenuItem.Name = "texToolsToolStripMenuItem";
-            this.texToolsToolStripMenuItem.Size = new System.Drawing.Size(222, 22);
-            this.texToolsToolStripMenuItem.Text = "TexTools";
-            this.texToolsToolStripMenuItem.Click += new System.EventHandler(this.texToolsToolStripMenuItem_Click);
+            texToolsToolStripMenuItem.Name = "texToolsToolStripMenuItem";
+            texToolsToolStripMenuItem.Size = new Size(222, 22);
+            texToolsToolStripMenuItem.Text = "TexTools";
+            texToolsToolStripMenuItem.Click += texToolsToolStripMenuItem_Click;
             // 
             // xIVModsResourcesToolStripMenuItem
             // 
-            this.xIVModsResourcesToolStripMenuItem.Name = "xIVModsResourcesToolStripMenuItem";
-            this.xIVModsResourcesToolStripMenuItem.Size = new System.Drawing.Size(222, 22);
-            this.xIVModsResourcesToolStripMenuItem.Text = "XIV Mods && Resources";
-            this.xIVModsResourcesToolStripMenuItem.Click += new System.EventHandler(this.xIVModsResourcesToolStripMenuItem_Click);
+            xIVModsResourcesToolStripMenuItem.Name = "xIVModsResourcesToolStripMenuItem";
+            xIVModsResourcesToolStripMenuItem.Size = new Size(222, 22);
+            xIVModsResourcesToolStripMenuItem.Text = "XIV Mods && Resources";
+            xIVModsResourcesToolStripMenuItem.Click += xIVModsResourcesToolStripMenuItem_Click;
             // 
             // toBeExpandedToolStripMenuItem2
             // 
-            this.toBeExpandedToolStripMenuItem2.Enabled = false;
-            this.toBeExpandedToolStripMenuItem2.Name = "toBeExpandedToolStripMenuItem2";
-            this.toBeExpandedToolStripMenuItem2.Size = new System.Drawing.Size(222, 22);
-            this.toBeExpandedToolStripMenuItem2.Text = "--To Be Expanded--";
+            toBeExpandedToolStripMenuItem2.Enabled = false;
+            toBeExpandedToolStripMenuItem2.Name = "toBeExpandedToolStripMenuItem2";
+            toBeExpandedToolStripMenuItem2.Size = new Size(222, 22);
+            toBeExpandedToolStripMenuItem2.Text = "--To Be Expanded--";
             // 
             // openConfigurationToolStripMenuItem
             // 
-            this.openConfigurationToolStripMenuItem.Name = "openConfigurationToolStripMenuItem";
-            this.openConfigurationToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.openConfigurationToolStripMenuItem.Text = "Open Configuration";
-            this.openConfigurationToolStripMenuItem.Click += new System.EventHandler(this.openConfigurationToolStripMenuItem_Click);
+            openConfigurationToolStripMenuItem.Name = "openConfigurationToolStripMenuItem";
+            openConfigurationToolStripMenuItem.Size = new Size(180, 22);
+            openConfigurationToolStripMenuItem.Text = "Open Configuration";
+            openConfigurationToolStripMenuItem.Click += openConfigurationToolStripMenuItem_Click;
             // 
             // checkForUpdateToolStripMenuItem
             // 
-            this.checkForUpdateToolStripMenuItem.Name = "checkForUpdateToolStripMenuItem";
-            this.checkForUpdateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.checkForUpdateToolStripMenuItem.Text = "Check For Update";
-            this.checkForUpdateToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdateToolStripMenuItem_Click);
-            // 
-            // exitToolStripMenuItem
-            // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.exitToolStripMenuItem.Text = "Exit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
-            // 
-            // heliopshereButton
-            // 
-            this.heliopshereButton.Location = new System.Drawing.Point(72, 180);
-            this.heliopshereButton.Name = "heliopshereButton";
-            this.heliopshereButton.Size = new System.Drawing.Size(84, 23);
-            this.heliopshereButton.TabIndex = 13;
-            this.heliopshereButton.Text = "Heliosphere";
-            this.heliopshereButton.UseVisualStyleBackColor = true;
-            this.heliopshereButton.Click += new System.EventHandler(this.heliosphereToolStripMenuItem_Click);
-            // 
-            // textools
-            // 
-            this.textools.CurrentPath = null;
-            this.textools.Filter = null;
-            this.textools.Index = -1;
-            this.textools.Location = new System.Drawing.Point(4, 96);
-            this.textools.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.textools.MinimumSize = new System.Drawing.Size(300, 28);
-            this.textools.Name = "textools";
-            this.textools.Size = new System.Drawing.Size(312, 28);
-            this.textools.TabIndex = 14;
-            this.textools.OnFileSelected += new System.EventHandler(this.textools_OnFileSelected);
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label2.Location = new System.Drawing.Point(0, 64);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(276, 25);
-            this.label2.TabIndex = 15;
-            this.label2.Text = "Mod Creators Only (Optional)";
-            // 
-            // donateButton
-            // 
-            this.donateButton.BackColor = System.Drawing.Color.LightCoral;
-            this.donateButton.ForeColor = System.Drawing.Color.White;
-            this.donateButton.Location = new System.Drawing.Point(156, 204);
-            this.donateButton.Name = "donateButton";
-            this.donateButton.Size = new System.Drawing.Size(156, 28);
-            this.donateButton.TabIndex = 16;
-            this.donateButton.Text = "Donate";
-            this.donateButton.UseVisualStyleBackColor = false;
-            this.donateButton.Click += new System.EventHandler(this.donateButton_Click);
-            // 
-            // discordButton
-            // 
-            this.discordButton.BackColor = System.Drawing.Color.SlateBlue;
-            this.discordButton.ForeColor = System.Drawing.Color.White;
-            this.discordButton.Location = new System.Drawing.Point(0, 204);
-            this.discordButton.Name = "discordButton";
-            this.discordButton.Size = new System.Drawing.Size(156, 28);
-            this.discordButton.TabIndex = 17;
-            this.discordButton.Text = "Discord";
-            this.discordButton.UseVisualStyleBackColor = false;
-            this.discordButton.Click += new System.EventHandler(this.discordButton_Click);
+            checkForUpdateToolStripMenuItem.Name = "checkForUpdateToolStripMenuItem";
+            checkForUpdateToolStripMenuItem.Size = new Size(180, 22);
+            checkForUpdateToolStripMenuItem.Text = "Check For Update";
+            checkForUpdateToolStripMenuItem.Click += checkForUpdateToolStripMenuItem_Click;
             // 
             // donateToolStripMenuItem
             // 
-            this.donateToolStripMenuItem.BackColor = System.Drawing.Color.MistyRose;
-            this.donateToolStripMenuItem.Name = "donateToolStripMenuItem";
-            this.donateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.donateToolStripMenuItem.Text = "Donate";
-            this.donateToolStripMenuItem.Click += new System.EventHandler(this.donateButton_Click);
+            donateToolStripMenuItem.BackColor = Color.MistyRose;
+            donateToolStripMenuItem.Name = "donateToolStripMenuItem";
+            donateToolStripMenuItem.Size = new Size(180, 22);
+            donateToolStripMenuItem.Text = "Donate";
+            donateToolStripMenuItem.Click += donateButton_Click;
+            // 
+            // exitToolStripMenuItem
+            // 
+            exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            exitToolStripMenuItem.Size = new Size(180, 22);
+            exitToolStripMenuItem.Text = "Exit";
+            exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
+            // 
+            // heliopshereButton
+            // 
+            heliopshereButton.Location = new Point(72, 114);
+            heliopshereButton.Name = "heliopshereButton";
+            heliopshereButton.Size = new Size(84, 23);
+            heliopshereButton.TabIndex = 13;
+            heliopshereButton.Text = "Heliosphere";
+            heliopshereButton.UseVisualStyleBackColor = true;
+            heliopshereButton.Click += heliosphereToolStripMenuItem_Click;
+            // 
+            // donateButton
+            // 
+            donateButton.BackColor = Color.LightCoral;
+            donateButton.ForeColor = Color.White;
+            donateButton.Location = new Point(156, 138);
+            donateButton.Name = "donateButton";
+            donateButton.Size = new Size(156, 28);
+            donateButton.TabIndex = 16;
+            donateButton.Text = "Donate";
+            donateButton.UseVisualStyleBackColor = false;
+            donateButton.Click += donateButton_Click;
+            // 
+            // discordButton
+            // 
+            discordButton.BackColor = Color.SlateBlue;
+            discordButton.ForeColor = Color.White;
+            discordButton.Location = new Point(0, 138);
+            discordButton.Name = "discordButton";
+            discordButton.Size = new Size(156, 28);
+            discordButton.TabIndex = 17;
+            discordButton.Text = "Discord";
+            discordButton.UseVisualStyleBackColor = false;
+            discordButton.Click += discordButton_Click;
             // 
             // MainWindow
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(313, 231);
-            this.Controls.Add(this.discordButton);
-            this.Controls.Add(this.donateButton);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.textools);
-            this.Controls.Add(this.heliopshereButton);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.autoLoadModCheckbox);
-            this.Controls.Add(associateFileTypes);
-            this.Controls.Add(this.downloads);
-            this.Controls.Add(this.kittyEmporium);
-            this.Controls.Add(this.aetherlink);
-            this.Controls.Add(this.nexusMods);
-            this.Controls.Add(this.glamourDresser);
-            this.Controls.Add(this.xma);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MaximizeBox = false;
-            this.Name = "MainWindow";
-            this.Text = "Penumbra Mod Forwarder";
-            this.Activated += new System.EventHandler(this.MainWindow_Activated);
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainWindow_FormClosing);
-            this.Load += new System.EventHandler(this.MainWindow_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher)).EndInit();
-            this.contextMenu.ResumeLayout(false);
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(313, 168);
+            Controls.Add(discordButton);
+            Controls.Add(donateButton);
+            Controls.Add(heliopshereButton);
+            Controls.Add(label1);
+            Controls.Add(autoLoadModCheckbox);
+            Controls.Add(associateFileTypes);
+            Controls.Add(downloads);
+            Controls.Add(kittyEmporium);
+            Controls.Add(aetherlink);
+            Controls.Add(nexusMods);
+            Controls.Add(glamourDresser);
+            Controls.Add(xma);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
+            Name = "MainWindow";
+            Text = "Penumbra Mod Forwarder";
+            Activated += MainWindow_Activated;
+            FormClosing += MainWindow_FormClosing;
+            Load += MainWindow_Load;
+            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).EndInit();
+            contextMenu.ResumeLayout(false);
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -555,8 +499,6 @@
         private ToolStripMenuItem crossGenPortingToolToolStripMenuItem;
         private ToolStripMenuItem toBeExpandedToolStripMenuItem3;
         private ToolStripMenuItem checkForUpdateToolStripMenuItem;
-        private FFXIVVoicePackCreator.FilePicker textools;
-        private Label label2;
         private Button discordButton;
         private Button donateButton;
         private ToolStripMenuItem donateToolStripMenuItem;
