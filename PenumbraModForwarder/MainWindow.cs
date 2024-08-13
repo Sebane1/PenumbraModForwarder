@@ -162,6 +162,7 @@ namespace FFXIVModExractor {
                 Process process = new Process();
                 process.StartInfo.FileName = _textoolsPath;
                 //process.StartInfo.Verb = "runas";
+                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(_textoolsPath);
                 process.StartInfo.UseShellExecute = true;
                 process.StartInfo.Arguments = @"/upgrade """ + modPackPath + @""" " + @"""" + finalModPath + @"""";
                 process.Start();
