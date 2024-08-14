@@ -22,7 +22,8 @@
         ///  Required method for Designer support - do not modify
         ///  the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent() {
+        private void InitializeComponent()
+        {
             components = new System.ComponentModel.Container();
             Button associateFileTypes;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
@@ -69,6 +70,8 @@
             heliopshereButton = new Button();
             donateButton = new Button();
             discordButton = new Button();
+            checkBox1 = new CheckBox();
+            AutoDelete = new CheckBox();
             associateFileTypes = new Button();
             ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).BeginInit();
             contextMenu.SuspendLayout();
@@ -426,11 +429,30 @@
             discordButton.UseVisualStyleBackColor = false;
             discordButton.Click += discordButton_Click;
             // 
+            // checkBox1
+            // 
+            checkBox1.Location = new Point(0, 0);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(104, 24);
+            checkBox1.TabIndex = 0;
+            // 
+            // AutoDelete
+            // 
+            AutoDelete.AutoSize = true;
+            AutoDelete.Location = new Point(180, 62);
+            AutoDelete.Name = "AutoDelete";
+            AutoDelete.Size = new Size(114, 19);
+            AutoDelete.TabIndex = 18;
+            AutoDelete.Text = "Auto Delete Files";
+            AutoDelete.UseVisualStyleBackColor = true;
+            AutoDelete.CheckedChanged += AutoDelete_CheckedChanged;
+            // 
             // MainWindow
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(313, 168);
+            Controls.Add(AutoDelete);
             Controls.Add(discordButton);
             Controls.Add(donateButton);
             Controls.Add(heliopshereButton);
@@ -502,5 +524,7 @@
         private Button discordButton;
         private Button donateButton;
         private ToolStripMenuItem donateToolStripMenuItem;
+        private CheckBox checkBox1;
+        private CheckBox AutoDelete;
     }
 }
