@@ -8,7 +8,9 @@ namespace FFXIVModExractor.Models
 {
     public class Config
     {
-        public string Option { get; set; } = string.Empty;
-        public string Value { get; set; } = string.Empty;
+        public bool AutoLoad { get; set; }
+        public bool AutoDelete { get; set; }
+        public string DownloadPath { get; set; } = string.Empty;
+        public string TexToolPath { get; set; } = string.Empty;
     }
 }

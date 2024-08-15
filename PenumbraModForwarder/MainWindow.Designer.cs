@@ -439,6 +439,7 @@
             // AutoDelete
             // 
             AutoDelete.AutoSize = true;
+            AutoDelete.Enabled = false;
             AutoDelete.Location = new Point(180, 62);
             AutoDelete.Name = "AutoDelete";
             AutoDelete.Size = new Size(114, 19);

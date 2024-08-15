@@ -26,6 +26,9 @@ namespace FFXIVModExractor
 
         public MainWindow()
         {
+            // Before we start let's just migrate the settings
+            Options.MigrateOldSettings();
+
             InitializeComponent();
             GetDownloadPath();
             AutoScaleDimensions = new SizeF(96, 96);
@@ -181,10 +184,11 @@ namespace FFXIVModExractor
                     if (autoLoadModCheckbox.Checked)
                     {
                         hideAfterLoad = true;
-                    }
 
-                    // We will set the checkboxes here for now, this could be done better in the future.
-                    AutoDelete.Checked = Convert.ToBoolean(Options.ReadFromConfig("AutoDelete").Value);
+                        var config = Options.GetConfigValue<bool>("AutoDelete");
+                        AutoDelete.Enabled = true;
+                        AutoDelete.Checked = config;
+                    }
                 }
                 else
                 {
@@ -421,31 +425,29 @@ namespace FFXIVModExractor
         // TODO: This will need to be removed in favour of the new Options class
         public void GetDownloadPath()
         {
-            string downloadPath = Options.ReadFromConfig("DownloadPath").Value;
+            string downloadPath = Options.GetConfigValue<string>("DownloadPath");
             if (!string.IsNullOrEmpty(downloadPath))
             {
                 downloads.CurrentPath = downloadPath;
-                fileSystemWatcher.Path = downloads.FilePath.Text;
+                fileSystemWatcher.Path = downloadPath;
             }
         }
 
         // TODO: This will need to be removed in favour of the new Options class
         public void WriteDownloadPath(string path)
         {
-            Options.WriteToConfig(new Config()
+            Options.UpdateConfig(options =>
             {
-                Option = "DownloadPath",
-                Value = path
+                options.DownloadPath = path;
             });
         }
 
         // TODO: This will need to be removed in favour of the new Options class
         public void WriteTexToolsPath(string path)
         {
-            Options.WriteToConfig(new Config()
+            Options.UpdateConfig(options =>
             {
-                Option = "TexToolsPath",
-                Value = path
+                options.TexToolPath = path;
             });
         }
 
@@ -463,20 +465,16 @@ namespace FFXIVModExractor
         // TODO: This will need to be removed in favour of the new Options class
         public void GetAutoLoadOption()
         {
-            var option = Options.ReadFromConfig("AutoLoad").Value;
-            if (!string.IsNullOrEmpty(option))
-            {
-                autoLoadModCheckbox.Checked = bool.Parse(option);
-            }
+            var option = Options.GetConfigValue<bool>("AutoLoad");
+            autoLoadModCheckbox.Checked = option;
         }
 
         // TODO: This will need to be removed in favour of the new Options class
         public void WriteAutoLoadOption(bool option)
         {
-            Options.WriteToConfig(new Config()
+            Options.UpdateConfig(options =>
             {
-                Option = "AutoLoad",
-                Value = option.ToString()
+                options.AutoLoad = option;
             });
         }
 
@@ -495,20 +493,26 @@ namespace FFXIVModExractor
                 rk.SetValue(Text, Application.ExecutablePath);
                 trayIcon.BalloonTipText = "Penumbra Mod Forwarder will now appear in the system tray!";
                 trayIcon.ShowBalloonTip(5000);
+                AutoDelete.Enabled = true;
             }
             else
             {
                 rk.DeleteValue(Text, false);
+                Options.UpdateConfig(options =>
+                {
+                    options.AutoDelete = false;
+                });
+                AutoDelete.Enabled = false;
+                AutoDelete.Checked = false;
             }
             WriteAutoLoadOption(autoLoadModCheckbox.Checked);
         }
 
         private void AutoDelete_CheckedChanged(object sender, EventArgs e)
         {
-            Options.WriteToConfig(new Config()
+            Options.UpdateConfig(options =>
             {
-                Option = "AutoDelete",
-                Value = AutoDelete.Checked.ToString()
+                options.AutoDelete = AutoDelete.Checked;
             });
         }
 
