@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
+
 namespace FFXIVModExractor.Models;
 
 public class ProcessingQueue
 {
-    public List<string> Files { get; set; } = new();
+    public ConcurrentQueue<ProcessingQueueItem> Files { get; } = new();
 }

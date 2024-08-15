@@ -8,6 +8,7 @@ using FFXIVModExractor.Services;
 using IWshRuntimeLibrary;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using PenumbraModForwarder.Enums;
 using PenumbraModForwarder.Services;
 using SevenZip;
 using File = System.IO.File;
@@ -76,10 +77,11 @@ namespace FFXIVModExractor
             if (File.Exists(textoolsInk))
             {
                 IWshShell wsh = new WshShellClass();
-                IWshShortcut sc = (IWshShortcut)wsh.CreateShortcut(textoolsInk);
+                IWshShortcut sc = (IWshShortcut) wsh.CreateShortcut(textoolsInk);
                 var texToolsDirectory = Path.GetDirectoryName(sc.TargetPath);
                 _textoolsPath = Path.Combine(texToolsDirectory, "ConsoleTools.exe");
             }
+
             string[] arguments = Environment.GetCommandLineArgs();
             bool foundValidFile = false;
             if (arguments.Length > 0)
@@ -87,7 +89,8 @@ namespace FFXIVModExractor
                 for (int i = 1; i < arguments.Length; i++)
                 {
                     // TODO: This is similar to the ProcessModPackRequest method, should be refactored to use the same method
-                    if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2"))
+                    if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") ||
+                        arguments[i].EndsWith(".ttmp2"))
                     {
                         SendModToPenumbra(arguments[i], ref foundValidFile);
                     }
@@ -107,6 +110,7 @@ namespace FFXIVModExractor
                     //}
                 }
             }
+
             if (foundValidFile)
             {
                 exitInitiated = true;
@@ -137,6 +141,7 @@ namespace FFXIVModExractor
                     Application.Exit();
                 }
             }
+
             ContextMenuStrip = contextMenu;
         }
 
@@ -148,9 +153,10 @@ namespace FFXIVModExractor
             {
                 string originatingModDirectory = Path.GetDirectoryName(modPackPath);
                 var outputModName = modPackPath
-                .Replace(".pmp", "_dt.pmp").Replace(".ttmp", "_dt.ttmp");
+                    .Replace(".pmp", "_dt.pmp").Replace(".ttmp", "_dt.ttmp");
                 Directory.CreateDirectory(Path.Combine(originatingModDirectory, @"Dawntrail Converted\"));
-                finalModPath = Path.Combine(originatingModDirectory, @"Dawntrail Converted\" + Path.GetFileName(outputModName));
+                finalModPath = Path.Combine(originatingModDirectory,
+                    @"Dawntrail Converted\" + Path.GetFileName(outputModName));
                 trayIcon.BalloonTipText = "Mod pack has been sent to textools for Dawntrail conversion.";
                 trayIcon.ShowBalloonTip(5000);
                 Process process = new Process();
@@ -164,10 +170,12 @@ namespace FFXIVModExractor
                 if (!File.Exists(finalModPath))
                 {
                     finalModPath = modPackPath;
-                    trayIcon.BalloonTipText = "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
+                    trayIcon.BalloonTipText =
+                        "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
                     trayIcon.ShowBalloonTip(5000);
                 }
             }
+
             PenumbraHttpApi.OpenWindow();
             PenumbraHttpApi.Install(finalModPath);
             trayIcon.BalloonTipText = "Mod pack has been sent to penumbra.";
@@ -209,10 +217,11 @@ namespace FFXIVModExractor
         {
             ProcessModPackRequest(e);
         }
+
         private void RoleplayingVoiceCheck()
         {
             string roleplayingVoiceConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-         + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
+                                            + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
             if (File.Exists(roleplayingVoiceConfig))
             {
                 RoleplayingVoiceConfig file = JsonConvert.DeserializeObject<RoleplayingVoiceConfig>(
@@ -224,113 +233,122 @@ namespace FFXIVModExractor
         // TODO: This is being reworked in FileHandler.cs, struggling right now to find a way to handle the tray icon balloon tip when detached from the UI
         async Task ProcessModPackRequest(FileSystemEventArgs e)
         {
-            while (_processingQueue.Files.Contains(e.FullPath))
+            if (_processingQueue.Files.Any(item => item.FilePath == e.FullPath))
             {
-                await Task.Delay(100);
+                Console.WriteLine($"{e.FullPath} is already in the processing queue, waiting...");
+                return;
             }
 
-#if DEBUG
-            foreach (var file in _processingQueue.Files)
+            var queueItem = new ProcessingQueueItem
             {
-                Console.WriteLine(file);
-            }
-#endif
-            
-            // Add the file to the processing queue
-            _processingQueue.Files.Add(e.FullPath);
-            
-            if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2"))
+                FilePath = e.FullPath,
+                Status = ProcessingStatus.Queued
+            };
+
+            _processingQueue.Files.Enqueue(queueItem);
+
+            try
             {
-                Thread.Sleep(50);
-                while (IsFileLocked(e.FullPath))
+                if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2"))
                 {
-                    Thread.Sleep(100);
+                    bool value = false;
+                    SendModToPenumbra(e.FullPath, ref value);
                 }
-                bool value = false;
-                SendModToPenumbra(e.FullPath, ref value);
-            }
-            else if (e.FullPath.EndsWith(".rpvsp"))
-            {
-                RoleplayingVoiceCheck();
-                if (!string.IsNullOrEmpty(roleplayingVoiceCache))
+                else if (e.FullPath.EndsWith(".rpvsp"))
                 {
-                    Thread.Sleep(50);
-                    while (IsFileLocked(e.FullPath))
+                    RoleplayingVoiceCheck();
+                    if (!string.IsNullOrEmpty(roleplayingVoiceCache))
                     {
-                        Thread.Sleep(100);
+                        string directory = roleplayingVoiceCache + @"\VoicePack\" +
+                                           Path.GetFileNameWithoutExtension(e.FullPath);
+                        ZipFile.ExtractToDirectory(e.FullPath, directory);
+                        trayIcon.BalloonTipText = "Mod has been sent to Artemis Roleplaying Kit";
+                        trayIcon.ShowBalloonTip(5000);
                     }
-                    string directory = roleplayingVoiceCache + @"\VoicePack\" + Path.GetFileNameWithoutExtension(e.FullPath);
-                    ZipFile.ExtractToDirectory(e.FullPath, directory);
-                    trayIcon.BalloonTipText = "Mod has been sent to Artemis Roleplaying Kit";
-                    trayIcon.ShowBalloonTip(5000);
-                }
-                else
-                {
-                    if (MessageBox.Show("This mod requires the Artemis Roleplaying Kit dalamud plugin to be installed. Would you like to install it now?",
-                        "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    else
                     {
-                        try
+                        if (MessageBox.Show(
+                                "This mod requires the Artemis Roleplaying Kit dalamud plugin to be installed. Would you like to install it now?",
+                                "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes)
                         {
-                            Process.Start(new ProcessStartInfo
+                            try
                             {
-                                FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
-                                UseShellExecute = true,
-                                Verb = "OPEN"
-                            });
-                        }
-                        catch
-                        {
-
-                        }
-                    }
-                }
-            }
-            else if (e.FullPath.EndsWith(".7z") || e.FullPath.EndsWith(".rar") || e.FullPath.EndsWith(".zip"))
-            {
-                await FileHandler.WaitForFileRelease(e.FullPath);
-                List<string> extractedMods = new List<string>();
-
-                try
-                {
-                    SevenZipExtractor.SetLibraryPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory + Path.DirectorySeparatorChar + "Resources/", "7z.dll"));
-                    using (var archive = new SevenZipExtractor(e.FullPath))
-                    {
-                        foreach (var item in archive.ArchiveFileNames)
-                        {
-                            // Process files that match criteria
-                            if (FileHandler.IsModFile(item) || FileHandler.IsRoleplayingVoiceFile(item))
-                            {
-                                // Create a flat output path, stripping directories
-                                string fileName = Path.GetFileName(item);
-                                string tempOutputPath = Path.Combine(Path.GetDirectoryName(e.FullPath), fileName);
-
-                                // Extract the file to a flat path
-                                using (FileStream outputFileStream = new FileStream(tempOutputPath, FileMode.Create, FileAccess.Write))
+                                Process.Start(new ProcessStartInfo
                                 {
-                                    int index = archive.ArchiveFileNames.IndexOf(item);
-                                    archive.ExtractFile(index, outputFileStream);
-                                    extractedMods.Add(tempOutputPath);
-                                }
+                                    FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
+                                    UseShellExecute = true,
+                                    Verb = "OPEN"
+                                });
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
                 }
-                catch (Exception ex)
+                else if (e.FullPath.EndsWith(".7z") || e.FullPath.EndsWith(".rar") || e.FullPath.EndsWith(".zip"))
                 {
-                    // Log the error as needed
-                    string error = ex.Message;
-                }
+                    await FileHandler.WaitForFileRelease(e.FullPath);
+                    List<string> extractedMods = new List<string>();
 
-                foreach (var item in extractedMods)
-                {
-                    await FileHandler.WaitForFileRelease(item);
-                    bool success = false;
-                    SendModToPenumbra(item, ref success);
+                    try
+                    {
+                        SevenZipExtractor.SetLibraryPath(Path.Combine(
+                            AppDomain.CurrentDomain.BaseDirectory + Path.DirectorySeparatorChar + "Resources/",
+                            "7z.dll"));
+                        using (var archive = new SevenZipExtractor(e.FullPath))
+                        {
+                            foreach (var item in archive.ArchiveFileNames)
+                            {
+                                // Process files that match criteria
+                                if (FileHandler.IsModFile(item) || FileHandler.IsRoleplayingVoiceFile(item))
+                                {
+                                    // Create a flat output path, stripping directories
+                                    string fileName = Path.GetFileName(item);
+                                    string tempOutputPath = Path.Combine(Path.GetDirectoryName(e.FullPath), fileName);
+
+                                    // Extract the file to a flat path
+                                    using (FileStream outputFileStream = new FileStream(tempOutputPath, FileMode.Create,
+                                               FileAccess.Write))
+                                    {
+                                        int index = archive.ArchiveFileNames.IndexOf(item);
+                                        archive.ExtractFile(index, outputFileStream);
+                                        extractedMods.Add(tempOutputPath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error as needed
+                        string error = ex.Message;
+
+                        queueItem.Status = ProcessingStatus.Failed;
+                        Console.WriteLine($"Failed to extract {e.FullPath}: {error}");
+                    }
+
+                    foreach (var item in extractedMods)
+                    {
+                        await FileHandler.WaitForFileRelease(item);
+                        bool success = false;
+                        SendModToPenumbra(item, ref success);
+                    }
+                    
+                    FileHandler.DeleteFile(e.FullPath);
                 }
-                
-                FileHandler.DeleteFile(e.FullPath);
-                // Clear the entire _processingQueue
-                _processingQueue.Files.Clear();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing {e.FullPath}: {ex.Message}");
+                queueItem.Status = ProcessingStatus.Failed;
+            }
+            finally
+            {
+                queueItem.Status = ProcessingStatus.Completed;
+                _processingQueue.Files.TryDequeue(out _);
+                Console.WriteLine($"Processed {e.FullPath}");
             }
         }
 
