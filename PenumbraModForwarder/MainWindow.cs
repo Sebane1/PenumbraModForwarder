@@ -5,7 +5,6 @@ using Anamnesis.Penumbra;
 using AutoUpdaterDotNET;
 using FFXIVModExractor.Models;
 using FFXIVModExractor.Services;
-using IWshRuntimeLibrary;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Enums;
@@ -74,11 +73,10 @@ namespace FFXIVModExractor
             // If this path is not found textools reliant functions will be disabled until textools is installed.
             var textoolsInk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 @"Microsoft\Windows\Start Menu\Programs\FFXIV TexTools\FFXIV TexTools.lnk");
+    
             if (File.Exists(textoolsInk))
             {
-                IWshShell wsh = new WshShellClass();
-                IWshShortcut sc = (IWshShortcut) wsh.CreateShortcut(textoolsInk);
-                var texToolsDirectory = Path.GetDirectoryName(sc.TargetPath);
+                var texToolsDirectory = Path.GetDirectoryName(ShortcutHandler.GetShortcutTarget(textoolsInk));
                 _textoolsPath = Path.Combine(texToolsDirectory, "ConsoleTools.exe");
             }
 
