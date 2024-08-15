@@ -8,7 +8,7 @@ runs:
           uses: actions/checkout@v3
           
         - name: Setup .NET
-          uses: actions/setup-dotnet@v1
+          uses: actions/setup-dotnet@v4
           with:
               dotnet-version: '7.x.x'
         
@@ -22,6 +22,6 @@ runs:
 #          shell: bash
           
         - name: Build
-          run: dotnet build --configuration Release --no-restore
+          run: dotnet msbuild -p:UseMSBuildHost=true --configuration Release --no-restore
           shell: bash
           
