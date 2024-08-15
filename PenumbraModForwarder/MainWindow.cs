@@ -226,9 +226,15 @@ namespace FFXIVModExractor
         {
             while (_processingQueue.Files.Contains(e.FullPath))
             {
-                Console.WriteLine("File is already being processed, waiting...");
                 await Task.Delay(100);
             }
+
+#if DEBUG
+            foreach (var file in _processingQueue.Files)
+            {
+                Console.WriteLine(file);
+            }
+#endif
             
             // Add the file to the processing queue
             _processingQueue.Files.Add(e.FullPath);
@@ -323,7 +329,8 @@ namespace FFXIVModExractor
                 }
                 
                 FileHandler.DeleteFile(e.FullPath);
-                _processingQueue.Files.Remove(e.FullPath);
+                // Clear the entire _processingQueue
+                _processingQueue.Files.Clear();
             }
         }
 
