@@ -1,6 +1,6 @@
-﻿using FFXIVModExractor.Services;
+﻿using System.IO.Compression;
+using FFXIVModExractor.Services;
 using SevenZip;
-using System.IO.Compression;
 
 namespace PenumbraModForwarder.Services
 {

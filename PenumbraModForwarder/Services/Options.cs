@@ -1,10 +1,5 @@
-﻿using Newtonsoft.Json;
-using FFXIVModExractor.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FFXIVModExractor.Models;
+using Newtonsoft.Json;
 
 namespace FFXIVModExractor.Services
 {
@@ -44,10 +39,8 @@ namespace FFXIVModExractor.Services
             {
                 return result;
             }
-            else
-            {
-                throw new InvalidCastException($"Cannot cast property '{propertyName}' to type {typeof(T)}.");
-            }
+
+            throw new InvalidCastException($"Cannot cast property '{propertyName}' to type {typeof(T)}.");
         }
 
         private static Config GetConfig()

@@ -1,9 +1,13 @@
-﻿namespace FFXIVModExractor {
+﻿using System.ComponentModel;
+using FFXIVVoicePackCreator;
+using Timer = System.Windows.Forms.Timer;
+
+namespace FFXIVModExractor {
     partial class MainWindow {
         /// <summary>
         ///  Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary>
         ///  Clean up any resources being used.
@@ -488,8 +492,8 @@
         private Button nexusMods;
         private Button glamourDresser;
         private Button xma;
-        private FFXIVVoicePackCreator.FilePicker downloads;
-        private System.Windows.Forms.Timer cooldownTimer;
+        private FilePicker downloads;
+        private Timer cooldownTimer;
         private Label label1;
         private CheckBox autoLoadModCheckbox;
         private NotifyIcon trayIcon;

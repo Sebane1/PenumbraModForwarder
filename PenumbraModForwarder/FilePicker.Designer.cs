@@ -1,13 +1,11 @@
-﻿
-using System.ComponentModel;
-using System.Windows.Forms;
+﻿using System.ComponentModel;
 
 namespace FFXIVVoicePackCreator {
     partial class FilePicker {
         /// <summary> 
         /// Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary> 
         /// Clean up any resources being used.
@@ -111,9 +109,9 @@ namespace FFXIVVoicePackCreator {
 
         #endregion
 
-        private System.Windows.Forms.TextBox filePath;
-        private System.Windows.Forms.Button openButton;
-        private System.Windows.Forms.Label labelName;
+        private TextBox filePath;
+        private Button openButton;
+        private Label labelName;
         private TableLayoutPanel tableLayoutPanel1;
 
         public Label LabelName { get => labelName; set => labelName = value; }

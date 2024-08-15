@@ -1,20 +1,16 @@
 ﻿// © Anamnesis.
 // Licensed under the MIT license.
 
-namespace Anamnesis.Penumbra;
-
-using System;
-using System.IO;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
+
+namespace Anamnesis.Penumbra;
 
 internal static class PenumbraApi {
     private const string Url = "http://localhost:42069/api";
     private const int TimeoutMs = 500;
-    private static bool calledWarningOnce = false;
+    private static bool calledWarningOnce;
     public static async Task Post(string route, object content) {
         await PostRequest(route, content);
     }

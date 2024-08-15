@@ -1,15 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.ComponentModel;
 
 namespace FFXIVVoicePackCreator {
     public partial class FilePicker : UserControl {
@@ -17,7 +6,7 @@ namespace FFXIVVoicePackCreator {
             InitializeComponent();
         }
 
-        int index = 0;
+        int index;
         bool isSaveMode = false;
         bool isSwappable = true;
         bool isPlayable = true;
@@ -50,7 +39,7 @@ namespace FFXIVVoicePackCreator {
 
         private void filePicker_MouseMove(object sender, MouseEventArgs e) {
             if ((e.X != startPos.X || startPos.Y != e.Y) && canDoDragDrop) {
-                this.ParentForm.TopMost = true;
+                ParentForm.TopMost = true;
                 List<string> fileList = new List<string>();
                 if (!string.IsNullOrEmpty(filePath.Text)) {
                     fileList.Add(filePath.Text);
@@ -60,9 +49,9 @@ namespace FFXIVVoicePackCreator {
                     DoDragDrop(fileDragData, DragDropEffects.Copy);
                 }
                 canDoDragDrop = false;
-                this.ParentForm.BringToFront();
+                ParentForm.BringToFront();
             }
-            this.ParentForm.TopMost = false;
+            ParentForm.TopMost = false;
         }
         private void openButton_Click(object sender, EventArgs e) {
             if (!isSaveMode) {

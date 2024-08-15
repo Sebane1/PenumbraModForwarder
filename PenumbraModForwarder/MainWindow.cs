@@ -1,26 +1,23 @@
-using Anamnesis.Penumbra;
 using System.Diagnostics;
-using Microsoft.Win32;
-using System.Reflection;
-using AutoUpdaterDotNET;
-using PenumbraModForwarder;
-using System.Runtime.InteropServices;
-using System.Security.Policy;
-using System.Configuration;
 using System.IO.Compression;
-using Newtonsoft.Json;
-using SevenZip;
+using System.Reflection;
+using Anamnesis.Penumbra;
+using AutoUpdaterDotNET;
 using FFXIVModExractor.Models;
 using FFXIVModExractor.Services;
+using IWshRuntimeLibrary;
+using Microsoft.Win32;
+using Newtonsoft.Json;
 using PenumbraModForwarder.Services;
+using SevenZip;
+using File = System.IO.File;
 
-// TODO: Rename to FFXIVModExtractor
 namespace FFXIVModExractor
 {
     public partial class MainWindow : Form
     {
-        bool exitInitiated = false;
-        bool hideAfterLoad = false;
+        bool exitInitiated;
+        bool hideAfterLoad;
         private string roleplayingVoiceCache;
         private string _textoolsPath;
 
@@ -41,87 +38,27 @@ namespace FFXIVModExractor
 
         private void xma_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
-                {
-                    FileName = "https://www.xivmodarchive.com/",
-                    UseShellExecute = true,
-                    Verb = "OPEN"
-                });
-            }
-            catch
-            {
-
-            }
+            ProcessHelper.OpenWebsite("https://www.xivmodarchive.com/");
         }
 
         private void glamourDresser_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
-                {
-                    FileName = "https://www.glamourdresser.com/",
-                    UseShellExecute = true,
-                    Verb = "OPEN"
-                });
-            }
-            catch
-            {
-
-            }
+            ProcessHelper.OpenWebsite("https://www.glamourdresser.com/");
         }
 
         private void nexusMods_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
-                {
-                    FileName = "https://www.nexusmods.com/finalfantasy14",
-                    UseShellExecute = true,
-                    Verb = "OPEN"
-                });
-            }
-            catch
-            {
-
-            }
+            ProcessHelper.OpenWebsite("https://www.nexusmods.com/finalfantasy14");
         }
 
         private void aetherlink_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
-                {
-                    FileName = "https://beta.aetherlink.app/",
-                    UseShellExecute = true,
-                    Verb = "OPEN"
-                });
-            }
-            catch
-            {
-
-            }
+            ProcessHelper.OpenWebsite("https://beta.aetherlink.app/");
         }
 
         private void kittyEmporium_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
-                {
-                    FileName = "https://prettykittyemporium.blogspot.com/?zx=67bbd385fd16c2ff",
-                    UseShellExecute = true,
-                    Verb = "OPEN"
-                });
-            }
-            catch
-            {
-
-            }
+            ProcessHelper.OpenWebsite("https://prettykittyemporium.blogspot.com/?zx=67bbd385fd16c2ff");
         }
 
         private void downloads_OnFileSelected(object sender, EventArgs e)
@@ -137,8 +74,8 @@ namespace FFXIVModExractor
                 @"Microsoft\Windows\Start Menu\Programs\FFXIV TexTools\FFXIV TexTools.lnk");
             if (File.Exists(textoolsInk))
             {
-                IWshRuntimeLibrary.IWshShell wsh = new IWshRuntimeLibrary.WshShellClass();
-                IWshRuntimeLibrary.IWshShortcut sc = (IWshRuntimeLibrary.IWshShortcut)wsh.CreateShortcut(textoolsInk);
+                IWshShell wsh = new WshShellClass();
+                IWshShortcut sc = (IWshShortcut)wsh.CreateShortcut(textoolsInk);
                 var texToolsDirectory = Path.GetDirectoryName(sc.TargetPath);
                 _textoolsPath = Path.Combine(texToolsDirectory, "ConsoleTools.exe");
             }
@@ -148,6 +85,7 @@ namespace FFXIVModExractor
             {
                 for (int i = 1; i < arguments.Length; i++)
                 {
+                    // TODO: This is similar to the ProcessModPackRequest method, should be refactored to use the same method
                     if (arguments[i].EndsWith(".pmp") || arguments[i].EndsWith(".ttmp") || arguments[i].EndsWith(".ttmp2"))
                     {
                         SendModToPenumbra(arguments[i], ref foundValidFile);
@@ -171,7 +109,7 @@ namespace FFXIVModExractor
             if (foundValidFile)
             {
                 exitInitiated = true;
-                this.Close();
+                Close();
                 Application.Exit();
             }
             else
@@ -194,7 +132,7 @@ namespace FFXIVModExractor
                 {
                     MessageBox.Show("Penumbra Mod Forward is already running.", Text);
                     exitInitiated = true;
-                    this.Close();
+                    Close();
                     Application.Exit();
                 }
             }
@@ -227,7 +165,7 @@ namespace FFXIVModExractor
                     finalModPath = modPackPath;
                     trayIcon.BalloonTipText = "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
                     trayIcon.ShowBalloonTip(5000);
-                    FileHandler.DeleteDirectory(finalModPath);
+                    FileHandler.DeleteDirectory(Path.Combine(originatingModDirectory, @"Dawntrail Converted\"));
                 }
             }
             PenumbraHttpApi.OpenWindow();
@@ -242,6 +180,7 @@ namespace FFXIVModExractor
             FileHandler.DeleteDirectory(finalModPath);
         }
 
+        // TODO: Extract this to a new class called UpdateHandler, will need to handle the ApplicationExitEvent somehow
         private void CheckForUpdate()
         {
             AutoUpdater.InstalledVersion = new Version(Application.ProductVersion.Split("+")[0]);
@@ -250,13 +189,13 @@ namespace FFXIVModExractor
             AutoUpdater.Mandatory = true;
             AutoUpdater.UpdateMode = Mode.ForcedDownload;
             AutoUpdater.Start("https://raw.githubusercontent.com/Sebane1/PenumbraModForwarder/master/update.xml");
-            AutoUpdater.ApplicationExitEvent += delegate ()
+            AutoUpdater.ApplicationExitEvent += delegate
             {
                 hideAfterLoad = true;
                 exitInitiated = true;
             };
         }
-
+        
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e)
         {
             ProcessModPackRequest(e);
@@ -273,7 +212,7 @@ namespace FFXIVModExractor
             }
         }
 
-        // TODO: This is being reworked in FileHandler.cs
+        // TODO: This is being reworked in FileHandler.cs, struggling right now to find a way to handle the tray icon balloon tip when detached from the UI
         async Task ProcessModPackRequest(RenamedEventArgs e)
         {
             if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2"))
@@ -308,7 +247,7 @@ namespace FFXIVModExractor
                     {
                         try
                         {
-                            Process.Start(new System.Diagnostics.ProcessStartInfo()
+                            Process.Start(new ProcessStartInfo
                             {
                                 FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
                                 UseShellExecute = true,
@@ -322,37 +261,6 @@ namespace FFXIVModExractor
                     }
                 }
             }
-            // This is being repeated below do we need it?
-
-            //else if (e.FullPath.EndsWith(".zip"))
-            //{
-            //    while (IsFileLocked(e.FullPath))
-            //    {
-            //        Thread.Sleep(100);
-            //    }
-            //    List<string> extractedMods = new List<string>();
-            //    using (var zip = ZipFile.OpenRead(e.FullPath))
-            //    {
-            //        foreach (var item in zip.Entries)
-            //        {
-            //            if (item.FullName.EndsWith(".pmp") || item.FullName.EndsWith(".ttmp") || item.FullName.EndsWith(".ttmp2") || item.FullName.EndsWith(".rpvsp"))
-            //            {
-            //                string outputFile = Path.Combine(Path.GetDirectoryName(e.FullPath), Path.GetFileName(item.FullName));
-            //                item.ExtractToFile(outputFile);
-            //                extractedMods.Add(outputFile);
-            //            }
-            //        }
-            //    }
-            //    foreach (var item in extractedMods)
-            //    {
-            //        bool success = false;
-            //        while (IsFileLocked(item))
-            //        {
-            //            Thread.Sleep(100);
-            //        }
-            //        SendModToPenumbra(item, ref success);
-            //    }
-            //}
             else if (e.FullPath.EndsWith(".7z") || e.FullPath.EndsWith(".rar") || e.FullPath.EndsWith(".zip"))
             {
                 await FileHandler.WaitForFileRelease(e.FullPath);
@@ -421,8 +329,7 @@ namespace FFXIVModExractor
             //file is not locked
             return false;
         }
-
-        // TODO: This will need to be removed in favour of the new Options class
+        
         public void GetDownloadPath()
         {
             string downloadPath = Options.GetConfigValue<string>("DownloadPath");
@@ -432,8 +339,7 @@ namespace FFXIVModExractor
                 fileSystemWatcher.Path = downloadPath;
             }
         }
-
-        // TODO: This will need to be removed in favour of the new Options class
+        
         public void WriteDownloadPath(string path)
         {
             Options.UpdateConfig(options =>
@@ -441,8 +347,7 @@ namespace FFXIVModExractor
                 options.DownloadPath = path;
             });
         }
-
-        // TODO: This will need to be removed in favour of the new Options class
+        
         public void WriteTexToolsPath(string path)
         {
             Options.UpdateConfig(options =>
@@ -457,19 +362,15 @@ namespace FFXIVModExractor
             FileReg.CreateSubKey("shell\\open\\command").SetValue("", $"\"{applicationPath}\" \"%1\"");
             FileReg.Close();
 
-            SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
+            Imports.SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
         }
-        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
-
-        // TODO: This will need to be removed in favour of the new Options class
+        
         public void GetAutoLoadOption()
         {
             var option = Options.GetConfigValue<bool>("AutoLoad");
             autoLoadModCheckbox.Checked = option;
         }
-
-        // TODO: This will need to be removed in favour of the new Options class
+        
         public void WriteAutoLoadOption(bool option)
         {
             Options.UpdateConfig(options =>
@@ -604,7 +505,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://github.com/Sebane1/FFXIVLooseTextureCompiler/",
                     UseShellExecute = true,
@@ -621,7 +522,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://github.com/Sebane1/FFXIVVoicePackCreator/",
                     UseShellExecute = true,
@@ -640,7 +541,7 @@ namespace FFXIVModExractor
             {
                 if (MessageBox.Show("Heliosphere requires a separate dalamud plugin to use.", Text) == DialogResult.OK)
                 {
-                    Process.Start(new System.Diagnostics.ProcessStartInfo()
+                    Process.Start(new ProcessStartInfo
                     {
                         FileName = "https://heliosphere.app/",
                         UseShellExecute = true,
@@ -670,7 +571,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://www.xivmodarchive.com/",
                     UseShellExecute = true,
@@ -687,7 +588,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://discord.gg/9XtTqws2cJ",
                     UseShellExecute = true,
@@ -704,7 +605,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://discord.gg/rtGXwMn7pX",
                     UseShellExecute = true,
@@ -721,7 +622,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://discord.gg/ffxivtextools",
                     UseShellExecute = true,
@@ -738,7 +639,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://discord.gg/8x2G75D46w",
                     UseShellExecute = true,
@@ -755,7 +656,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://www.xivmodarchive.com/modid/56505",
                     UseShellExecute = true,
@@ -777,7 +678,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://ko-fi.com/sebastina",
                     UseShellExecute = true,
@@ -794,7 +695,7 @@ namespace FFXIVModExractor
         {
             try
             {
-                Process.Start(new System.Diagnostics.ProcessStartInfo()
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://discord.gg/rtGXwMn7pX",
                     UseShellExecute = true,

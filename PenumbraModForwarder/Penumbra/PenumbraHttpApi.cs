@@ -3,9 +3,7 @@
 
 namespace Anamnesis.Penumbra;
 
-using System.Threading.Tasks;
-
-public static partial class PenumbraHttpApi {
+public static class PenumbraHttpApi {
     public static async Task Redraw(int targetIndex) {
         RedrawData data = new();
         data.ObjectTableIndex = targetIndex;
