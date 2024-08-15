@@ -8,7 +8,7 @@ namespace PenumbraModForwarder.Services
     {
         public static void DeleteFile(string path)
         {
-            if (Options.GetConfigValue<bool>("AutoDelete"))
+            if (Convert.ToBoolean(Options.ReadFromConfig("AutoDelete").Value))
             {
                 try
                 {
@@ -23,7 +23,7 @@ namespace PenumbraModForwarder.Services
 
         public static void DeleteDirectory(string path)
         {
-            if (Options.GetConfigValue<bool>("AutoDelete"))
+            if (Convert.ToBoolean(Options.ReadFromConfig("AutoDelete").Value))
             {
                 try
                 {
@@ -51,7 +51,6 @@ namespace PenumbraModForwarder.Services
             return path.EndsWith(".7z") || path.EndsWith(".rar") || path.EndsWith(".zip");
         }
 
-        // TODO: Everything below this line needs to be converted from the respective functions inside MainWindow.cs
         public static async Task ProcessZipFile(string path)
         {
             await WaitForFileRelease(path);
@@ -122,6 +121,7 @@ namespace PenumbraModForwarder.Services
             }
             catch (Exception ex)
             {
+                // Handle exceptions as needed
                 string error = ex.Message;
             }
 
