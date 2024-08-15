@@ -1,7 +1,5 @@
 using Anamnesis.Penumbra;
 using System.Security.Policy;
-
-// TODO: Rename to FFXIVModExtractor
 namespace FFXIVModExractor {
     internal static class Program {
         /// <summary>
