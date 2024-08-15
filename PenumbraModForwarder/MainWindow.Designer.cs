@@ -28,17 +28,17 @@ namespace FFXIVModExractor {
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
+            components = new Container();
             Button associateFileTypes;
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(MainWindow));
             fileSystemWatcher = new FileSystemWatcher();
             xma = new Button();
             glamourDresser = new Button();
             nexusMods = new Button();
             aetherlink = new Button();
             kittyEmporium = new Button();
-            downloads = new FFXIVVoicePackCreator.FilePicker();
-            cooldownTimer = new System.Windows.Forms.Timer(components);
+            downloads = new FilePicker();
+            cooldownTimer = new Timer(components);
             autoLoadModCheckbox = new CheckBox();
             label1 = new Label();
             trayIcon = new NotifyIcon(components);
@@ -77,7 +77,7 @@ namespace FFXIVModExractor {
             checkBox1 = new CheckBox();
             AutoDelete = new CheckBox();
             associateFileTypes = new Button();
-            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).BeginInit();
+            ((ISupportInitialize)fileSystemWatcher).BeginInit();
             contextMenu.SuspendLayout();
             SuspendLayout();
             // 
@@ -95,6 +95,7 @@ namespace FFXIVModExractor {
             // 
             fileSystemWatcher.EnableRaisingEvents = true;
             fileSystemWatcher.SynchronizingObject = this;
+            fileSystemWatcher.Created += fileSystemWatcher_Created;
             fileSystemWatcher.Renamed += fileSystemWatcher_Renamed;
             // 
             // xma
@@ -478,7 +479,7 @@ namespace FFXIVModExractor {
             Activated += MainWindow_Activated;
             FormClosing += MainWindow_FormClosing;
             Load += MainWindow_Load;
-            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).EndInit();
+            ((ISupportInitialize)fileSystemWatcher).EndInit();
             contextMenu.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();

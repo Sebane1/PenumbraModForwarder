@@ -20,6 +20,7 @@ namespace FFXIVModExractor
         bool hideAfterLoad;
         private string roleplayingVoiceCache;
         private string _textoolsPath;
+        private ProcessingQueue _processingQueue = new();
 
         public MainWindow()
         {
@@ -165,7 +166,6 @@ namespace FFXIVModExractor
                     finalModPath = modPackPath;
                     trayIcon.BalloonTipText = "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
                     trayIcon.ShowBalloonTip(5000);
-                    FileHandler.DeleteDirectory(Path.Combine(originatingModDirectory, @"Dawntrail Converted\"));
                 }
             }
             PenumbraHttpApi.OpenWindow();
@@ -177,7 +177,10 @@ namespace FFXIVModExractor
 
             // For now we will try to delete the file & folder after it has been sent to Penumbra.
             FileHandler.DeleteFile(modPackPath);
+            // This will most likely print an error to the console, its fine
             FileHandler.DeleteDirectory(finalModPath);
+            // We need to delete it here otherwise we won't have a file to install
+            FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
         }
 
         // TODO: Extract this to a new class called UpdateHandler, will need to handle the ApplicationExitEvent somehow
@@ -195,8 +198,14 @@ namespace FFXIVModExractor
                 exitInitiated = true;
             };
         }
-        
+
         private void fileSystemWatcher_Renamed(object sender, RenamedEventArgs e)
+        {
+            ProcessModPackRequest(e);
+        }
+
+        // Some browsers/download managers will download the file to a temporary location and then move it to the final location.
+        private void fileSystemWatcher_Created(object sender, FileSystemEventArgs e)
         {
             ProcessModPackRequest(e);
         }
@@ -213,8 +222,17 @@ namespace FFXIVModExractor
         }
 
         // TODO: This is being reworked in FileHandler.cs, struggling right now to find a way to handle the tray icon balloon tip when detached from the UI
-        async Task ProcessModPackRequest(RenamedEventArgs e)
+        async Task ProcessModPackRequest(FileSystemEventArgs e)
         {
+            while (_processingQueue.Files.Contains(e.FullPath))
+            {
+                Console.WriteLine("File is already being processed, waiting...");
+                await Task.Delay(100);
+            }
+            
+            // Add the file to the processing queue
+            _processingQueue.Files.Add(e.FullPath);
+            
             if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2"))
             {
                 Thread.Sleep(50);
@@ -303,8 +321,9 @@ namespace FFXIVModExractor
                     bool success = false;
                     SendModToPenumbra(item, ref success);
                 }
-
+                
                 FileHandler.DeleteFile(e.FullPath);
+                _processingQueue.Files.Remove(e.FullPath);
             }
         }
 
@@ -329,7 +348,7 @@ namespace FFXIVModExractor
             //file is not locked
             return false;
         }
-        
+
         public void GetDownloadPath()
         {
             string downloadPath = Options.GetConfigValue<string>("DownloadPath");
@@ -339,7 +358,7 @@ namespace FFXIVModExractor
                 fileSystemWatcher.Path = downloadPath;
             }
         }
-        
+
         public void WriteDownloadPath(string path)
         {
             Options.UpdateConfig(options =>
@@ -347,7 +366,7 @@ namespace FFXIVModExractor
                 options.DownloadPath = path;
             });
         }
-        
+
         public void WriteTexToolsPath(string path)
         {
             Options.UpdateConfig(options =>
@@ -364,13 +383,13 @@ namespace FFXIVModExractor
 
             Imports.SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
         }
-        
+
         public void GetAutoLoadOption()
         {
             var option = Options.GetConfigValue<bool>("AutoLoad");
             autoLoadModCheckbox.Checked = option;
         }
-        
+
         public void WriteAutoLoadOption(bool option)
         {
             Options.UpdateConfig(options =>

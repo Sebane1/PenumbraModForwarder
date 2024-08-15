@@ -128,13 +128,14 @@ namespace PenumbraModForwarder.Services
             return extractedMods;
         }
 
-        public static async Task WaitForFileRelease(string path)
+        public static async Task<bool> WaitForFileRelease(string path)
         {
-            Thread.Sleep(50);
             while (IsFileLocked(path))
             {
-                Thread.Sleep(100);
+                await Task.Delay(100);
             }
+
+            return true;
         }
 
         private static bool IsFileLocked(string file)
