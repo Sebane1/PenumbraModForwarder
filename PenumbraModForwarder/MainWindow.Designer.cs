@@ -1,9 +1,13 @@
-﻿namespace FFXIVModExractor {
+﻿using System.ComponentModel;
+using FFXIVVoicePackCreator;
+using Timer = System.Windows.Forms.Timer;
+
+namespace FFXIVModExractor {
     partial class MainWindow {
         /// <summary>
         ///  Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary>
         ///  Clean up any resources being used.
@@ -22,18 +26,19 @@
         ///  Required method for Designer support - do not modify
         ///  the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent() {
-            components = new System.ComponentModel.Container();
+        private void InitializeComponent()
+        {
+            components = new Container();
             Button associateFileTypes;
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(MainWindow));
             fileSystemWatcher = new FileSystemWatcher();
             xma = new Button();
             glamourDresser = new Button();
             nexusMods = new Button();
             aetherlink = new Button();
             kittyEmporium = new Button();
-            downloads = new FFXIVVoicePackCreator.FilePicker();
-            cooldownTimer = new System.Windows.Forms.Timer(components);
+            downloads = new FilePicker();
+            cooldownTimer = new Timer(components);
             autoLoadModCheckbox = new CheckBox();
             label1 = new Label();
             trayIcon = new NotifyIcon(components);
@@ -69,8 +74,10 @@
             heliopshereButton = new Button();
             donateButton = new Button();
             discordButton = new Button();
+            checkBox1 = new CheckBox();
+            AutoDelete = new CheckBox();
             associateFileTypes = new Button();
-            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).BeginInit();
+            ((ISupportInitialize)fileSystemWatcher).BeginInit();
             contextMenu.SuspendLayout();
             SuspendLayout();
             // 
@@ -88,6 +95,7 @@
             // 
             fileSystemWatcher.EnableRaisingEvents = true;
             fileSystemWatcher.SynchronizingObject = this;
+            fileSystemWatcher.Created += fileSystemWatcher_Created;
             fileSystemWatcher.Renamed += fileSystemWatcher_Renamed;
             // 
             // xma
@@ -426,11 +434,31 @@
             discordButton.UseVisualStyleBackColor = false;
             discordButton.Click += discordButton_Click;
             // 
+            // checkBox1
+            // 
+            checkBox1.Location = new Point(0, 0);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(104, 24);
+            checkBox1.TabIndex = 0;
+            // 
+            // AutoDelete
+            // 
+            AutoDelete.AutoSize = true;
+            AutoDelete.Enabled = false;
+            AutoDelete.Location = new Point(180, 62);
+            AutoDelete.Name = "AutoDelete";
+            AutoDelete.Size = new Size(114, 19);
+            AutoDelete.TabIndex = 18;
+            AutoDelete.Text = "Auto Delete Files";
+            AutoDelete.UseVisualStyleBackColor = true;
+            AutoDelete.CheckedChanged += AutoDelete_CheckedChanged;
+            // 
             // MainWindow
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(313, 168);
+            Controls.Add(AutoDelete);
             Controls.Add(discordButton);
             Controls.Add(donateButton);
             Controls.Add(heliopshereButton);
@@ -451,7 +479,7 @@
             Activated += MainWindow_Activated;
             FormClosing += MainWindow_FormClosing;
             Load += MainWindow_Load;
-            ((System.ComponentModel.ISupportInitialize)fileSystemWatcher).EndInit();
+            ((ISupportInitialize)fileSystemWatcher).EndInit();
             contextMenu.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
@@ -465,8 +493,8 @@
         private Button nexusMods;
         private Button glamourDresser;
         private Button xma;
-        private FFXIVVoicePackCreator.FilePicker downloads;
-        private System.Windows.Forms.Timer cooldownTimer;
+        private FilePicker downloads;
+        private Timer cooldownTimer;
         private Label label1;
         private CheckBox autoLoadModCheckbox;
         private NotifyIcon trayIcon;
@@ -502,5 +530,7 @@
         private Button discordButton;
         private Button donateButton;
         private ToolStripMenuItem donateToolStripMenuItem;
+        private CheckBox checkBox1;
+        private CheckBox AutoDelete;
     }
 }
