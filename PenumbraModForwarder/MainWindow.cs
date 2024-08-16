@@ -89,6 +89,8 @@ namespace FFXIVModExractor {
                         var config = Options.GetConfigValue<bool>("AutoDelete");
                         autoDeleteFilesCheckBox.Enabled = true;
                         autoDeleteFilesCheckBox.Checked = config;
+                        choicePromptCheckBox.Enabled = true;
+                        choicePromptCheckBox.Checked = Options.GetConfigValue<bool>("AllowChoicesBeforeExtractingArchive");
                     }
                 } else {
                     MessageBox.Show("Penumbra Mod Forward is already running.", Text);
@@ -113,14 +115,29 @@ namespace FFXIVModExractor {
                     @"Dawntrail Converted\" + Path.GetFileName(outputModName));
                 trayIcon.BalloonTipText = "Mod pack has been sent to textools for Dawntrail conversion.";
                 trayIcon.ShowBalloonTip(5000);
+                var processStart = new ProcessStartInfo(_textoolsPath);
+                processStart.RedirectStandardOutput = true;
+                processStart.RedirectStandardError = true;
+                processStart.WindowStyle = ProcessWindowStyle.Hidden;
+                processStart.UseShellExecute = false;
+                processStart.RedirectStandardInput = true;
+                processStart.CreateNoWindow = true;
+                processStart.FileName = _textoolsPath;
+                processStart.WorkingDirectory = Path.GetDirectoryName(_textoolsPath);
+                processStart.UseShellExecute = false;
+                processStart.Arguments = @"/upgrade """ + modPackPath + @""" " + @"""" + finalModPath + @"""";
                 Process process = new Process();
-                process.StartInfo.FileName = _textoolsPath;
-                //process.StartInfo.Verb = "runas";
-                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(_textoolsPath);
-                process.StartInfo.UseShellExecute = true;
-                process.StartInfo.Arguments = @"/upgrade """ + modPackPath + @""" " + @"""" + finalModPath + @"""";
+                process.StartInfo = processStart;
+                process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e) { };
+                process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs e) { };
+                process.EnableRaisingEvents = true;
                 process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                WaitingMessageWindow waitingMessageWindow = new WaitingMessageWindow();
+                waitingMessageWindow.Show();
                 process.WaitForExit();
+                waitingMessageWindow.Close();
                 if (!File.Exists(finalModPath)) {
                     finalModPath = modPackPath;
                     trayIcon.BalloonTipText =
@@ -143,7 +160,7 @@ namespace FFXIVModExractor {
                     // This will most likely print an error to the console, its fine
                     FileHandler.DeleteFile(finalModPath);
                     // We need to delete it here otherwise we won't have a file to install
-                    FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
+                    //FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
                 }
             });
         }
@@ -243,7 +260,7 @@ namespace FFXIVModExractor {
                                 }
                             }
                         }
-                        // Dont question why we have to close and re-open the archive file. Apparently if we dont do it the files extract corrupted because we seeked file names first..
+                        // Dont question why we have to close and re-open the archive file. Apparently if we dont do it the files extract corrupted because we seeked file names first.
                         using (var archive = new SevenZipExtractor(e.FullPath)) {
                             if (Options.GetConfigValue<bool>("AllowChoicesBeforeExtractingArchive") && validModFiles.Count > 1) {
                                 ModPackSelectionWindow modPackSelectionWindow = new ModPackSelectionWindow();
