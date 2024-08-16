@@ -347,7 +347,7 @@ namespace FFXIVModExractor {
             } else {
                 rk.DeleteValue(Text, false);
                 Options.UpdateConfig(options => {
-                    options.AutoDelete = false,
+                    options.AutoDelete = false;
                     options.AllowChoicesBeforeExtractingArchive = false;
                 });
                 autoDeleteFilesCheckBox.Enabled = false;
