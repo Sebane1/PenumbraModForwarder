@@ -1,0 +1,27 @@
+name: "Build and Test"
+description: "Build and test on .NET 7"
+
+runs:
+    using: "composite"
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+          
+        - name: Setup .NET
+          uses: actions/setup-dotnet@v4
+          with:
+              dotnet-version: '7.x.x'
+        
+        - name: Restore Dependencies
+          run: dotnet restore
+          shell: bash
+
+#        There are no tests so this is kinda useless
+#        - name: Test
+#          run: dotnet test
+#          shell: bash
+          
+        - name: Build
+          run: dotnet msbuild -p:UseMSBuildHost=true -p:Configuration=Release
+          shell: bash
+          

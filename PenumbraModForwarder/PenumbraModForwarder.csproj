@@ -7,29 +7,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>PMFI.ico</ApplicationIcon>
-    <Version>1.0.0.8</Version>
+    <Version>1.0.0.9</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <COMReference Include="IWshRuntimeLibrary">
-      <WrapperTool>tlbimp</WrapperTool>
-      <VersionMinor>0</VersionMinor>
-      <VersionMajor>1</VersionMajor>
-      <Guid>f935dc20-1cf0-11d0-adb9-00c04fd58a0b</Guid>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="PMFI.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="7z" Version="15.8.0" />
     <PackageReference Include="Autoupdater.NET.Official" Version="1.7.7" />
-    <PackageReference Include="LZMA-SDK" Version="22.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Penumbra.Api" Version="1.0.7" />
     <PackageReference Include="Penumbra.String" Version="1.0.4" />
