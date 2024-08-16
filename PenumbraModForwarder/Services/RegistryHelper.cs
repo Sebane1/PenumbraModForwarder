@@ -28,12 +28,22 @@ public static class RegistryHelper
 
     private static string GetInstallLocation()
     {
-        return GetRegistryValue(RegistryPath, "InstallLocation");
+        var installLocation = GetRegistryValue(RegistryPath, "InstallLocation");
+        if (string.IsNullOrEmpty(installLocation))
+        {
+            Console.WriteLine("Error: InstallLocation not found in registry.");
+        }
+        return installLocation;
     }
 
     public static string GetTexToolsConsolePath()
     {
-        return GetInstallLocation() + @"\ConsoleTools.exe";
+        var installLocation = GetInstallLocation();
+        if (string.IsNullOrEmpty(installLocation))
+        {
+            return "";
+        }
+        return installLocation;
     }
 
 }
