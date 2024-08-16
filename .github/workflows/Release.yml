@@ -26,6 +26,7 @@ jobs:
   build-release-upload:
     environment: Release
     runs-on: windows-latest
+    needs: validate-tag
     strategy:
       fail-fast: true
 
@@ -43,6 +44,19 @@ jobs:
           retention-days: 10
           name: "artifact"
 
+      - name: Create Release
+        uses: softprops/action-gh-release@v2.0.8
+        with:
+          tag_name: ${{ github.event.inputs.tagName }}
+          files: ./publish/PenumbraModForwarder.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-version:
+    runs-on: ubuntu-latest
+    needs: build-release-upload
+
+    steps:
       - name: Update XML and Update URL
         run: |
           $version = "${{ github.event.inputs.tagName }}"
@@ -58,11 +72,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           body: "**Automated pull request**<br><br>Updated Version Number"
           title: "Update Version Number"
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2.0.8
-        with:
-          tag_name: ${{ github.event.inputs.tagName }}
-          files: ./publish/PenumbraModForwarder.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
