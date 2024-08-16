@@ -7,7 +7,6 @@ on:
                 description: 'Tag Name'
                 required: true
                 
-    pull_request: 
 
 permissions:
     contents: write
