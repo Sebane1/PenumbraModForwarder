@@ -26,8 +26,7 @@ namespace FFXIVModExractor {
         ///  Required method for Designer support - do not modify
         ///  the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent()
-        {
+        private void InitializeComponent() {
             components = new Container();
             Button associateFileTypes;
             ComponentResourceManager resources = new ComponentResourceManager(typeof(MainWindow));
@@ -75,7 +74,8 @@ namespace FFXIVModExractor {
             donateButton = new Button();
             discordButton = new Button();
             checkBox1 = new CheckBox();
-            AutoDelete = new CheckBox();
+            autoDeleteFilesCheckBox = new CheckBox();
+            choicePromptCheckBox = new CheckBox();
             associateFileTypes = new Button();
             ((ISupportInitialize)fileSystemWatcher).BeginInit();
             contextMenu.SuspendLayout();
@@ -100,7 +100,7 @@ namespace FFXIVModExractor {
             // 
             // xma
             // 
-            xma.Location = new Point(0, 90);
+            xma.Location = new Point(0, 113);
             xma.Name = "xma";
             xma.Size = new Size(104, 23);
             xma.TabIndex = 2;
@@ -110,7 +110,7 @@ namespace FFXIVModExractor {
             // 
             // glamourDresser
             // 
-            glamourDresser.Location = new Point(104, 90);
+            glamourDresser.Location = new Point(104, 113);
             glamourDresser.Name = "glamourDresser";
             glamourDresser.Size = new Size(124, 23);
             glamourDresser.TabIndex = 3;
@@ -120,7 +120,7 @@ namespace FFXIVModExractor {
             // 
             // nexusMods
             // 
-            nexusMods.Location = new Point(228, 90);
+            nexusMods.Location = new Point(228, 113);
             nexusMods.Name = "nexusMods";
             nexusMods.Size = new Size(84, 23);
             nexusMods.TabIndex = 4;
@@ -130,7 +130,7 @@ namespace FFXIVModExractor {
             // 
             // aetherlink
             // 
-            aetherlink.Location = new Point(0, 114);
+            aetherlink.Location = new Point(0, 137);
             aetherlink.Name = "aetherlink";
             aetherlink.Size = new Size(72, 23);
             aetherlink.TabIndex = 5;
@@ -140,7 +140,7 @@ namespace FFXIVModExractor {
             // 
             // kittyEmporium
             // 
-            kittyEmporium.Location = new Point(156, 114);
+            kittyEmporium.Location = new Point(156, 137);
             kittyEmporium.Name = "kittyEmporium";
             kittyEmporium.Size = new Size(156, 23);
             kittyEmporium.TabIndex = 6;
@@ -182,7 +182,7 @@ namespace FFXIVModExractor {
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
-            label1.Location = new Point(0, 62);
+            label1.Location = new Point(0, 85);
             label1.Name = "label1";
             label1.Size = new Size(109, 25);
             label1.TabIndex = 12;
@@ -402,7 +402,7 @@ namespace FFXIVModExractor {
             // 
             // heliopshereButton
             // 
-            heliopshereButton.Location = new Point(72, 114);
+            heliopshereButton.Location = new Point(72, 137);
             heliopshereButton.Name = "heliopshereButton";
             heliopshereButton.Size = new Size(84, 23);
             heliopshereButton.TabIndex = 13;
@@ -414,7 +414,7 @@ namespace FFXIVModExractor {
             // 
             donateButton.BackColor = Color.LightCoral;
             donateButton.ForeColor = Color.White;
-            donateButton.Location = new Point(156, 138);
+            donateButton.Location = new Point(156, 161);
             donateButton.Name = "donateButton";
             donateButton.Size = new Size(156, 28);
             donateButton.TabIndex = 16;
@@ -426,7 +426,7 @@ namespace FFXIVModExractor {
             // 
             discordButton.BackColor = Color.SlateBlue;
             discordButton.ForeColor = Color.White;
-            discordButton.Location = new Point(0, 138);
+            discordButton.Location = new Point(0, 161);
             discordButton.Name = "discordButton";
             discordButton.Size = new Size(156, 28);
             discordButton.TabIndex = 17;
@@ -441,24 +441,37 @@ namespace FFXIVModExractor {
             checkBox1.Size = new Size(104, 24);
             checkBox1.TabIndex = 0;
             // 
-            // AutoDelete
+            // autoDeleteFilesCheckBox
             // 
-            AutoDelete.AutoSize = true;
-            AutoDelete.Enabled = false;
-            AutoDelete.Location = new Point(180, 62);
-            AutoDelete.Name = "AutoDelete";
-            AutoDelete.Size = new Size(114, 19);
-            AutoDelete.TabIndex = 18;
-            AutoDelete.Text = "Auto Delete Files";
-            AutoDelete.UseVisualStyleBackColor = true;
-            AutoDelete.CheckedChanged += AutoDelete_CheckedChanged;
+            autoDeleteFilesCheckBox.AutoSize = true;
+            autoDeleteFilesCheckBox.Enabled = false;
+            autoDeleteFilesCheckBox.Location = new Point(180, 62);
+            autoDeleteFilesCheckBox.Name = "autoDeleteFilesCheckBox";
+            autoDeleteFilesCheckBox.Size = new Size(114, 19);
+            autoDeleteFilesCheckBox.TabIndex = 18;
+            autoDeleteFilesCheckBox.Text = "Auto Delete Files";
+            autoDeleteFilesCheckBox.UseVisualStyleBackColor = true;
+            autoDeleteFilesCheckBox.CheckedChanged += AutoDelete_CheckedChanged;
+            // 
+            // choicePromptCheckBox
+            // 
+            choicePromptCheckBox.AutoSize = true;
+            choicePromptCheckBox.Enabled = false;
+            choicePromptCheckBox.Location = new Point(180, 85);
+            choicePromptCheckBox.Name = "choicePromptCheckBox";
+            choicePromptCheckBox.Size = new Size(106, 19);
+            choicePromptCheckBox.TabIndex = 19;
+            choicePromptCheckBox.Text = "Choice Prompt";
+            choicePromptCheckBox.UseVisualStyleBackColor = true;
+            choicePromptCheckBox.CheckedChanged += choicePromptCheckBox_CheckedChanged;
             // 
             // MainWindow
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(313, 168);
-            Controls.Add(AutoDelete);
+            ClientSize = new Size(313, 191);
+            Controls.Add(choicePromptCheckBox);
+            Controls.Add(autoDeleteFilesCheckBox);
             Controls.Add(discordButton);
             Controls.Add(donateButton);
             Controls.Add(heliopshereButton);
@@ -531,6 +544,7 @@ namespace FFXIVModExractor {
         private Button donateButton;
         private ToolStripMenuItem donateToolStripMenuItem;
         private CheckBox checkBox1;
-        private CheckBox AutoDelete;
+        private CheckBox autoDeleteFilesCheckBox;
+        private CheckBox choicePromptCheckBox;
     }
 }
