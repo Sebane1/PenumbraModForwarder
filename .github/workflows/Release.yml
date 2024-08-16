@@ -1,71 +1,69 @@
 name: Manual Release
 
 on:
-    workflow_dispatch: 
-        inputs:
-            tagName:
-                description: 'Tag Name'
-                required: true
-                default: 'vX.X.X.X'
-                
+  workflow_dispatch:
+    inputs:
+      tagName:
+        description: "Tag Name"
+        required: true
+        default: "vX.X.X.X"
 
 permissions:
-    contents: write
-    packages: write
-    
-jobs:
-    validate-tag:
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Validate Tag Name
-                run: |
-                    if [[ ! "${{ github.event.inputs.tagName }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                    echo "Invalid tag name format. Please use the format vX.X.X.X"
-                    exit 1
-                    fi
-                    
-    build-release-upload:
-        environment: Release
-        runs-on: windows-latest
-        strategy: 
-            fail-fast: true
-        
-        steps:
-            - name: Checkout Repository
-              uses: actions/checkout@v3
-              
-            - name: Build and Publish
-              uses: ./.github/templates/ReleaseAndPublish
-              
-            - name: Upload Artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  path: ./publish/PenumbraModForwarder.zip
-                  retention-days: 10
-                  name: 'artifact'
-                  
-                  
-            - name: Update XML and Update URL
-              run: |
-                  $version = "${{ github.event.inputs.tagName }}"
-                  $xmlFile = "./update.xml"
-                  $xml = [xml](Get-Content $xmlFile)
-                  $xml.item.version = $version
-                  $xml.item.url = "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v$version/PenumbraModForwarder.zip"
-                  $xml.Save($xmlFile)
+  contents: write
+  packages: write
 
-            - name: Commit and Push Changes
-              run: |
-                  git config --global username "github-actions"
-                  git config --global user.mail "github-actions@github.com"
-                  git add ./update.xml
-                  git commit -m "Bump version to ${{ github.event.inputs.tagName }}"
-                  git push
-            
-            - name: Create Release
-              uses: softprops/action-gh-release@v2.0.8
-              with:
-                  tag_name: ${{ github.event.inputs.tagName }}
-                  files: ./publish/PenumbraModForwarder.zip
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Tag Name
+        run: |
+          if [[ ! "${{ github.event.inputs.tagName }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Invalid tag name format. Please use the format vX.X.X.X"
+          exit 1
+          fi
+
+  build-release-upload:
+    environment: Release
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build and Publish
+        uses: ./.github/templates/ReleaseAndPublish
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./publish/PenumbraModForwarder.zip
+          retention-days: 10
+          name: "artifact"
+
+      - name: Update XML and Update URL
+        run: |
+          $version = "${{ github.event.inputs.tagName }}"
+          $xmlFile = "./update.xml"
+          $xml = [xml](Get-Content $xmlFile)
+          $xml.item.version = $version
+          $xml.item.url = "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v$version/PenumbraModForwarder.zip"
+          $xml.Save($xmlFile)
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.mail "github-actions@github.com"
+          git add ./update.xml
+          git commit -m "Bump version to ${{ github.event.inputs.tagName }}"
+          git push
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2.0.8
+        with:
+          tag_name: ${{ github.event.inputs.tagName }}
+          files: ./publish/PenumbraModForwarder.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
