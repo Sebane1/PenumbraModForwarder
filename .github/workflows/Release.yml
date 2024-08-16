@@ -59,12 +59,13 @@ jobs:
     steps:
       - name: Update XML and Update URL
         run: |
-          $version = "${{ github.event.inputs.tagName }}"
-          $xmlFile = "./update.xml"
-          $xml = [xml](Get-Content $xmlFile)
-          $xml.item.version = $version
-          $xml.item.url = "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v$version/PenumbraModForwarder.zip"
-          $xml.Save($xmlFile)
+          version="${{ github.event.inputs.tagName }}"
+          xml_file="./update.xml"
+          xml=$(cat "$xml_file")
+          xml=$(echo "$xml" | sed "s/<version>.*<\/version>/<version>$version<\/version>/")
+          xml=$(echo "$xml" | sed "s/<url>.*<\/url>/<url>https:\/\/github.com\/Sebane1\/PenumbraModForwarder\/releases\/download\/v$version\/PenumbraModForwarder.zip<\/url>/")
+          echo "$xml" > "$xml_file"
+        shell: bash
 
       - name: Create a PR with the changes
         uses: devops-infra/action-pull-request@master
