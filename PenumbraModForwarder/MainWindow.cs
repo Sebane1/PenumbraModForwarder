@@ -135,15 +135,17 @@ namespace FFXIVModExractor {
             trayIcon.ShowBalloonTip(5000);
             Thread.Sleep(6000);
             foundValidFile = true;
-
-            if (Options.GetConfigValue<bool>("AutoDelete")) {
-                // For now we will try to delete the file & folder after it has been sent to Penumbra.
-                FileHandler.DeleteFile(modPackPath);
-                // This will most likely print an error to the console, its fine
-                FileHandler.DeleteFile(finalModPath);
-                // We need to delete it here otherwise we won't have a file to install
-                FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
-            }
+            Task.Run(async () => {
+                await FileHandler.WaitForFileRelease(finalModPath);
+                if (Options.GetConfigValue<bool>("AutoDelete")) {
+                    // For now we will try to delete the file & folder after it has been sent to Penumbra.
+                    FileHandler.DeleteFile(modPackPath);
+                    // This will most likely print an error to the console, its fine
+                    FileHandler.DeleteFile(finalModPath);
+                    // We need to delete it here otherwise we won't have a file to install
+                    FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
+                }
+            });
         }
 
         // TODO: Extract this to a new class called UpdateHandler, will need to handle the ApplicationExitEvent somehow
@@ -248,8 +250,9 @@ namespace FFXIVModExractor {
                                         string fileName = InvalidPenumbraSymbolReplacer(validModFiles[item]);
                                         using (FileStream outputFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write)) {
                                             archive.ExtractFile(item, outputFileStream);
-                                            extractedModFiles.Add(validModFiles[item]);
+                                            outputFileStream.Flush();
                                         }
+                                        extractedModFiles.Add(validModFiles[item]);
                                     }
                                 }
                             } else {
@@ -258,8 +261,9 @@ namespace FFXIVModExractor {
                                     using (FileStream outputFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write)) {
                                         int index = archive.ArchiveFileNames.IndexOf(item);
                                         archive.ExtractFile(index, outputFileStream);
-                                        extractedModFiles.Add(item);
+                                        outputFileStream.Flush();
                                     }
+                                    extractedModFiles.Add(item);
                                 }
                             }
                         }
