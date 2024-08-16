@@ -1,48 +1,41 @@
-using Microsoft.Win32;
-
 namespace PenumbraModForwarder.Services;
+
+using Microsoft.Win32;
+using System;
+using System.IO;
 
 public static class RegistryHelper
 {
-    private const string RegistryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
+    private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
 
-    private static string GetRegistryValue(string keyName, string valueName)
+    private static string? GetRegistryValue(string keyValue)
     {
         try
         {
-            using RegistryKey key = Registry.LocalMachine.OpenSubKey(keyName);
-            if (key == null)
-            {
-                return "";
-            }
-
-            return key.GetValue(valueName).ToString();
+            using var key = Registry.LocalMachine.OpenSubKey(RegistryPath);
+            return key?.GetValue(keyValue)?.ToString();
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error reading registry: {e.Message}");
-            return "";
+            Console.WriteLine($"Error accessing registry: {e.Message}\n{e.StackTrace}");
+            return null;
         }
-    }
-
-    private static string GetInstallLocation()
-    {
-        var installLocation = GetRegistryValue(RegistryPath, "InstallLocation");
-        if (string.IsNullOrEmpty(installLocation))
-        {
-            Console.WriteLine("Error: InstallLocation not found in registry.");
-        }
-        return installLocation;
     }
 
     public static string GetTexToolsConsolePath()
     {
-        var installLocation = GetInstallLocation();
-        if (string.IsNullOrEmpty(installLocation))
+        var path = GetRegistryValue("InstallLocation");
+        
+        // Strip the path of ""
+        if (path != null && path.StartsWith("\"") && path.EndsWith("\""))
         {
-            return "";
+            path = path[1..^1];
         }
-        return installLocation;
-    }
+        
+        // The path just returns the folder, we need to find ConsoleTools.exe which is at the location /path/FFXIV_TexTools/ConsoleTools.exe
+        var combinedPath = Path.Combine(path ?? string.Empty, "FFXIV_TexTools", "ConsoleTools.exe");
 
+        // Check if ConsoleTools.exe exists
+        return File.Exists(combinedPath) ? combinedPath : string.Empty;
+    }
 }
