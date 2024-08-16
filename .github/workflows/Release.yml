@@ -52,12 +52,12 @@ jobs:
           $xml.item.url = "https://github.com/Sebane1/PenumbraModForwarder/releases/download/v$version/PenumbraModForwarder.zip"
           $xml.Save($xmlFile)
 
-      - name: Commit and Push Changes
-        run: |
-          git config user.name "github-actions"
-          git add ./update.xml
-          git commit -m "Bump version to ${{ github.event.inputs.tagName }}"
-          git push
+      - name: Create a PR with the changes
+        uses: devops-infra/action-pull-request@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          body: "**Automated pull request**<br><br>Updated Version Number"
+          title: "Update Version Number"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2.0.8
