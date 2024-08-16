@@ -7,6 +7,8 @@ on:
                 description: 'Tag Name'
                 required: true
                 
+    pull_request: 
+
 permissions:
     contents: write
     packages: write
@@ -36,7 +38,9 @@ jobs:
             - name: Upload Artifact
               uses: actions/upload-artifact@v2
               with:
-                  name: publish
+                  path: ./publish/PenumbraModForwarder.zip
+                  retention-days: 30
+                  name: 'artifact'
                   
 #            Uncomment this section if you want to update the XML file and create a release
                   
