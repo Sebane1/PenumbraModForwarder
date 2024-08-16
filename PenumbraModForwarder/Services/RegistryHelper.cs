@@ -4,7 +4,6 @@ namespace PenumbraModForwarder.Services;
 
 public static class RegistryHelper
 {
-    // I need to read the registry of HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools to get the InstallLocation
     private const string RegistryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
 
     private static string GetRegistryValue(string keyName, string valueName)
