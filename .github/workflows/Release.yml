@@ -54,8 +54,7 @@ jobs:
 
       - name: Commit and Push Changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.mail "github-actions@github.com"
+          git config user.name "github-actions"
           git add ./update.xml
           git commit -m "Bump version to ${{ github.event.inputs.tagName }}"
           git push
