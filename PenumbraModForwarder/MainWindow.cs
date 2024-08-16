@@ -11,7 +11,6 @@ using PenumbraModForwarder;
 using PenumbraModForwarder.Enums;
 using PenumbraModForwarder.Services;
 using SevenZip;
-using File = System.IO.File;
 
 namespace FFXIVModExractor {
     public partial class MainWindow : Form {
@@ -61,13 +60,7 @@ namespace FFXIVModExractor {
 
         private void MainWindow_Load(object sender, EventArgs e) {
             // If this path is not found textools reliant functions will be disabled until textools is installed.
-            var textoolsInk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                @"Microsoft\Windows\Start Menu\Programs\FFXIV TexTools\FFXIV TexTools.lnk");
-
-            if (File.Exists(textoolsInk)) {
-                var texToolsDirectory = Path.GetDirectoryName(ShortcutHandler.GetShortcutTarget(textoolsInk));
-                _textoolsPath = Path.Combine(texToolsDirectory, "ConsoleTools.exe");
-            }
+            _textoolsPath = RegistryHelper.GetTexToolsConsolePath();
 
             string[] arguments = Environment.GetCommandLineArgs();
             bool foundValidFile = false;
@@ -354,7 +347,7 @@ namespace FFXIVModExractor {
             } else {
                 rk.DeleteValue(Text, false);
                 Options.UpdateConfig(options => {
-                    options.AutoDelete = false;
+                    options.AutoDelete = false,
                     options.AllowChoicesBeforeExtractingArchive = false;
                 });
                 autoDeleteFilesCheckBox.Enabled = false;
