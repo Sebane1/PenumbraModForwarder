@@ -242,6 +242,9 @@ namespace FFXIVModExractor {
                                     validModFiles.Add(tempOutputPath);
                                 }
                             }
+                        }
+                        // Dont question why we have to close and re-open the archive file. Apparently if we dont do it the files extract corrupted because we seeked file names first..
+                        using (var archive = new SevenZipExtractor(e.FullPath)) {
                             if (Options.GetConfigValue<bool>("AllowChoicesBeforeExtractingArchive") && validModFiles.Count > 1) {
                                 ModPackSelectionWindow modPackSelectionWindow = new ModPackSelectionWindow();
                                 modPackSelectionWindow.ModPackItems = validModFiles.ToArray();
