@@ -4,6 +4,7 @@ using System.Linq;
 using System.Timers;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
+using Timer = System.Timers.Timer;
 
 namespace PenumbraModForwarder.Common.Services
 {
@@ -11,22 +12,24 @@ namespace PenumbraModForwarder.Common.Services
     {
         private readonly ILogger<FileWatcher> _logger;
         private readonly IConfigurationService _configurationService;
+        private readonly IArchiveHelperService _archiveHelperService;
         private FileSystemWatcher _watcher;
-        private System.Timers.Timer _debounceTimer;
+        private Timer _debounceTimer;
         private ConcurrentQueue<string> _changeQueue;
         private HashSet<string> _processingFiles;
         private readonly TimeSpan _debounceInterval = TimeSpan.FromMilliseconds(500);
         private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
-        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService)
+        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IArchiveHelperService archiveHelperService)
         {
-            _logger = logger;
-            _configurationService = configurationService;
-            
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+            _archiveHelperService = archiveHelperService ?? throw new ArgumentNullException(nameof(archiveHelperService));
+
             _changeQueue = new ConcurrentQueue<string>();
             _processingFiles = new HashSet<string>();
 
-            _debounceTimer = new System.Timers.Timer(_debounceInterval.TotalMilliseconds)
+            _debounceTimer = new Timer(_debounceInterval.TotalMilliseconds)
             {
                 AutoReset = false
             };
@@ -36,10 +39,10 @@ namespace PenumbraModForwarder.Common.Services
             {
                 InitializeWatcher();
             }
-            
+
             _configurationService.ConfigChanged += OnConfigChange;
         }
-        
+
         private void OnConfigChange(object sender, EventArgs e)
         {
             _logger.LogInformation("Config changed");
@@ -49,14 +52,21 @@ namespace PenumbraModForwarder.Common.Services
         private void InitializeWatcher()
         {
             _logger.LogInformation("Initializing watcher");
-            Dispose();
-            
+
+            // Clean up old watcher
+            if (_watcher != null)
+            {
+                _watcher.Created -= OnFileCreated;
+                _watcher.Renamed -= OnFileRenamed;
+                _watcher.Dispose();
+            }
+
             var directory = _configurationService.GetConfigValue(config => config.DownloadPath);
-            
+
             if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
             {
-                _logger.LogWarning("Directory does not exist");
-                return; 
+                _logger.LogWarning("Directory does not exist or is invalid.");
+                return;
             }
 
             _watcher = new FileSystemWatcher
@@ -64,12 +74,11 @@ namespace PenumbraModForwarder.Common.Services
                 Path = directory,
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName
             };
-            
+
             _watcher.Created += OnFileCreated;
             _watcher.Renamed += OnFileRenamed;
-            
             _watcher.EnableRaisingEvents = true;
-            
+
             _logger.LogInformation($"Watching directory: {directory}");
         }
 
@@ -82,14 +91,13 @@ namespace PenumbraModForwarder.Common.Services
         {
             ProcessFileEvent(e.FullPath);
         }
-        
+
         private void ProcessFileEvent(string filePath)
         {
             if (_processingFiles.Contains(filePath)) return;
-            
+
             var fileExtension = Path.GetExtension(filePath).ToLower();
-            
-            // Check if the file extension is in the allowed list
+
             if (_allowedExtensions.Contains(fileExtension))
             {
                 _changeQueue.Enqueue(filePath);
@@ -115,17 +123,17 @@ namespace PenumbraModForwarder.Common.Services
                 _processingFiles.Add(file);
                 _logger.LogInformation($"Processing file: {file}");
 
-                // File processing logic here using FileHandlerService
+                try
+                {
+                    _archiveHelperService.ExtractArchive(file);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to extract archive: {file}");
+                }
 
                 _processingFiles.Remove(file);
             }
-        }
-        
-        private void Dispose()
-        {
-            _logger.LogInformation("Disposing watcher");
-            _watcher?.Dispose();
-            _debounceTimer?.Dispose();
         }
     }
 }

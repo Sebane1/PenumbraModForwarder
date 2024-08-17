@@ -6,10 +6,12 @@ namespace PenumbraModForwarder.Common.Services;
 public class FileHandlerService : IFileHandlerService
 {
     private readonly ILogger<FileHandlerService> _logger;
+    private readonly IArchiveHelperService _archiveHelperService;
 
-    public FileHandlerService(ILogger<FileHandlerService> logger)
+    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService)
     {
         _logger = logger;
+        _archiveHelperService = archiveHelperService;
     }
     
     public void HandleFile(string filePath)
@@ -19,6 +21,7 @@ public class FileHandlerService : IFileHandlerService
         {
             _logger.LogWarning("File is an Archive");
             // Extract the archive using ArchiveHelperService
+            _archiveHelperService.ExtractArchive(filePath);
         }
         
         //Check if the file is a mod file

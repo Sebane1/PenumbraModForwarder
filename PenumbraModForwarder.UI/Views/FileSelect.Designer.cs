@@ -24,7 +24,7 @@ partial class FileSelect
     }
 
     #region Windows Form Designer generated code
-    private System.Windows.Forms.ListBox fileListBox;
+    private System.Windows.Forms.CheckedListBox fileCheckedListBox;
 
     /// <summary>
     /// Required method for Designer support - do not modify
@@ -32,30 +32,42 @@ partial class FileSelect
     /// </summary>
     private void InitializeComponent()
     {
-        this.fileListBox = new System.Windows.Forms.ListBox();
-        this.SuspendLayout();
+        fileCheckedListBox = new CheckedListBox();
+        confirmButton = new Button();
+        SuspendLayout();
         // 
-        // fileListBox
+        // fileCheckedListBox
         // 
-        this.fileListBox.FormattingEnabled = true;
-        this.fileListBox.Location = new System.Drawing.Point(12, 12);
-        this.fileListBox.Name = "fileListBox";
-        this.fileListBox.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
-        this.fileListBox.Size = new System.Drawing.Size(760, 274);
-        this.fileListBox.TabIndex = 0;
+        fileCheckedListBox.FormattingEnabled = true;
+        fileCheckedListBox.Location = new Point(12, 12);
+        fileCheckedListBox.Name = "fileCheckedListBox";
+        fileCheckedListBox.Size = new Size(776, 328);
+        fileCheckedListBox.TabIndex = 0;
+        // 
+        // confirmButton
+        // 
+        confirmButton.Location = new Point(669, 377);
+        confirmButton.Name = "confirmButton";
+        confirmButton.Size = new Size(119, 37);
+        confirmButton.TabIndex = 1;
+        confirmButton.Text = "Confirm Selection";
+        confirmButton.UseVisualStyleBackColor = true;
         // 
         // FileSelect
         // 
-        this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-        this.ClientSize = new System.Drawing.Size(796, 328);
-        this.Controls.Add(this.fileListBox);
-        this.MaximizeBox = false;
-        this.MinimizeBox = false;
-        this.Name = "FileSelect";
-        this.Text = "Select a File";
-        this.ResumeLayout(false);
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        ClientSize = new Size(800, 450);
+        Controls.Add(confirmButton);
+        Controls.Add(fileCheckedListBox);
+        MaximizeBox = false;
+        MinimizeBox = false;
+        Name = "FileSelect";
+        Text = "Select Files";
+        ResumeLayout(false);
     }
 
     #endregion
+
+    private Button confirmButton;
 }

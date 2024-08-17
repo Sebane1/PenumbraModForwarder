@@ -10,6 +10,7 @@ public class MainWindowViewModel : ReactiveObject
 {
     private readonly IConfigurationService _configurationService;
     private readonly ILogger<MainWindowViewModel> _logger;
+    // This will start the file watcher for us
     private readonly IFileWatcher _fileWatcher;
     
     private string _selectedFolderPath;
