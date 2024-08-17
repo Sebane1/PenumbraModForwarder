@@ -6,4 +6,5 @@ public interface IConfigurationService
 {
     public T GetConfigValue<T>(Func<ConfigurationModel, T> getValue);
     public void SetConfigValue<T>(Action<ConfigurationModel, T> setValue, T value);
+    public event EventHandler ConfigChanged;
 }

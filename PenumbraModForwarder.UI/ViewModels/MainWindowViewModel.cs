@@ -10,11 +10,13 @@ public class MainWindowViewModel : ReactiveObject
 {
     private readonly IConfigurationService _configurationService;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private readonly IFileWatcher _fileWatcher;
     
     private string _selectedFolderPath;
     private bool _autoDelete;
     private bool _autoLoad;
     private bool _extractAll;
+    private bool _selectBoxEnabled;
     
     public string SelectedFolderPath
     {
@@ -31,7 +33,11 @@ public class MainWindowViewModel : ReactiveObject
     public bool AutoLoad
     {
         get => _autoLoad;
-        set => this.RaiseAndSetIfChanged(ref _autoLoad, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _autoLoad, value);
+            SelectBoxEnabled = value;
+        }
     }
     
     public bool ExtractAll
@@ -40,16 +46,24 @@ public class MainWindowViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _extractAll, value);
     }
     
+    public bool SelectBoxEnabled
+    {
+        get => _selectBoxEnabled;
+        set => this.RaiseAndSetIfChanged(ref _selectBoxEnabled, value);
+    }
+    
     public ReactiveCommand<Unit, Unit> OpenFolderDialog { get; }
     public ReactiveCommand<bool, Unit> UpdateAutoDeleteCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateAutoLoadCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateExtractAllCommand { get; }
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher)
     {
         _configurationService = configurationService;
         _logger = logger;
+        // This will start the file watcher for us
+        _fileWatcher = fileWatcher;
         SetAllConfigValues();
         
         _logger.LogInformation("MainWindowViewModel created.");

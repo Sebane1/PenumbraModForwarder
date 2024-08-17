@@ -4,6 +4,7 @@ using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 using Microsoft.Extensions.Logging;
+using PenumbraModForwarder.Common.Models;
 
 namespace PenumbraModForwarder.UI.Extensions;
 
@@ -16,12 +17,15 @@ public static class ServiceExtensions
         ConfigureViews(services);
         ConfigureLogging(services);
 
+        services.AddAutoMapper(typeof(MappingProfile));
+
         return services.BuildServiceProvider();
     }
     
     private static void ConfigureServices(ServiceCollection services)
     {
         services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IFileWatcher, FileWatcher>();
     }
     
     private static void ConfigureViews(ServiceCollection services)

@@ -53,6 +53,9 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             {
                 ViewModel.UpdateExtractAllCommand.Execute(extractall_checkbox.Checked).Subscribe();
             };
+            
+            this.Bind(ViewModel, vm => vm.SelectBoxEnabled, v => v.select_directory.Enabled)
+                .DisposeWith(disposables);
         });
     }
 }
