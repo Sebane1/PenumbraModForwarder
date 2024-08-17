@@ -67,15 +67,15 @@ namespace PenumbraModForwarder.Common.Services
                     SaveConfig();
                 }
                 
-                _logger.LogInformation("Deleting old config file");
-                File.Delete(file);
+                // _logger.LogInformation("Deleting old config file");
+                // File.Delete(file);
             }
 
-            if (!Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                                  @"\PenumbraModForwarder\PenumbraModForwarder")) return;
-            _logger.LogInformation("Deleting old config directory");
-            Directory.Delete(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                             @"\PenumbraModForwarder\PenumbraModForwarder", true);
+            // if (!Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+            //                       @"\PenumbraModForwarder\PenumbraModForwarder")) return;
+            // _logger.LogInformation("Deleting old config directory");
+            // Directory.Delete(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+            //                  @"\PenumbraModForwarder\PenumbraModForwarder", true);
         }
         
         private void SaveConfig()
