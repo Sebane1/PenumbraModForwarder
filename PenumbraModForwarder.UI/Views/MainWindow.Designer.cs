@@ -49,16 +49,17 @@ partial class MainWindow
         // 
         // directory_text
         // 
-        directory_text.Location = new Point(74, 12);
+        directory_text.Enabled = false;
+        directory_text.Location = new Point(12, 12);
         directory_text.Name = "directory_text";
         directory_text.ReadOnly = true;
-        directory_text.Size = new Size(146, 23);
+        directory_text.Size = new Size(208, 23);
         directory_text.TabIndex = 1;
         // 
         // autoforward_checkbox
         // 
         autoforward_checkbox.AutoSize = true;
-        autoforward_checkbox.Location = new Point(170, 57);
+        autoforward_checkbox.Location = new Point(170, 52);
         autoforward_checkbox.Name = "autoforward_checkbox";
         autoforward_checkbox.Size = new Size(131, 19);
         autoforward_checkbox.TabIndex = 2;
@@ -68,7 +69,7 @@ partial class MainWindow
         // autodelete_checkbox
         // 
         autodelete_checkbox.AutoSize = true;
-        autodelete_checkbox.Location = new Point(170, 82);
+        autodelete_checkbox.Location = new Point(170, 102);
         autodelete_checkbox.Name = "autodelete_checkbox";
         autodelete_checkbox.Size = new Size(121, 19);
         autodelete_checkbox.TabIndex = 3;
@@ -78,7 +79,7 @@ partial class MainWindow
         // extractall_checkbox
         // 
         extractall_checkbox.AutoSize = true;
-        extractall_checkbox.Location = new Point(170, 107);
+        extractall_checkbox.Location = new Point(170, 77);
         extractall_checkbox.Name = "extractall_checkbox";
         extractall_checkbox.Size = new Size(112, 19);
         extractall_checkbox.TabIndex = 4;
