@@ -17,11 +17,15 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Interfaces\" />
       <Folder Include="Models\" />
     </ItemGroup>
 
     <ItemGroup>
       <Compile Update="Views\MainWindow.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="Views\FileSelect.cs">
         <SubType>Form</SubType>
       </Compile>
     </ItemGroup>
