@@ -12,7 +12,8 @@ static class Program
     static void Main()
     {
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
-        
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(serviceProvider.GetRequiredService<MainWindow>());
     }
 }
