@@ -115,7 +115,7 @@ namespace PenumbraModForwarder.Common.Services
                 _processingFiles.Add(file);
                 _logger.LogInformation($"Processing file: {file}");
 
-                // File processing logic here
+                // File processing logic here using FileHandlerService
 
                 _processingFiles.Remove(file);
             }
