@@ -1,44 +1,58 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reactive;
+using System.Reactive.Concurrency;
 using Microsoft.Extensions.Logging;
+using PenumbraModForwarder.Common.Interfaces;
 using ReactiveUI;
 
-namespace PenumbraModForwarder.UI.ViewModels
+public class FileSelectViewModel : ReactiveObject
 {
-    public class FileSelectViewModel : ReactiveObject
+    private readonly ILogger<FileSelectViewModel> _logger;
+
+    public ObservableCollection<string> Files { get; } = new();
+
+    private string[] _selectedFiles = Array.Empty<string>();
+    public string[] SelectedFiles
     {
-        private readonly ILogger<FileSelectViewModel> _logger;
-        public ObservableCollection<string> Files { get; }
+        get => _selectedFiles;
+        set => this.RaiseAndSetIfChanged(ref _selectedFiles, value);
+    }
 
-        private string _selectedFile;
-        public string SelectedFile
+    public ReactiveCommand<Unit, Unit> ConfirmSelectionCommand { get; }
+
+    public FileSelectViewModel(ILogger<FileSelectViewModel> logger)
+    {
+        _logger = logger;
+
+        ConfirmSelectionCommand = ReactiveCommand.Create(
+            ConfirmSelection, 
+            outputScheduler: RxApp.MainThreadScheduler // Ensure command runs on the UI thread
+        );
+    }
+
+    public void LoadFiles(IEnumerable<string> files)
+    {
+        Files.Clear();
+        foreach (var file in files)
         {
-            get => _selectedFile;
-            set => this.RaiseAndSetIfChanged(ref _selectedFile, value);
-        }
-
-        public ReactiveCommand<Unit, Unit> ConfirmSelectionCommand { get; }
-
-        public FileSelectViewModel(ILogger<FileSelectViewModel> logger)
-        {
-            _logger = logger;
-            Files = new ObservableCollection<string>();
-            ConfirmSelectionCommand = ReactiveCommand.Create(ConfirmSelection);
-        }
-
-        public void LoadFiles(IEnumerable<string> files)
-        {
-            Files.Clear();
-            foreach (var file in files)
-            {
-                Files.Add(file);
-            }
-        }
-
-        private void ConfirmSelection()
-        {
-            // Logic to confirm file selection
-            _logger.LogInformation($"Selected file: {SelectedFile}");
+            Files.Add(file);
         }
     }
+
+    private void ConfirmSelection()
+    {
+        RxApp.MainThreadScheduler.Schedule(() =>
+        {
+            if (SelectedFiles.Any())
+            {
+                _logger.LogInformation($"Confirming selection of {SelectedFiles.Length} files.");
+                _logger.LogInformation($"Selected files: {string.Join(", ", SelectedFiles)}");
+            }
+            else
+            {
+                _logger.LogWarning("No files selected.");
+            }
+        });
+    }
+
 }
