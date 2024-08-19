@@ -111,10 +111,6 @@ namespace PenumbraModForwarder.Common.Services
                         SaveConfig();
                         _logger.LogInformation("Migrated Config.json");
                     }
-
-                    // Uncomment if you want to delete the old config files
-                    // _logger.LogInformation("Deleting old config file");
-                    // File.Delete(file);
                 }
                 catch (Exception ex)
                 {
@@ -123,14 +119,13 @@ namespace PenumbraModForwarder.Common.Services
                 }
             }
 
-            // Uncomment if you want to delete the old config directory
-            // var oldConfigDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-            //                          @"\PenumbraModForwarder\PenumbraModForwarder";
-            // if (Directory.Exists(oldConfigDirectory))
-            // {
-            //     _logger.LogInformation("Deleting old config directory");
-            //     Directory.Delete(oldConfigDirectory, true);
-            // }
+            var oldConfigDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                                     @"\PenumbraModForwarder\PenumbraModForwarder";
+            if (Directory.Exists(oldConfigDirectory))
+            {
+                _logger.LogInformation("Deleting old config directory");
+                Directory.Delete(oldConfigDirectory, true);
+            }
         }
 
 
