@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
 using Serilog;
 
@@ -14,6 +15,7 @@ static class Program
     static void Main()
     {
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
+        CheckForUpdates(serviceProvider);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         Application.ApplicationExit += OnApplicationExit;
@@ -28,5 +30,11 @@ static class Program
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
         var fileHandlerService = serviceProvider.GetRequiredService<IFileHandlerService>();
         fileHandlerService.CleanUpTempFiles();
+    }
+    
+    private static void CheckForUpdates(IServiceProvider serviceProvider)
+    {
+        var updateService = serviceProvider.GetRequiredService<IUpdateService>();
+        updateService.CheckForUpdates();
     }
 }
