@@ -49,8 +49,13 @@ public static class ServiceExtensions
     
     private static void ConfigureLogging(IServiceCollection services)
     {
+#if DEBUG
+        var minimumLevel = LogEventLevel.Debug;
+#else
+    var minimumLevel = LogEventLevel.Warning;
+#endif
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            .MinimumLevel.Is(minimumLevel)
             .WriteTo.Console()
             .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day, 
                 restrictedToMinimumLevel: LogEventLevel.Information)
