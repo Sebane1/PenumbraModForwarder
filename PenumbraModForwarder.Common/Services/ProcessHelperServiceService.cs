@@ -38,4 +38,5 @@ public class ProcessHelperServiceService : IProcessHelperService
     public void OpenNexusMods() => OpenUrl("https://www.nexusmods.com/finalfantasy14", "Opening Nexus Mods.");
     public void OpenAetherLink() => OpenUrl("https://beta.aetherlink.app/", "Opening Aether Link.");
     public void OpenPrettyKitty() => OpenUrl("https://prettykittyemporium.blogspot.com/?zx=67bbd385fd16c2ff", "Opening Pretty Kitty.");
+    public void OpenArk() => OpenUrl("https://github.com/Sebane1/RoleplayingVoiceDalamud", "Opening Ark.");
 }

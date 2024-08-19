@@ -15,15 +15,17 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IPenumbraInstallerService _penumbraInstallerService;
         private readonly IConfigurationService _configurationService;
         private readonly IErrorWindowService _errorWindowService;
+        private readonly IArkService _arkService;
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
 
-        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService)
+        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService, IArkService arkService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
             _penumbraInstallerService = penumbraInstallerService;
             _configurationService = configurationService;
             _errorWindowService = errorWindowService;
+            _arkService = arkService;
 
             if (!Directory.Exists(_extractionPath))
             {
@@ -48,6 +50,14 @@ namespace PenumbraModForwarder.Common.Services
         
                     foreach (var file in selectedFiles)
                     {
+                        // Check if the file extension is a .rsvp file
+                        if (files.Any(arkfile => arkfile.EndsWith(".rpvsp")))
+                        {
+                            _logger.LogInformation("File is a RolePlayVoice File");
+                            _arkService.InstallArkFile(filePath);
+                            return;
+                        }
+                        
                         _logger.LogInformation("Extracting file: {0}", file);
                         var extractedFile = ExtractFileFromArchive(filePath, file);
                         _penumbraInstallerService.InstallMod(extractedFile);
@@ -82,7 +92,7 @@ namespace PenumbraModForwarder.Common.Services
             File.Delete(filePath);
         }
         
-        private string ExtractFileFromArchive(string archivePath, string filePath)
+        public string ExtractFileFromArchive(string archivePath, string filePath)
         {
             using var archive = OpenArchive(archivePath);
             // We should never get here if the archive is null

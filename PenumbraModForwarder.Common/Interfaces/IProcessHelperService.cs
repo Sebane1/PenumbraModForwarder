@@ -11,4 +11,5 @@ public interface IProcessHelperService
     void OpenNexusMods();
     void OpenAetherLink();
     void OpenPrettyKitty();
+    void OpenArk();
 }
