@@ -95,15 +95,19 @@ namespace PenumbraModForwarder.Common.Services
                         _logger.LogInformation("Migrating Config.json");
                         if (string.IsNullOrWhiteSpace(oldConfig) || !oldConfig.StartsWith("{"))
                         {
-                            _logger.LogInformation("Old config file is empty or invalid JSON");
-                            continue;
+                            _logger.LogError("Old config file is empty or invalid JSON");
+                            // If we get this error here, we are in some serious trouble.
+                            _errorWindowService.ShowError("Old config file is empty or invalid JSON");
+                            return;
                         }
 
                         var oldConfigModel = JsonConvert.DeserializeObject<OldConfigurationModel>(oldConfig);
                         if (oldConfigModel == null)
                         {
-                            _logger.LogWarning("Failed to deserialize old config model");
-                            continue;
+                            _logger.LogError("Failed to deserialize old config model");
+                            // If we get this error here, we are in some serious trouble.
+                            _errorWindowService.ShowError("Failed to deserialize old config model");
+                            return;
                         }
 
                         var newConfigModel = _mapper.Map<ConfigurationModel>(oldConfigModel);
