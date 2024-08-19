@@ -75,7 +75,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
 
             if (process.ExitCode != 0 || !File.Exists(dtPath))
             {
-                _logger.LogWarning($"Error converting mod to DT or conversion failed: {modPath}");
+                _logger.LogWarning($"Error converting mod to DT or conversion isn't needed: {modPath}");
                 return modPath;
             }
 
