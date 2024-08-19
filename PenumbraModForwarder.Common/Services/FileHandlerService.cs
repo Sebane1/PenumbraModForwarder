@@ -10,14 +10,16 @@ public class FileHandlerService : IFileHandlerService
     private readonly IPenumbraInstallerService _penumbraInstallerService;
     private readonly IConfigurationService _configurationService;
     private readonly IErrorWindowService _errorWindowService;
+    private readonly IArkService _arkService;
 
-    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService)
+    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService, IArkService arkService)
     {
         _logger = logger;
         _archiveHelperService = archiveHelperService;
         _penumbraInstallerService = penumbraInstallerService;
         _configurationService = configurationService;
         _errorWindowService = errorWindowService;
+        _arkService = arkService;
     }
     
     public void HandleFile(string filePath)
@@ -42,6 +44,7 @@ public class FileHandlerService : IFileHandlerService
         if (IsRPVSFile(filePath))
         {
             _logger.LogInformation("File is a RolePlayVoice File");
+            _arkService.InstallArkFile(filePath);
         }
         
     }

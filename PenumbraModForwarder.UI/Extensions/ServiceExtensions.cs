@@ -51,6 +51,7 @@ public static class ServiceExtensions
         services.AddTransient<IUpdateService, UpdateService>();
         services.AddSingleton<IErrorWindowService, ErrorWindowService>();
         services.AddSingleton<IProcessHelperService, ProcessHelperServiceService>();
+        services.AddSingleton<IArkService, ArkService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
