@@ -1,5 +1,6 @@
 ﻿using System.Reactive.Disposables;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
 
@@ -8,6 +9,7 @@ namespace PenumbraModForwarder.UI.Views;
 public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 {
     public MainWindowViewModel ViewModel { get; set; }
+    private readonly ITrayNotificationService _notificationService;
     
     object IViewFor.ViewModel
     {
@@ -15,11 +17,13 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         set => ViewModel = (MainWindowViewModel) value;
     }
     
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow(MainWindowViewModel viewModel, ITrayNotificationService notificationService)
     {
         InitializeComponent();
 
         ViewModel = viewModel;
+        _notificationService = notificationService;
+
 
         this.WhenActivated(disposables =>
         {
@@ -56,6 +60,9 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             
             this.Bind(ViewModel, vm => vm.SelectBoxEnabled, v => v.select_directory.Enabled)
                 .DisposeWith(disposables);
+            
+            // Register the notification service for disposal
+            disposables.Add(_notificationService);
         });
     }
 }

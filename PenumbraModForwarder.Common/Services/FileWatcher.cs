@@ -84,12 +84,18 @@ namespace PenumbraModForwarder.Common.Services
 
         private void OnFileRenamed(object sender, RenamedEventArgs e)
         {
-            ProcessFileEvent(e.FullPath);
+            if (_configurationService.GetConfigValue(o => o.AutoLoad))
+            {
+                ProcessFileEvent(e.FullPath);
+            }
         }
 
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            ProcessFileEvent(e.FullPath);
+            if (_configurationService.GetConfigValue(o => o.AutoLoad))
+            {
+                ProcessFileEvent(e.FullPath);
+            }
         }
 
         private void ProcessFileEvent(string filePath)

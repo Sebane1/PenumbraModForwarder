@@ -32,22 +32,29 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     
     private string UpdateToDt(string modPath)
     {
+        if (!IsConversionNeeded(modPath))
+        {
+            _logger.LogInformation($"Converted mod already exists: {modPath}");
+            return GetConvertedModPath(modPath);
+        }
+
         var textToolPath = _registryHelper.GetTexToolsConsolePath();
         if (string.IsNullOrEmpty(textToolPath) || !File.Exists(textToolPath))
         {
             _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
             return modPath;
         }
-        
+
         _logger.LogInformation($"Converting mod to DT: {modPath}");
         return ConvertToDt(modPath);
     }
+
     
     private string ConvertToDt(string modPath)
     {
         _logger.LogInformation($"Converting mod to DT: {modPath}");
-        var dtPath = Path.Combine(_dtConversionPath, Path.GetFileName(modPath));
-        
+        var dtPath = GetConvertedModPath(modPath);
+
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -60,24 +67,37 @@ public class PenumbraInstallerService : IPenumbraInstallerService
                 CreateNoWindow = true
             }
         };
-        
+
         using (process)
         {
             process.Start();
             process.WaitForExit();
-            
-            if (process.ExitCode != 0)
+
+            if (process.ExitCode != 0 || !File.Exists(dtPath))
             {
-                _logger.LogWarning($"Error/Mod doesn't need converting mod to DT: {modPath}");
+                _logger.LogWarning($"Error converting mod to DT or conversion failed: {modPath}");
                 return modPath;
             }
-            
+
             _logger.LogInformation($"Mod converted to DT: {dtPath}");
-            
-            // Delete the original mod
+
+            // Optionally delete the original mod if conversion was successful
             File.Delete(modPath);
-            
+
             return dtPath;
         }
     }
+
+    
+    private bool IsConversionNeeded(string modPath)
+    {
+        var convertedModPath = GetConvertedModPath(modPath);
+        return !File.Exists(convertedModPath);
+    }
+
+    private string GetConvertedModPath(string modPath)
+    {
+        return Path.Combine(_dtConversionPath, Path.GetFileNameWithoutExtension(modPath) + "_dt" + Path.GetExtension(modPath));
+    }
+
 }

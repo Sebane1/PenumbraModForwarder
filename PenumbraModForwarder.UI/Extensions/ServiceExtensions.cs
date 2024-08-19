@@ -27,6 +27,16 @@ public static class ServiceExtensions
     
     private static void ConfigureServices(IServiceCollection services)
     {
+        // Registering NotifyIcon
+        services.AddSingleton<NotifyIcon>(_ =>
+        {
+            var notifyIcon = new NotifyIcon
+            {
+                Visible = true,
+                Text = "Penumbra Mod Forwarder"
+            };
+            return notifyIcon;
+        });
         // Registering services
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IFileWatcher, FileWatcher>();
@@ -36,6 +46,7 @@ public static class ServiceExtensions
         services.AddTransient<IPenumbraApi, PenumbraApi>();
         services.AddSingleton<IRegistryHelper, RegistryHelper>();
         services.AddSingleton<IPenumbraInstallerService, PenumbraInstallerService>();
+        services.AddSingleton<ITrayNotificationService, NotificationService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
