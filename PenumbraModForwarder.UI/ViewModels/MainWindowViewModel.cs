@@ -12,13 +12,13 @@ public class MainWindowViewModel : ReactiveObject
     private readonly ILogger<MainWindowViewModel> _logger;
     // This will start the file watcher for us
     private readonly IFileWatcher _fileWatcher;
+    private readonly ITrayNotificationService _trayNotificationService;
     
     private string _selectedFolderPath;
     private bool _autoDelete;
     private bool _autoLoad;
     private bool _extractAll;
     private bool _selectBoxEnabled;
-    
     public string SelectedFolderPath
     {
         get => _selectedFolderPath;

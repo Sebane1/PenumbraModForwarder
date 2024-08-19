@@ -13,13 +13,15 @@ namespace PenumbraModForwarder.Common.Services
         private readonly ILogger<ArchiveHelperService> _logger;
         private readonly IFileSelector _fileSelector;
         private readonly IPenumbraInstallerService _penumbraInstallerService;
+        private readonly IConfigurationService _configurationService;
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
 
-        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService)
+        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
             _penumbraInstallerService = penumbraInstallerService;
+            _configurationService = configurationService;
 
             if (!Directory.Exists(_extractionPath))
             {
@@ -30,30 +32,50 @@ namespace PenumbraModForwarder.Common.Services
         public void ExtractArchive(string filePath)
         {
             var files = GetFilesInArchive(filePath);
-            if (files.Length > 1)
+            switch (files.Length)
             {
-                _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
-                var selectedFiles = _fileSelector.SelectFiles(files);
-                if (selectedFiles.Length == 0)
+                case > 1 when !_configurationService.GetConfigValue(o => o.ExtractAll):
                 {
-                    _logger.LogWarning("No files selected. Aborting extraction.");
-                    return;
-                }
+                    _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
+                    var selectedFiles = _fileSelector.SelectFiles(files);
+                    if (selectedFiles.Length == 0)
+                    {
+                        _logger.LogWarning("No files selected. Aborting extraction.");
+                        return;
+                    }
         
-                foreach (var file in selectedFiles)
-                {
-                    _logger.LogInformation("Extracting file: {0}", file);
-                    var extractedFile = ExtractFileFromArchive(filePath, file);
-                    _penumbraInstallerService.InstallMod(extractedFile);
+                    foreach (var file in selectedFiles)
+                    {
+                        _logger.LogInformation("Extracting file: {0}", file);
+                        var extractedFile = ExtractFileFromArchive(filePath, file);
+                        _penumbraInstallerService.InstallMod(extractedFile);
+                    }
+
+                    break;
                 }
-            }
-            else
-            {
-                var extractedFile = ExtractFileFromArchive(filePath, files[0]);
-                _penumbraInstallerService.InstallMod(extractedFile);
+                case > 1 when _configurationService.GetConfigValue(o => o.ExtractAll):
+                {
+                    foreach (var file in files)
+                    {
+                        _logger.LogInformation("Extracting file: {0}", file);
+                        var extractedFile = ExtractFileFromArchive(filePath, file);
+                        _penumbraInstallerService.InstallMod(extractedFile);
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    _logger.LogInformation("Extracting file: {0}", files[0]);
+                    var extractedFile = ExtractFileFromArchive(filePath, files[0]);
+                    _penumbraInstallerService.InstallMod(extractedFile);
+                    break;
+                }
             }
             
+            
             // Delete the archive after extraction
+            if (!_configurationService.GetConfigValue(option => option.AutoDelete)) return;
             _logger.LogInformation("Deleting archive: {0}", filePath);
             File.Delete(filePath);
         }

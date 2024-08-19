@@ -8,12 +8,14 @@ public class FileHandlerService : IFileHandlerService
     private readonly ILogger<FileHandlerService> _logger;
     private readonly IArchiveHelperService _archiveHelperService;
     private readonly IPenumbraInstallerService _penumbraInstallerService;
+    private readonly IConfigurationService _configurationService;
 
-    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService)
+    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService)
     {
         _logger = logger;
         _archiveHelperService = archiveHelperService;
         _penumbraInstallerService = penumbraInstallerService;
+        _configurationService = configurationService;
     }
     
     public void HandleFile(string filePath)
@@ -39,6 +41,7 @@ public class FileHandlerService : IFileHandlerService
         {
             _logger.LogInformation("File is a RolePlayVoice File");
         }
+        
     }
 
     public void CleanUpTempFiles()
@@ -71,6 +74,20 @@ public class FileHandlerService : IFileHandlerService
                 foreach (var dir in Directory.GetDirectories(_dtConversionPath))
                 {
                     Directory.Delete(dir, true);
+                }
+            }
+            
+            // Check if any files are left inside the DownloadPath and delete them
+            var downloadPath = _configurationService.GetConfigValue(config => config.DownloadPath);
+            if (Directory.Exists(downloadPath))
+            {
+                // Check if the files are mod files
+                foreach (var file in Directory.GetFiles(downloadPath))
+                {
+                    if (IsModFile(file))
+                    {
+                        File.Delete(file);
+                    }
                 }
             }
 
