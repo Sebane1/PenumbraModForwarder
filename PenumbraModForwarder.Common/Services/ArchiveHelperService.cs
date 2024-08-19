@@ -78,6 +78,14 @@ namespace PenumbraModForwarder.Common.Services
                 }
                 default:
                 {
+                    // Check if the file extension is a .rsvp file
+                    // We will just check it again just in case
+                    if (files.Any(arkfile => arkfile.EndsWith(".rpvsp")))
+                    {
+                        _logger.LogInformation("File is a RolePlayVoice File");
+                        _arkService.InstallArkFile(filePath);
+                        return;
+                    }
                     _logger.LogInformation("Extracting file: {0}", files[0]);
                     var extractedFile = ExtractFileFromArchive(filePath, files[0]);
                     _penumbraInstallerService.InstallMod(extractedFile);
