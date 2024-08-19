@@ -33,7 +33,9 @@ public static class ServiceExtensions
         services.AddSingleton<IArchiveHelperService, ArchiveHelperService>();
         services.AddSingleton<IFileHandlerService, FileHandlerService>();
         services.AddSingleton<IFileSelector, FileSelector>();
-        services.AddSingleton<IPenumbraApi, PenumbraApi>();
+        services.AddTransient<IPenumbraApi, PenumbraApi>();
+        services.AddSingleton<IRegistryHelper, RegistryHelper>();
+        services.AddSingleton<IPenumbraInstallerService, PenumbraInstallerService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)

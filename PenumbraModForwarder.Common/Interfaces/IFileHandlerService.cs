@@ -3,4 +3,5 @@
 public interface IFileHandlerService
 {
     public void HandleFile(string filePath);
+    public void CleanUpTempFiles();
 }
