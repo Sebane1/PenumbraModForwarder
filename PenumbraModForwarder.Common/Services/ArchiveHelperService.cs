@@ -12,14 +12,14 @@ namespace PenumbraModForwarder.Common.Services
     {
         private readonly ILogger<ArchiveHelperService> _logger;
         private readonly IFileSelector _fileSelector;
-        private readonly IPenumbraApi _penumbraApi;
+        private readonly IPenumbraInstallerService _penumbraInstallerService;
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
 
-        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraApi penumbraApi)
+        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
-            _penumbraApi = penumbraApi;
+            _penumbraInstallerService = penumbraInstallerService;
 
             if (!Directory.Exists(_extractionPath))
             {
@@ -44,13 +44,13 @@ namespace PenumbraModForwarder.Common.Services
                 {
                     _logger.LogInformation("Extracting file: {0}", file);
                     var extractedFile = ExtractFileFromArchive(filePath, file);
-                    _penumbraApi.InstallAsync(extractedFile);
+                    _penumbraInstallerService.InstallMod(extractedFile);
                 }
             }
             else
             {
                 var extractedFile = ExtractFileFromArchive(filePath, files[0]);
-                _penumbraApi.InstallAsync(extractedFile);
+                _penumbraInstallerService.InstallMod(extractedFile);
             }
             
             // Delete the archive after extraction

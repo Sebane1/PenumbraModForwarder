@@ -1,8 +1,5 @@
-﻿using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Interfaces;
@@ -55,7 +52,15 @@ namespace PenumbraModForwarder.Common.Services
             try
             {
                 var response = await PostRequestAsync(route, content);
-                response.EnsureSuccessStatusCode();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("HTTP request error: {StatusCode} - {ReasonPhrase}. Response body: {ResponseBody}", 
+                        response.StatusCode, response.ReasonPhrase, responseBody);
+                    response.EnsureSuccessStatusCode();
+                }
+                
                 _logger.LogInformation("Successfully posted to {Route}", route);
             }
             catch (HttpRequestException httpEx)
@@ -72,7 +77,9 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task<HttpResponseMessage> PostRequestAsync(string route, object content)
         {
-            route = route.StartsWith("/") ? route : "/" + route;
+            // Ensure that the route starts with "/api"
+            if (!route.StartsWith("/api"))
+                route = "/api" + route;
 
             var json = JsonConvert.SerializeObject(content);
             var byteContent = new ByteArrayContent(Encoding.UTF8.GetBytes(json))
@@ -84,8 +91,10 @@ namespace PenumbraModForwarder.Common.Services
             };
 
             var requestUri = new Uri(new Uri(BaseUrl), route);
+            _logger.LogInformation("Posting request to {RequestUri} with content: {Content}", requestUri, json);
             return await HttpClient.PostAsync(requestUri, byteContent);
         }
+
 
         private void HandleWarning(Exception ex)
         {
