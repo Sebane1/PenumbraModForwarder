@@ -29,6 +29,9 @@
       <Compile Update="Views\FileSelect.cs">
         <SubType>Form</SubType>
       </Compile>
+      <Compile Update="Views\ErrorWindow.cs">
+        <SubType>Form</SubType>
+      </Compile>
     </ItemGroup>
 
     <ItemGroup>

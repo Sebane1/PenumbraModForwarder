@@ -13,6 +13,7 @@ public class MainWindowViewModel : ReactiveObject
     // This will start the file watcher for us
     private readonly IFileWatcher _fileWatcher;
     private readonly ITrayNotificationService _trayNotificationService;
+    private readonly IProcessHelperService _processHelperService;
     
     private string _selectedFolderPath;
     private bool _autoDelete;
@@ -57,14 +58,28 @@ public class MainWindowViewModel : ReactiveObject
     public ReactiveCommand<bool, Unit> UpdateAutoDeleteCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateAutoLoadCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateExtractAllCommand { get; }
+
+    #region Link Buttons
+    
+    public ReactiveCommand<Unit, Unit> OpenXivArchiveCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenGlamourDresserCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenNexusModsCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenAetherLinkCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenHelioSphereCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenPrettyKittyCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenDiscordCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenDonateCommand { get; }
+    
+    #endregion
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService)
     {
         _configurationService = configurationService;
         _logger = logger;
         // This will start the file watcher for us
         _fileWatcher = fileWatcher;
+        _processHelperService = processHelperService;
         SetAllConfigValues();
         
         _logger.LogInformation("MainWindowViewModel created.");
@@ -72,6 +87,19 @@ public class MainWindowViewModel : ReactiveObject
         UpdateAutoDeleteCommand = ReactiveCommand.Create<bool>(UpdateAutoDelete);
         UpdateAutoLoadCommand = ReactiveCommand.Create<bool>(UpdateAutoLoad);
         UpdateExtractAllCommand = ReactiveCommand.Create<bool>(UpdateExtractAll);
+        
+        #region Link Buttons
+        
+        OpenXivArchiveCommand = ReactiveCommand.Create(OpenXivArchive);
+        OpenGlamourDresserCommand = ReactiveCommand.Create(OpenGlamourDresser);
+        OpenNexusModsCommand = ReactiveCommand.Create(OpenNexusMods);
+        OpenAetherLinkCommand = ReactiveCommand.Create(OpenAetherLink);
+        OpenHelioSphereCommand = ReactiveCommand.Create(OpenHelioSphere);
+        OpenPrettyKittyCommand = ReactiveCommand.Create(OpenPrettyKitty);
+        OpenDiscordCommand = ReactiveCommand.Create(OpenDiscord);
+        OpenDonateCommand = ReactiveCommand.Create(OpenDonate);
+
+        #endregion
     }
     
     private void SetAllConfigValues()
@@ -81,6 +109,53 @@ public class MainWindowViewModel : ReactiveObject
         AutoLoad = _configurationService.GetConfigValue(config => config.AutoLoad);
         ExtractAll = _configurationService.GetConfigValue(config => config.ExtractAll);
     }
+
+    #region Link Buttons
+
+    private void OpenXivArchive()
+    {
+        _processHelperService.OpenXivArchive();
+    }
+    
+    private void OpenGlamourDresser()
+    {
+        _processHelperService.OpenGlamourDresser();
+    }
+    
+    private void OpenNexusMods()
+    {
+        _processHelperService.OpenNexusMods();
+    }
+    
+    private void OpenAetherLink()
+    {
+        _processHelperService.OpenAetherLink();
+    }
+    
+    private void OpenHelioSphere()
+    {
+        if (MessageBox.Show("Heliosphere requires a separate dalamud plugin to use.") == DialogResult.OK)
+        {
+            _processHelperService.OpenHelios();
+        }
+    }
+    
+    private void OpenPrettyKitty()
+    {
+        _processHelperService.OpenPrettyKitty();
+    }
+    
+    private void OpenDiscord()
+    {
+        _processHelperService.OpenSupportDiscord();
+    }
+    
+    private void OpenDonate()
+    {
+        _processHelperService.OpenDonate();
+    }
+
+    #endregion
     
     private void UpdateAutoDelete(bool value)
     {

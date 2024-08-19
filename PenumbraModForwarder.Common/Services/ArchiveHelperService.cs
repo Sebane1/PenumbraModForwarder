@@ -14,14 +14,16 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IFileSelector _fileSelector;
         private readonly IPenumbraInstallerService _penumbraInstallerService;
         private readonly IConfigurationService _configurationService;
+        private readonly IErrorWindowService _errorWindowService;
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
 
-        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService)
+        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
             _penumbraInstallerService = penumbraInstallerService;
             _configurationService = configurationService;
+            _errorWindowService = errorWindowService;
 
             if (!Directory.Exists(_extractionPath))
             {
@@ -118,7 +120,11 @@ namespace PenumbraModForwarder.Common.Services
 
             using (var archive = OpenArchive(filePath))
             {
-                if (archive == null) throw new InvalidOperationException("Archive could not be opened.");
+                if (archive == null)
+                {
+                    _errorWindowService.ShowError("Failed to open archive.");
+                    throw new InvalidOperationException("Archive could not be opened.");
+                }
 
                 foreach (var entry in archive.Entries.Where(e => !e.IsDirectory))
                 {
@@ -138,6 +144,7 @@ namespace PenumbraModForwarder.Common.Services
             if (string.IsNullOrEmpty(filePath))
             {
                 _logger.LogError("File path is null or empty.");
+                _errorWindowService.ShowError("File path is null or empty.");
                 throw new ArgumentNullException(nameof(filePath));
             }
 
@@ -158,12 +165,14 @@ namespace PenumbraModForwarder.Common.Services
                         return RarArchive.Open(filePath);
                     default:
                         _logger.LogError($"Unsupported archive format: {extension}");
+                        _errorWindowService.ShowError($"The file format {extension} is not supported.");
                         throw new NotSupportedException($"The file format {extension} is not supported.");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to open archive: {filePath}");
+                _errorWindowService.ShowError($"Failed to open archive: {filePath}");
                 throw;
             }
         }

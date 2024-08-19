@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using PenumbraModForwarder.Common.Interfaces;
 
 namespace PenumbraModForwarder.Common.Services;
@@ -6,7 +7,15 @@ namespace PenumbraModForwarder.Common.Services;
 public class RegistryHelper : IRegistryHelper
 {
     private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
-    
+    private readonly IErrorWindowService _errorWindowService;
+    private readonly ILogger<RegistryHelper> _logger;
+
+    public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger)
+    {
+        _errorWindowService = errorWindowService;
+        _logger = logger;
+    }
+
     private string GetRegistryValue(string keyValue)
     {
         try
@@ -16,7 +25,8 @@ public class RegistryHelper : IRegistryHelper
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error accessing registry: {e.Message}\n{e.StackTrace}");
+            _logger.LogError(e, "Error reading registry");
+            _errorWindowService.ShowError(e.ToString());
             return null;
         }
     }

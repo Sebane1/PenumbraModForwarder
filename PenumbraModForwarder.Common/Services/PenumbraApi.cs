@@ -13,7 +13,7 @@ namespace PenumbraModForwarder.Common.Services
         private static readonly HttpClient HttpClient;
         private static bool _warningShown;
         private readonly ITrayNotificationService _trayNotificationService;
-        
+        private readonly IErrorWindowService _errorWindowService;
         private readonly ILogger<PenumbraApi> _logger;
 
         static PenumbraApi()
@@ -24,10 +24,11 @@ namespace PenumbraModForwarder.Common.Services
             };
         }
 
-        public PenumbraApi(ILogger<PenumbraApi> logger, ITrayNotificationService trayNotificationService)
+        public PenumbraApi(ILogger<PenumbraApi> logger, ITrayNotificationService trayNotificationService, IErrorWindowService errorWindowService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _trayNotificationService = trayNotificationService;
+            _errorWindowService = errorWindowService;
         }
 
         public async Task InstallAsync(string modPath)
@@ -105,6 +106,7 @@ namespace PenumbraModForwarder.Common.Services
             if (!_warningShown)
             {
                 _logger.LogWarning(ex, "Error communicating with Penumbra. Please ensure the HTTP API is enabled in Penumbra under 'Settings -> Advanced'.");
+                _errorWindowService.ShowError(ex.ToString());
                 _warningShown = true;
             }
         }
