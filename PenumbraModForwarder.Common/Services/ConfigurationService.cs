@@ -14,12 +14,14 @@ namespace PenumbraModForwarder.Common.Services
         private ConfigurationModel _config;
         private readonly object _lock = new();
         private readonly ILogger<ConfigurationService> _logger;
+        private readonly IErrorWindowService _errorWindowService;
         private readonly IMapper _mapper;
         
-        public ConfigurationService(ILogger<ConfigurationService> logger, IMapper mapper)
+        public ConfigurationService(ILogger<ConfigurationService> logger, IMapper mapper, IErrorWindowService errorWindowService)
         {
             _logger = logger;
             _mapper = mapper;
+            _errorWindowService = errorWindowService;
             MigrateOldConfig();
             if (!File.Exists(_configPath))
             {
@@ -117,6 +119,7 @@ namespace PenumbraModForwarder.Common.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Error processing file: {file}");
+                    _errorWindowService.ShowError(ex.ToString());
                 }
             }
 

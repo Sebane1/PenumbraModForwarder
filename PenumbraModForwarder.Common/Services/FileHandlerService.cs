@@ -9,13 +9,15 @@ public class FileHandlerService : IFileHandlerService
     private readonly IArchiveHelperService _archiveHelperService;
     private readonly IPenumbraInstallerService _penumbraInstallerService;
     private readonly IConfigurationService _configurationService;
+    private readonly IErrorWindowService _errorWindowService;
 
-    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService)
+    public FileHandlerService(ILogger<FileHandlerService> logger, IArchiveHelperService archiveHelperService, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService)
     {
         _logger = logger;
         _archiveHelperService = archiveHelperService;
         _penumbraInstallerService = penumbraInstallerService;
         _configurationService = configurationService;
+        _errorWindowService = errorWindowService;
     }
     
     public void HandleFile(string filePath)
@@ -96,6 +98,7 @@ public class FileHandlerService : IFileHandlerService
         catch (Exception e)
         {
             _logger.LogError($"Error cleaning up temp files: {e.Message}");
+            _errorWindowService.ShowError(e.ToString());
         }
     }
     

@@ -60,6 +60,34 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             
             this.Bind(ViewModel, vm => vm.SelectBoxEnabled, v => v.select_directory.Enabled)
                 .DisposeWith(disposables);
+
+            #region Link Buttons
+            
+            this.BindCommand(ViewModel, vm => vm.OpenXivArchiveCommand, v => v.xivarchive_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenGlamourDresserCommand, v => v.glamourdressor_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenNexusModsCommand, v => v.nexusmods_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenAetherLinkCommand, v => v.aetherlink_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenHelioSphereCommand, v => v.heliosphere_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenPrettyKittyCommand, v => v.prettykitty_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenDiscordCommand, v => v.discord_Button)
+                .DisposeWith(disposables);
+            
+            this.BindCommand(ViewModel, vm => vm.OpenDonateCommand, v => v.donate_Button)
+                .DisposeWith(disposables);
+
+            #endregion
             
             // Register the notification service for disposal
             disposables.Add(_notificationService);

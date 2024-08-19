@@ -49,6 +49,8 @@ public static class ServiceExtensions
         services.AddSingleton<IPenumbraInstallerService, PenumbraInstallerService>();
         services.AddSingleton<ITrayNotificationService, NotificationService>();
         services.AddTransient<IUpdateService, UpdateService>();
+        services.AddSingleton<IErrorWindowService, ErrorWindowService>();
+        services.AddSingleton<IProcessHelperService, ProcessHelperServiceService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
@@ -58,6 +60,8 @@ public static class ServiceExtensions
         services.AddTransient<MainWindow>();
         services.AddTransient<FileSelectViewModel>();
         services.AddTransient<FileSelect>();
+        services.AddTransient<ErrorWindowViewModel>();
+        services.AddTransient<ErrorWindow>();
     }
     
     private static void ConfigureLogging(IServiceCollection services)

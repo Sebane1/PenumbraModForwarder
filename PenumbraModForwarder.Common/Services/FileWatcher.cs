@@ -14,17 +14,19 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IConfigurationService _configurationService;
         private readonly IFileHandlerService _fileHandlerService;
         private FileSystemWatcher _watcher;
+        private readonly IErrorWindowService _errorWindowService;
         private Timer _debounceTimer;
         private ConcurrentQueue<string> _changeQueue;
         private HashSet<string> _processingFiles;
         private readonly TimeSpan _debounceInterval = TimeSpan.FromMilliseconds(500);
         private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
-        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IFileHandlerService fileHandlerService)
+        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IFileHandlerService fileHandlerService, IErrorWindowService errorWindowService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _configurationService = configurationService;
             _fileHandlerService = fileHandlerService;
+            _errorWindowService = errorWindowService;
 
             _changeQueue = new ConcurrentQueue<string>();
             _processingFiles = new HashSet<string>();
@@ -136,6 +138,7 @@ namespace PenumbraModForwarder.Common.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Failed to extract archive: {file}");
+                    _errorWindowService.ShowError($"Failed to extract archive: {file}");
                 }
 
                 _processingFiles.Remove(file);
