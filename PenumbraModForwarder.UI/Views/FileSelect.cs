@@ -1,8 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
-
 
 namespace PenumbraModForwarder.UI.Views
 {
@@ -13,27 +13,29 @@ namespace PenumbraModForwarder.UI.Views
         object IViewFor.ViewModel
         {
             get => ViewModel;
-            set => ViewModel = (FileSelectViewModel) value;
+            set => ViewModel = (FileSelectViewModel)value;
         }
 
         public FileSelect(FileSelectViewModel viewModel)
         {
             InitializeComponent();
             ViewModel = viewModel;
+            ViewModel.CloseAction = () =>
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            };
 
             this.WhenActivated(disposables =>
             {
-                // Bind Files to CheckedListBox
-                this.BindListBox(ViewModel, vm => vm.Files, fileCheckedListBox);
+                BindListBox(ViewModel, vm => vm.Files, fileCheckedListBox);
 
-                // Bind the Confirm button command
                 this.BindCommand(ViewModel, vm => vm.ConfirmSelectionCommand, v => v.confirmButton)
                     .DisposeWith(disposables);
 
-                // Handle CheckedListBox selections
                 fileCheckedListBox.ItemCheck += FileCheckedListBox_ItemCheck;
 
-                // Add event handler disposal
+                // Dispose event handler
                 Disposable.Create(() => fileCheckedListBox.ItemCheck -= FileCheckedListBox_ItemCheck)
                     .DisposeWith(disposables);
             });
@@ -41,31 +43,34 @@ namespace PenumbraModForwarder.UI.Views
 
         private void FileCheckedListBox_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            BeginInvoke(new Action(() =>
+            BeginInvoke(() =>
             {
-                var checkedItems = fileCheckedListBox.Items.Cast<string>()
-                    .Where((item, index) => fileCheckedListBox.GetItemChecked(index))
+                var checkedItems = fileCheckedListBox.Items.Cast<FileItem>()
+                    .Where((item, index) => 
+                        (index == e.Index ? e.NewValue == CheckState.Checked : fileCheckedListBox.GetItemChecked(index)))
+                    .Select(item => item.FullPath)
                     .ToArray();
+
                 ViewModel.SelectedFiles = checkedItems;
-            }));
+            });
         }
 
         private void BindListBox(FileSelectViewModel viewModel,
-            System.Linq.Expressions.Expression<Func<FileSelectViewModel, ObservableCollection<string>>> vmProperty,
+            System.Linq.Expressions.Expression<Func<FileSelectViewModel, ObservableCollection<FileItem>>> vmProperty,
             CheckedListBox listBox)
         {
             viewModel.WhenAnyValue(vmProperty)
                 .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(files =>
                 {
-                    this.BeginInvoke(new Action(() =>
+                    BeginInvoke(() =>
                     {
                         listBox.Items.Clear();
                         foreach (var file in files)
                         {
                             listBox.Items.Add(file, false);
                         }
-                    }));
+                    });
                 });
         }
     }

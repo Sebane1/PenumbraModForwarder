@@ -6,6 +6,9 @@ using PenumbraModForwarder.UI.Views;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.UI.Services;
+using Serilog;
+using Serilog.Events;
 
 namespace PenumbraModForwarder.UI.Extensions;
 
@@ -29,6 +32,8 @@ public static class ServiceExtensions
         services.AddSingleton<IFileWatcher, FileWatcher>();
         services.AddSingleton<IArchiveHelperService, ArchiveHelperService>();
         services.AddSingleton<IFileHandlerService, FileHandlerService>();
+        services.AddSingleton<IFileSelector, FileSelector>();
+        services.AddSingleton<IPenumbraApi, PenumbraApi>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
@@ -42,10 +47,17 @@ public static class ServiceExtensions
     
     private static void ConfigureLogging(IServiceCollection services)
     {
-        // Setting up logging to console
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day, 
+                restrictedToMinimumLevel: LogEventLevel.Information)
+            .CreateLogger();
+        
         services.AddLogging(builder =>
         {
-            builder.AddConsole();
+            builder.ClearProviders(); 
+            builder.AddSerilog();
         });
     }
 
