@@ -489,6 +489,12 @@ namespace FFXIVModExractor {
                 Hide();
                 e.Cancel = true;
             }
+            if (exitInitiated)
+            {
+                // If an exit was initiated, we need to make sure that the Dawntrail directory has been removed
+                string dawntrailConvertedDir = Path.Combine(downloads.FilePath.Text, @"Dawntrail Converted\");
+                FileHandler.DeleteDirectory(dawntrailConvertedDir);
+            }
         }
 
         private void openConfigurationToolStripMenuItem_Click(object sender, EventArgs e) {
