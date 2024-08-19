@@ -36,9 +36,18 @@ namespace PenumbraModForwarder.Common.Services
         public void ExtractArchive(string filePath)
         {
             var files = GetFilesInArchive(filePath);
-            switch (files.Length)
+
+            // Check if the archive contains any .rpvsp files
+            if (ContainsRolePlayVoiceFile(files))
             {
-                case > 1 when !_configurationService.GetConfigValue(o => o.ExtractAll):
+                _logger.LogInformation("File is a RolePlayVoice File");
+                _arkService.InstallArkFile(filePath);
+                return;
+            }
+
+            if (files.Length > 1)
+            {
+                if (!_configurationService.GetConfigValue(o => o.ExtractAll))
                 {
                     _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
                     var selectedFiles = _fileSelector.SelectFiles(files);
@@ -47,60 +56,47 @@ namespace PenumbraModForwarder.Common.Services
                         _logger.LogWarning("No files selected. Aborting extraction.");
                         return;
                     }
-        
+
                     foreach (var file in selectedFiles)
                     {
-                        // Check if the file extension is a .rsvp file
-                        if (files.Any(arkfile => arkfile.EndsWith(".rpvsp")))
-                        {
-                            _logger.LogInformation("File is a RolePlayVoice File");
-                            _arkService.InstallArkFile(filePath);
-                            return;
-                        }
-                        
-                        _logger.LogInformation("Extracting file: {0}", file);
-                        var extractedFile = ExtractFileFromArchive(filePath, file);
-                        _penumbraInstallerService.InstallMod(extractedFile);
+                        ExtractAndInstallFile(filePath, file);
                     }
-
-                    break;
                 }
-                case > 1 when _configurationService.GetConfigValue(o => o.ExtractAll):
+                else
                 {
                     foreach (var file in files)
                     {
-                        _logger.LogInformation("Extracting file: {0}", file);
-                        var extractedFile = ExtractFileFromArchive(filePath, file);
-                        _penumbraInstallerService.InstallMod(extractedFile);
+                        ExtractAndInstallFile(filePath, file);
                     }
-
-                    break;
-                }
-                default:
-                {
-                    // Check if the file extension is a .rsvp file
-                    // We will just check it again just in case
-                    if (files.Any(arkfile => arkfile.EndsWith(".rpvsp")))
-                    {
-                        _logger.LogInformation("File is a RolePlayVoice File");
-                        _arkService.InstallArkFile(filePath);
-                        return;
-                    }
-                    _logger.LogInformation("Extracting file: {0}", files[0]);
-                    var extractedFile = ExtractFileFromArchive(filePath, files[0]);
-                    _penumbraInstallerService.InstallMod(extractedFile);
-                    break;
                 }
             }
-            
-            
+            else
+            {
+                ExtractAndInstallFile(filePath, files[0]);
+            }
+
             // Delete the archive after extraction
-            if (!_configurationService.GetConfigValue(option => option.AutoDelete)) return;
-            _logger.LogInformation("Deleting archive: {0}", filePath);
-            File.Delete(filePath);
+            if (_configurationService.GetConfigValue(option => option.AutoDelete))
+            {
+                _logger.LogInformation("Deleting archive: {0}", filePath);
+                File.Delete(filePath);
+            }
         }
         
-        public string ExtractFileFromArchive(string archivePath, string filePath)
+        
+        private bool ContainsRolePlayVoiceFile(string[] files)
+        {
+            return files.Any(file => file.EndsWith(".rpvsp", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void ExtractAndInstallFile(string archivePath, string filePath)
+        {
+            _logger.LogInformation("Extracting file: {0}", filePath);
+            var extractedFile = ExtractFileFromArchive(archivePath, filePath);
+            _penumbraInstallerService.InstallMod(extractedFile);
+        }
+        
+        private string ExtractFileFromArchive(string archivePath, string filePath)
         {
             using var archive = OpenArchive(archivePath);
             // We should never get here if the archive is null
