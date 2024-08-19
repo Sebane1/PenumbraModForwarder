@@ -12,7 +12,7 @@ namespace PenumbraModForwarder.Common.Services
     {
         private readonly ILogger<FileWatcher> _logger;
         private readonly IConfigurationService _configurationService;
-        private readonly IArchiveHelperService _archiveHelperService;
+        private readonly IFileHandlerService _fileHandlerService;
         private FileSystemWatcher _watcher;
         private Timer _debounceTimer;
         private ConcurrentQueue<string> _changeQueue;
@@ -20,11 +20,11 @@ namespace PenumbraModForwarder.Common.Services
         private readonly TimeSpan _debounceInterval = TimeSpan.FromMilliseconds(500);
         private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
-        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IArchiveHelperService archiveHelperService)
+        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IFileHandlerService fileHandlerService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
-            _archiveHelperService = archiveHelperService ?? throw new ArgumentNullException(nameof(archiveHelperService));
+            _configurationService = configurationService;
+            _fileHandlerService = fileHandlerService;
 
             _changeQueue = new ConcurrentQueue<string>();
             _processingFiles = new HashSet<string>();
@@ -125,7 +125,7 @@ namespace PenumbraModForwarder.Common.Services
 
                 try
                 {
-                    _archiveHelperService.ExtractArchive(file);
+                    _fileHandlerService.HandleFile(file);
                 }
                 catch (Exception ex)
                 {

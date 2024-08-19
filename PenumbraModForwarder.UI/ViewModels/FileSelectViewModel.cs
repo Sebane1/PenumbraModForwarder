@@ -2,14 +2,14 @@
 using System.Reactive;
 using System.Reactive.Concurrency;
 using Microsoft.Extensions.Logging;
-using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 
 public class FileSelectViewModel : ReactiveObject
 {
     private readonly ILogger<FileSelectViewModel> _logger;
 
-    public ObservableCollection<string> Files { get; } = new();
+    public ObservableCollection<FileItem> Files { get; } = new();
 
     private string[] _selectedFiles = Array.Empty<string>();
     public string[] SelectedFiles
@@ -19,14 +19,14 @@ public class FileSelectViewModel : ReactiveObject
     }
 
     public ReactiveCommand<Unit, Unit> ConfirmSelectionCommand { get; }
+    public Action CloseAction { get; set; }
 
     public FileSelectViewModel(ILogger<FileSelectViewModel> logger)
     {
         _logger = logger;
-
         ConfirmSelectionCommand = ReactiveCommand.Create(
-            ConfirmSelection, 
-            outputScheduler: RxApp.MainThreadScheduler // Ensure command runs on the UI thread
+            ConfirmSelection,
+            outputScheduler: RxApp.MainThreadScheduler
         );
     }
 
@@ -35,24 +35,29 @@ public class FileSelectViewModel : ReactiveObject
         Files.Clear();
         foreach (var file in files)
         {
-            Files.Add(file);
+            var fileItem = new FileItem
+            {
+                FullPath = file,
+                FileName = Path.GetFileName(file)
+            };
+            Files.Add(fileItem);
         }
     }
 
+
     private void ConfirmSelection()
     {
-        RxApp.MainThreadScheduler.Schedule(() =>
+        // This should already be on the UI thread due to the scheduler
+        if (SelectedFiles.Any())
         {
-            if (SelectedFiles.Any())
-            {
-                _logger.LogInformation($"Confirming selection of {SelectedFiles.Length} files.");
-                _logger.LogInformation($"Selected files: {string.Join(", ", SelectedFiles)}");
-            }
-            else
-            {
-                _logger.LogWarning("No files selected.");
-            }
-        });
+            _logger.LogInformation($"Confirming selection of {SelectedFiles.Length} files.");
+            _logger.LogInformation($"Selected files: {string.Join(", ", SelectedFiles)}");
+            
+            CloseAction?.Invoke();
+        }
+        else
+        {
+            _logger.LogWarning("No files selected.");
+        }
     }
-
 }
