@@ -89,6 +89,7 @@ partial class FileSelect
         MinimizeBox = false;
         Name = "FileSelect";
         ShowIcon = false;
+        ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Select Files";
         TopMost = true;
