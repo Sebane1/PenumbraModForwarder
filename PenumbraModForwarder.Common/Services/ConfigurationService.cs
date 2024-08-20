@@ -22,7 +22,6 @@ namespace PenumbraModForwarder.Common.Services
             _logger = logger;
             _mapper = mapper;
             _errorWindowService = errorWindowService;
-            MigrateOldConfig();
             if (!File.Exists(_configPath))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_configPath));
@@ -58,7 +57,7 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        private void MigrateOldConfig()
+        public void MigrateOldConfig()
         {
             var filesToMigrate = new[]
             {

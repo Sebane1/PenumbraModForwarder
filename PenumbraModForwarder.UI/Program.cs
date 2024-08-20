@@ -16,6 +16,7 @@ static class Program
     {
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
         CheckForUpdates(serviceProvider);
+        MigrateOldConfigIfExists(serviceProvider);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         Application.ApplicationExit += OnApplicationExit;
@@ -30,6 +31,12 @@ static class Program
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
         var fileHandlerService = serviceProvider.GetRequiredService<IFileHandlerService>();
         fileHandlerService.CleanUpTempFiles();
+    }
+    
+    private static void MigrateOldConfigIfExists(IServiceProvider serviceProvider)
+    {
+        var configurationService = serviceProvider.GetRequiredService<IConfigurationService>();
+        configurationService.MigrateOldConfig();
     }
     
     private static void CheckForUpdates(IServiceProvider serviceProvider)
