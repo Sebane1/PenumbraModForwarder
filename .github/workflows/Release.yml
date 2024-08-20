@@ -78,6 +78,12 @@ jobs:
           sed -i "s|<Version>.*</Version>|<Version>${version}</Version>|" "$csproj_file"
         shell: bash
 
+      - name: Commit Changes
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_message: "[AUTO-COMMIT] Update Version Number"
+          
       - name: Create a PR with the changes
         uses: devops-infra/action-pull-request@master
         with:
