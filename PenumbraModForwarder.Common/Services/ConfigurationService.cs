@@ -96,8 +96,6 @@ namespace PenumbraModForwarder.Common.Services
                         if (string.IsNullOrWhiteSpace(oldConfig) || !oldConfig.StartsWith("{"))
                         {
                             _logger.LogError("Old config file is empty or invalid JSON");
-                            // If we get this error here, we are in some serious trouble.
-                            _errorWindowService.ShowError("Old config file is empty or invalid JSON");
                             return;
                         }
 
