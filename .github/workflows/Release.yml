@@ -65,8 +65,8 @@ jobs:
           version="${{ github.event.inputs.tagName }}"
           xml_file="./update.xml"
           xml=$(cat "$xml_file")
-          xml=$(echo "$xml" | sed "s/<version>.*<\/version>/<version>${version}</version>/")
-          xml=$(echo "$xml" | sed "s/<url>.*<\/url>/<url>https:\/\/github.com\/Sebane1\/PenumbraModForwarder\/releases\/download\/${version}\/PenumbraModForwarder.zip<\/url>/")
+          xml=$(echo "$xml" | sed "s|<version>.*</version>|<version>${version}</version>|")
+          xml=$(echo "$xml" | sed "s|<url>.*</url>|<url>https://github.com/Sebane1/PenumbraModForwarder/releases/download/${version}/PenumbraModForwarder.zip</url>|")
           echo "$xml" > "$xml_file"
         shell: bash
 
@@ -75,7 +75,7 @@ jobs:
           version="${{ github.event.inputs.tagName }}"
           version="${version#v}"  # Strip the leading 'v'
           csproj_file="./PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj"
-          sed -i "s/<Version>.*<\/Version>/<Version>${version}<\/Version>/" "$csproj_file"
+          sed -i "s|<Version>.*</Version>|<Version>${version}</Version>|" "$csproj_file"
         shell: bash
 
       - name: Create a PR with the changes
