@@ -34,6 +34,13 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             this.BindCommand(ViewModel, vm => vm.OpenFolderDialog, v => v.select_directory)
                 .DisposeWith(disposables);
             
+            this.Bind(ViewModel, vm => vm.NotificationEnabled, v => v.notification_checkbox.Checked)
+                .DisposeWith(disposables);
+            
+            notification_checkbox.CheckedChanged += (s, e) =>
+            {
+                ViewModel.UpdateNotificationCommand.Execute(notification_checkbox.Checked).Subscribe();
+            };
             
             this.Bind(ViewModel, vm => vm.AutoDelete, v => v.autodelete_checkbox.Checked)
                 .DisposeWith(disposables);

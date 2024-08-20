@@ -45,7 +45,7 @@ partial class MainWindow
         discord_Button = new Button();
         donate_Button = new Button();
         label1 = new Label();
-        notification_Button = new CheckBox();
+        notification_checkbox = new CheckBox();
         SuspendLayout();
         // 
         // select_directory
@@ -182,22 +182,22 @@ partial class MainWindow
         label1.TabIndex = 13;
         label1.Text = "Quick links";
         // 
-        // notification_Button
+        // notification_checkbox
         // 
-        notification_Button.AutoSize = true;
-        notification_Button.Location = new Point(12, 37);
-        notification_Button.Name = "notification_Button";
-        notification_Button.Size = new Size(126, 19);
-        notification_Button.TabIndex = 14;
-        notification_Button.Text = "Show Notifications";
-        notification_Button.UseVisualStyleBackColor = true;
+        notification_checkbox.AutoSize = true;
+        notification_checkbox.Location = new Point(12, 37);
+        notification_checkbox.Name = "notification_checkbox";
+        notification_checkbox.Size = new Size(126, 19);
+        notification_checkbox.TabIndex = 14;
+        notification_checkbox.Text = "Show Notifications";
+        notification_checkbox.UseVisualStyleBackColor = true;
         // 
         // MainWindow
         // 
         AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(313, 191);
-        Controls.Add(notification_Button);
+        Controls.Add(notification_checkbox);
         Controls.Add(label1);
         Controls.Add(donate_Button);
         Controls.Add(discord_Button);
@@ -235,5 +235,5 @@ partial class MainWindow
     private Button discord_Button;
     private Button donate_Button;
     private Label label1;
-    private CheckBox notification_Button;
+    private CheckBox notification_checkbox;
 }

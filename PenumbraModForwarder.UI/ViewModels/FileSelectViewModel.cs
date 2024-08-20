@@ -12,6 +12,14 @@ public class FileSelectViewModel : ReactiveObject
     public ObservableCollection<FileItem> Files { get; } = new();
 
     private string[] _selectedFiles = Array.Empty<string>();
+    private string _archiveFileName = string.Empty;
+    
+    public string ArchiveFileName
+    {
+        get => _archiveFileName;
+        set => this.RaiseAndSetIfChanged(ref _archiveFileName, value);
+    }
+    
     public string[] SelectedFiles
     {
         get => _selectedFiles;
@@ -19,6 +27,7 @@ public class FileSelectViewModel : ReactiveObject
     }
 
     public ReactiveCommand<Unit, Unit> ConfirmSelectionCommand { get; }
+    public ReactiveCommand<Unit, Unit> CancelSelectionCommand { get; }
     public Action CloseAction { get; set; }
 
     public FileSelectViewModel(ILogger<FileSelectViewModel> logger)
@@ -26,6 +35,11 @@ public class FileSelectViewModel : ReactiveObject
         _logger = logger;
         ConfirmSelectionCommand = ReactiveCommand.Create(
             ConfirmSelection,
+            outputScheduler: RxApp.MainThreadScheduler
+        );
+        
+        CancelSelectionCommand = ReactiveCommand.Create(
+            CancelSelection,
             outputScheduler: RxApp.MainThreadScheduler
         );
     }
@@ -42,6 +56,12 @@ public class FileSelectViewModel : ReactiveObject
             };
             Files.Add(fileItem);
         }
+    }
+    
+    private void CancelSelection()
+    {
+        _logger.LogWarning("File selection was canceled.");
+        CloseAction?.Invoke();
     }
 
 

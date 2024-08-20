@@ -15,21 +15,22 @@ namespace PenumbraModForwarder.UI.Services
             _logger = logger;
         }
 
-        public string[] SelectFiles(string[] files)
+        public string[] SelectFiles(string[] files, string archiveFileName)
         {
             if (Application.OpenForms.Count > 0)
             {
                 // Ensure we use the UI thread for showing the form
-                return Application.OpenForms[0].Invoke(() => SelectFilesInternal(files));
+                return Application.OpenForms[0].Invoke(() => SelectFilesInternal(files, archiveFileName));
             }
 
-            return SelectFilesInternal(files);
+            return SelectFilesInternal(files, archiveFileName);
         }
 
-        private string[] SelectFilesInternal(string[] files)
+        private string[] SelectFilesInternal(string[] files, string archiveName)
         {
             using var fileSelectForm = new FileSelect(new FileSelectViewModel(_fileLogger));
             fileSelectForm.ViewModel.LoadFiles(files);
+            fileSelectForm.ViewModel.ArchiveFileName = archiveName;
             
             var result = fileSelectForm.ShowDialog();
 

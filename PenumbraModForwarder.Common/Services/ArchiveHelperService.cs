@@ -50,7 +50,8 @@ namespace PenumbraModForwarder.Common.Services
                 if (!_configurationService.GetConfigValue(o => o.ExtractAll))
                 {
                     _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
-                    var selectedFiles = _fileSelector.SelectFiles(files);
+                    var fileName = Path.GetFileName(filePath);
+                    var selectedFiles = _fileSelector.SelectFiles(files, fileName);
                     if (selectedFiles.Length == 0)
                     {
                         _logger.LogWarning("No files selected. Aborting extraction.");

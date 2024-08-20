@@ -32,6 +32,9 @@ namespace PenumbraModForwarder.UI.Views
 
                 this.BindCommand(ViewModel, vm => vm.ConfirmSelectionCommand, v => v.confirmButton)
                     .DisposeWith(disposables);
+                
+                this.Bind(ViewModel, vm => vm.ArchiveFileName, v => v.archivefile_Label.Text)
+                    .DisposeWith(disposables);
 
                 fileCheckedListBox.ItemCheck += FileCheckedListBox_ItemCheck;
 

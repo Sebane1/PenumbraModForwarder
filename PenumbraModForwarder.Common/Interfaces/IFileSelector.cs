@@ -2,5 +2,5 @@
 
 public interface IFileSelector
 {
-    string[] SelectFiles(string[] files);
+    string[] SelectFiles(string[] files, string archiveFileName);
 }
