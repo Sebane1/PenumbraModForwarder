@@ -1,17 +1,19 @@
-name: Build and Release on PR Merge
+name: Release on PR Merge
 
 on:
-    workflow_run:
-        workflows: ["Manual Release"]
+    pull_request:
         types:
-            - completed
-        # Ensure this workflow is triggered only after the `update-version` workflow completes
-        status: success
+            - closed
+
+permissions:
+    contents: write
+    packages: write
 
 jobs:
-    build-release-upload:
-        if: github.event.workflow_run.workflow == 'Manual Release' && github.event.workflow_run.conclusion == 'success'
-        runs-on: windows-latest
+    release:
+        if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
+        runs-on: ubuntu-latest
+        environment: Release
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
@@ -29,7 +31,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ github.event.pull_request.head.ref }}
+                  tag_name: ${{ github.ref_name }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

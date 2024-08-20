@@ -66,7 +66,8 @@ jobs:
           target_branch: "master"
           get_diff: 'true'
 
-      - name: Output PR Number
-        id: output-pr
-        run: |
-          echo "PR_NUMBER=$(gh pr list --state open --head ${{ github.event.inputs.tagName }} --json number -q '.[0].number')" >> $GITHUB_ENV
+      - name: Add 'release' label to the PR
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: release
