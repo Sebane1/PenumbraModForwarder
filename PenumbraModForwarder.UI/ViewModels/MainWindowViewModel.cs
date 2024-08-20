@@ -218,6 +218,8 @@ public class MainWindowViewModel : ReactiveObject
             (config, linking) => config.FileLinkingEnabled = linking, 
             value
         );
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PenumbraModForwarder.exe");
+        _associateFileTypeService.AssociateFileTypes(path);
     }
     
     private void UpdateAutoLoad(bool value)

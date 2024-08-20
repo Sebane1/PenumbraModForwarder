@@ -2,5 +2,5 @@
 
 public interface IAssociateFileTypeService
 {
-    void AssociateFileTypes(string extension, string applicationPath);
+    void AssociateFileTypes(string applicationPath);
 }

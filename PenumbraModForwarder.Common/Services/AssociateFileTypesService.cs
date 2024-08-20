@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Reflection;
+using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 
 namespace PenumbraModForwarder.Common.Services;
@@ -18,20 +19,28 @@ public class AssociateFileTypesService : IAssociateFileTypeService
         _errorWindowService = errorWindowService;
     }
 
-    public void AssociateFileTypes(string extension, string applicationPath)
+    public void AssociateFileTypes(string applicationPath)
     {
+        var allowedExtensions = new[] {".pmp", ".ttmp2", ".ttmp", ".rpvsp"};
         try
         {
             if (_configurationService.GetConfigValue(c => c.FileLinkingEnabled))
             {
                 _logger.LogInformation("Associating file types");
-                _registryHelper.CreateFileAssociation(extension, applicationPath);
+                foreach (var extension in allowedExtensions)
+                {
+                    _registryHelper.CreateFileAssociation(extension, applicationPath);
+                }
             }
             else
             {
-                _logger.LogInformation("Not associating file types");
-                _registryHelper.RemoveFileAssociation(extension);
+                _logger.LogInformation("Disassociating file types");
+                foreach (var extension in allowedExtensions)
+                {
+                    _registryHelper.RemoveFileAssociation(extension);
+                }
             }
+
         }
         catch (Exception e)
         {
@@ -39,4 +48,5 @@ public class AssociateFileTypesService : IAssociateFileTypeService
             _errorWindowService.ShowError(e.ToString());
         }
     }
+    
 }
