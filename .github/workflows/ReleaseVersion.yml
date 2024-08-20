@@ -31,7 +31,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ github.ref_name }}
+                  tag_name: ${{ github.event.pull_request.head.ref }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
