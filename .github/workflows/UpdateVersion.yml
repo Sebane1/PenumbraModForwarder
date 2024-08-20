@@ -65,9 +65,4 @@ jobs:
           source_branch: ${{ github.event.inputs.tagName }}
           target_branch: "master"
           get_diff: 'true'
-
-      - name: Add 'release' label to the PR
-        uses: actions-ecosystem/action-add-labels@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          labels: release
+          label: 'release'
