@@ -90,5 +90,7 @@ jobs:
         uses: devops-infra/action-pull-request@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          body: "**Automated pull request**<br><br>Updated Version Number in XML and .csproj"
           title: "Update Version Number"
+          source_branch: ${{ github.event.inputs.tagName }}
+          target_branch: "master"
+          get_diff: 'true'
