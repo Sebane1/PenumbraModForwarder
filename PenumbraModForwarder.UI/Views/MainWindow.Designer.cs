@@ -46,6 +46,8 @@ partial class MainWindow
         donate_Button = new Button();
         label1 = new Label();
         notification_checkbox = new CheckBox();
+        version_Label = new Label();
+        associate_Checkbox = new CheckBox();
         SuspendLayout();
         // 
         // select_directory
@@ -192,11 +194,33 @@ partial class MainWindow
         notification_checkbox.Text = "Show Notifications";
         notification_checkbox.UseVisualStyleBackColor = true;
         // 
+        // version_Label
+        // 
+        version_Label.AutoSize = true;
+        version_Label.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+        version_Label.Location = new Point(0, 192);
+        version_Label.Name = "version_Label";
+        version_Label.Size = new Size(45, 13);
+        version_Label.TabIndex = 15;
+        version_Label.Text = "Version";
+        // 
+        // associate_Checkbox
+        // 
+        associate_Checkbox.AutoSize = true;
+        associate_Checkbox.Location = new Point(12, 62);
+        associate_Checkbox.Name = "associate_Checkbox";
+        associate_Checkbox.Size = new Size(129, 19);
+        associate_Checkbox.TabIndex = 16;
+        associate_Checkbox.Text = "Associate File Types";
+        associate_Checkbox.UseVisualStyleBackColor = true;
+        // 
         // MainWindow
         // 
         AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(313, 191);
+        ClientSize = new Size(313, 210);
+        Controls.Add(associate_Checkbox);
+        Controls.Add(version_Label);
         Controls.Add(notification_checkbox);
         Controls.Add(label1);
         Controls.Add(donate_Button);
@@ -236,4 +260,6 @@ partial class MainWindow
     private Button donate_Button;
     private Label label1;
     private CheckBox notification_checkbox;
+    private Label version_Label;
+    private CheckBox associate_Checkbox;
 }

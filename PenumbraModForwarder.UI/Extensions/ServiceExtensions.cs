@@ -42,6 +42,7 @@ public static class ServiceExtensions
         services.AddSingleton<IProcessHelperService, ProcessHelperServiceService>();
         services.AddSingleton<IArkService, ArkService>();
         services.AddSingleton<ISystemTrayManager, SystemTrayManager>();
+        services.AddSingleton<IAssociateFileTypeService, AssociateFileTypesService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)

@@ -14,17 +14,32 @@ public class MainWindowViewModel : ReactiveObject
     private readonly IFileWatcher _fileWatcher;
     private readonly IProcessHelperService _processHelperService;
     private readonly ISystemTrayManager _systemTrayManager;
-    
+    private readonly IAssociateFileTypeService _associateFileTypeService;
     private string _selectedFolderPath;
     private bool _autoDelete;
     private bool _autoLoad;
     private bool _extractAll;
     private bool _notificationEnabled;
     private bool _selectBoxEnabled;
+    private string _versionNumber;
+    private bool _fileLinkingEnabled;
+    
+    public bool FileLinkingEnabled
+    {
+        get => _fileLinkingEnabled;
+        set => this.RaiseAndSetIfChanged(ref _fileLinkingEnabled, value);
+    }
+    
     public string SelectedFolderPath
     {
         get => _selectedFolderPath;
         set => this.RaiseAndSetIfChanged(ref _selectedFolderPath, value);
+    }
+    
+    public string VersionNumber
+    {
+        get => _versionNumber;
+        set => this.RaiseAndSetIfChanged(ref _versionNumber, value);
     }
     
     public bool NotificationEnabled
@@ -66,6 +81,7 @@ public class MainWindowViewModel : ReactiveObject
     public ReactiveCommand<bool, Unit> UpdateAutoLoadCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateExtractAllCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateNotificationCommand { get; }
+    public ReactiveCommand<bool, Unit> EnableFileLinkingCommand { get; }
 
     #region Link Buttons
     
@@ -81,7 +97,7 @@ public class MainWindowViewModel : ReactiveObject
     #endregion
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager, IAssociateFileTypeService associateFileTypeService)
     {
         _configurationService = configurationService;
         _logger = logger;
@@ -89,7 +105,9 @@ public class MainWindowViewModel : ReactiveObject
         _fileWatcher = fileWatcher;
         _processHelperService = processHelperService;
         _systemTrayManager = systemTrayManager;
+        _associateFileTypeService = associateFileTypeService;
         SetAllConfigValues();
+        SetVersionNumber();
         
         _logger.LogInformation("MainWindowViewModel created.");
         OpenFolderDialog = ReactiveCommand.Create(OpenFolder);
@@ -97,6 +115,7 @@ public class MainWindowViewModel : ReactiveObject
         UpdateAutoLoadCommand = ReactiveCommand.Create<bool>(UpdateAutoLoad);
         UpdateExtractAllCommand = ReactiveCommand.Create<bool>(UpdateExtractAll);
         UpdateNotificationCommand = ReactiveCommand.Create<bool>(UpdateNotification);
+        EnableFileLinkingCommand = ReactiveCommand.Create<bool>(EnableFileLinking);
         
         #region Link Buttons
         
@@ -119,6 +138,12 @@ public class MainWindowViewModel : ReactiveObject
         AutoLoad = _configurationService.GetConfigValue(config => config.AutoLoad);
         ExtractAll = _configurationService.GetConfigValue(config => config.ExtractAll);
         NotificationEnabled = _configurationService.GetConfigValue(config => config.NotificationEnabled);
+        FileLinkingEnabled = _configurationService.GetConfigValue(config => config.FileLinkingEnabled);
+    }
+    
+    private void SetVersionNumber()
+    {
+        VersionNumber = $"Version: {Application.ProductVersion.Split("+")[0]}";
     }
 
     #region Link Buttons
@@ -182,6 +207,15 @@ public class MainWindowViewModel : ReactiveObject
         _logger.LogInformation($"AutoDelete: {value}");
         _configurationService.SetConfigValue(
             (config, delete) => config.AutoDelete = delete, 
+            value
+        );
+    }
+    
+    private void EnableFileLinking(bool value)
+    {
+        _logger.LogInformation($"FileLinkingEnabled: {value}");
+        _configurationService.SetConfigValue(
+            (config, linking) => config.FileLinkingEnabled = linking, 
             value
         );
     }

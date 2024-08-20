@@ -7,7 +7,6 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<OldConfigurationModel, ConfigurationModel>()
-            .ForMember(dest => dest.ExtractAll, opt => opt.MapFrom(src => src.AllowChoicesBeforeExtractingArchive))
             .ForMember(dest => dest.DownloadPath, opt => opt.MapFrom(src => src.DownloadPath))
             .ForMember(dest => dest.AutoLoad, opt => opt.MapFrom(src => src.AutoLoad))
             .ForMember(dest => dest.AutoDelete, opt => opt.MapFrom(src => src.AutoDelete))
