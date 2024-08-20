@@ -95,7 +95,7 @@ namespace FFXIVModExractor {
             // 
             fileSystemWatcher.EnableRaisingEvents = true;
             fileSystemWatcher.SynchronizingObject = this;
-            fileSystemWatcher.Created += fileSystemWatcher_Created;
+            // fileSystemWatcher.Created += fileSystemWatcher_Created;
             fileSystemWatcher.Renamed += fileSystemWatcher_Renamed;
             // 
             // xma

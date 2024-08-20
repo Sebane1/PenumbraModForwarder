@@ -128,14 +128,21 @@ namespace PenumbraModForwarder.Services
             return extractedMods;
         }
 
-        public static async Task<bool> WaitForFileRelease(string path)
+        public static async Task WaitForFileRelease(string filePath) 
         {
-            while (IsFileLocked(path))
-            {
-                await Task.Delay(100);
-            }
+            const int maxRetries = 10;
+            const int delayBetweenRetriesMs = 500;
 
-            return true;
+            for (var i = 0; i < maxRetries; i++) {
+                try {
+                    await using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None)) {
+                        return;
+                    }
+                } catch (IOException) {
+                    await Task.Delay(delayBetweenRetriesMs);
+                }
+            }
+            throw new IOException($"File {filePath} is locked and could not be accessed after multiple attempts.");
         }
 
         private static bool IsFileLocked(string file)
