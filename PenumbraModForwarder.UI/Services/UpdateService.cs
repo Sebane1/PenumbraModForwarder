@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.UI.Interfaces;
+using Serilog;
 
 namespace PenumbraModForwarder.UI.Services;
 using AutoUpdaterDotNET;
@@ -39,5 +40,6 @@ public class UpdateService : IUpdateService
     private void OnApplicationExit()
     {
         _logger.LogInformation("Application is exiting due to an update");
+        Log.CloseAndFlush();
     }
 }

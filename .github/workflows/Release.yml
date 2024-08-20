@@ -11,6 +11,7 @@ on:
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 jobs:
   validate-tag:
@@ -65,8 +66,8 @@ jobs:
           version="${{ github.event.inputs.tagName }}"
           xml_file="./update.xml"
           xml=$(cat "$xml_file")
-          xml=$(echo "$xml" | sed "s/<version>.*<\/version>/<version>${version}</version>/")
-          xml=$(echo "$xml" | sed "s/<url>.*<\/url>/<url>https:\/\/github.com\/Sebane1\/PenumbraModForwarder\/releases\/download\/${version}\/PenumbraModForwarder.zip<\/url>/")
+          xml=$(echo "$xml" | sed "s|<version>.*</version>|<version>${version}</version>|")
+          xml=$(echo "$xml" | sed "s|<url>.*</url>|<url>https://github.com/Sebane1/PenumbraModForwarder/releases/download/${version}/PenumbraModForwarder.zip</url>|")
           echo "$xml" > "$xml_file"
         shell: bash
 
@@ -74,13 +75,23 @@ jobs:
         run: |
           version="${{ github.event.inputs.tagName }}"
           version="${version#v}"  # Strip the leading 'v'
-          csproj_file="./PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj"
-          sed -i "s/<Version>.*<\/Version>/<Version>${version}<\/Version>/" "$csproj_file"
+          csproj_file="./PenumbraModForwarder/PenumbraModForwarder.csproj"
+          sed -i "s|<Version>.*</Version>|<Version>${version}</Version>|" "$csproj_file"
         shell: bash
+
+      - name: Commit Changes
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_message: "[AUTO-COMMIT] Update Version Number"
+          # Make the target branch the version number
+          target_branch: ${{ github.event.inputs.tagName }}
 
       - name: Create a PR with the changes
         uses: devops-infra/action-pull-request@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          body: "**Automated pull request**<br><br>Updated Version Number in XML and .csproj"
           title: "Update Version Number"
+          source_branch: ${{ github.event.inputs.tagName }}
+          target_branch: "master"
+          get_diff: 'true'
