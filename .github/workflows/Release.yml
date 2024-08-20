@@ -83,6 +83,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           commit_message: "[AUTO-COMMIT] Update Version Number"
+          # Make the target branch the version number
+          target_branch: ${{ github.event.inputs.tagName }}
           
       - name: Create a PR with the changes
         uses: devops-infra/action-pull-request@master
