@@ -106,64 +106,76 @@ namespace FFXIVModExractor {
         // TODO: Transition to the new ModHandler.DealWithMod method
         private void SendModToPenumbra(string modPackPath, ref bool foundValidFile) {
             string finalModPath = modPackPath;
-            if (File.Exists(_textoolsPath)) {
-                string originatingModDirectory = Path.GetDirectoryName(modPackPath);
-                var outputModName = modPackPath
-                    .Replace(".pmp", "_dt.pmp").Replace(".ttmp", "_dt.ttmp");
-                Directory.CreateDirectory(Path.Combine(originatingModDirectory, @"Dawntrail Converted\"));
-                finalModPath = Path.Combine(originatingModDirectory,
-                    @"Dawntrail Converted\" + Path.GetFileName(outputModName));
-                trayIcon.BalloonTipText = "Mod pack has been sent to textools for Dawntrail conversion.";
+            string originatingModDirectory = Path.GetDirectoryName(modPackPath);
+            string dawntrailConvertedDir = Path.Combine(originatingModDirectory, @"Dawntrail Converted\");
+            string outputModName = modPackPath
+                .Replace(".pmp", "_dt.pmp").Replace(".ttmp", "_dt.ttmp");
+            string convertedModPath = Path.Combine(dawntrailConvertedDir, Path.GetFileName(outputModName));
+
+            // Check if the Dawntrail converted mod already exists
+            if (File.Exists(convertedModPath)) {
+                trayIcon.BalloonTipText = "Dawntrail version of the mod already exists. Skipping import.";
                 trayIcon.ShowBalloonTip(5000);
-                var processStart = new ProcessStartInfo(_textoolsPath);
-                processStart.RedirectStandardOutput = true;
-                processStart.RedirectStandardError = true;
-                processStart.WindowStyle = ProcessWindowStyle.Hidden;
-                processStart.UseShellExecute = false;
-                processStart.RedirectStandardInput = true;
-                processStart.CreateNoWindow = true;
-                processStart.FileName = _textoolsPath;
-                processStart.WorkingDirectory = Path.GetDirectoryName(_textoolsPath);
-                processStart.UseShellExecute = false;
-                processStart.Arguments = @"/upgrade """ + modPackPath + @""" " + @"""" + finalModPath + @"""";
-                Process process = new Process();
-                process.StartInfo = processStart;
-                process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e) { };
-                process.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs e) { };
-                process.EnableRaisingEvents = true;
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-                WaitingMessageWindow waitingMessageWindow = new WaitingMessageWindow();
-                waitingMessageWindow.Show();
-                process.WaitForExit();
-                waitingMessageWindow.Close();
-                if (!File.Exists(finalModPath)) {
-                    finalModPath = modPackPath;
-                    trayIcon.BalloonTipText =
-                        "Mod pack was not converted to Dawntrail, or is already Dawntrail Compatible";
-                    trayIcon.ShowBalloonTip(5000);
+                foundValidFile = true;
+                return;
+            }
+
+            if (File.Exists(_textoolsPath)) {
+                Directory.CreateDirectory(dawntrailConvertedDir);
+                trayIcon.BalloonTipText = "Mod pack is being sent to textools for Dawntrail conversion.";
+                trayIcon.ShowBalloonTip(5000);
+
+                var processStart = new ProcessStartInfo(_textoolsPath) {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    CreateNoWindow = true,
+                    Arguments = $"/upgrade \"{modPackPath}\" \"{convertedModPath}\""
+                };
+
+                using (var process = new Process()) {
+                    process.StartInfo = processStart;
+                    process.OutputDataReceived += (sender, e) => { };
+                    process.ErrorDataReceived += (sender, e) => { };
+                    process.EnableRaisingEvents = true;
+                    process.Start();
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    using (var waitingMessageWindow = new WaitingMessageWindow()) {
+                        waitingMessageWindow.Show();
+                        process.WaitForExit();
+                    }
+
+                    if (!File.Exists(convertedModPath)) {
+                        trayIcon.BalloonTipText = "Mod pack was not converted to Dawntrail, or is already Dawntrail compatible.";
+                        trayIcon.ShowBalloonTip(5000);
+                        finalModPath = modPackPath; // Revert to original mod pack path if conversion fails
+                    }
                 }
+            } else {
+                trayIcon.BalloonTipText = "Textools not found. Skipping conversion.";
+                trayIcon.ShowBalloonTip(5000);
             }
 
             PenumbraHttpApi.OpenWindow();
             PenumbraHttpApi.Install(finalModPath);
-            trayIcon.BalloonTipText = "Mod pack has been sent to penumbra.";
+            trayIcon.BalloonTipText = "Mod pack has been sent to Penumbra.";
             trayIcon.ShowBalloonTip(5000);
             Thread.Sleep(6000);
             foundValidFile = true;
             Task.Run(async () => {
                 await FileHandler.WaitForFileRelease(finalModPath);
                 if (Options.GetConfigValue<bool>("AutoDelete")) {
-                    // For now we will try to delete the file & folder after it has been sent to Penumbra.
                     FileHandler.DeleteFile(modPackPath);
-                    // This will most likely print an error to the console, its fine
                     FileHandler.DeleteFile(finalModPath);
-                    // We need to delete it here otherwise we won't have a file to install
-                    //FileHandler.DeleteDirectory(Path.Combine(Path.GetDirectoryName(finalModPath), @"Dawntrail Converted\"));
+                    // Optionally delete the Dawntrail Converted directory
+                    // FileHandler.DeleteDirectory(dawntrailConvertedDir);
                 }
             });
         }
+
 
         // TODO: Extract this to a new class called UpdateHandler, will need to handle the ApplicationExitEvent somehow
         private void CheckForUpdate() {
@@ -199,119 +211,166 @@ namespace FFXIVModExractor {
         }
 
         // TODO: This is being reworked in FileHandler.cs, struggling right now to find a way to handle the tray icon balloon tip when detached from the UI
-        async Task ProcessModPackRequest(FileSystemEventArgs e) {
-            if (_processingQueue.Files.Any(item => item.FilePath == e.FullPath)) {
+        private async Task ProcessModPackRequest(FileSystemEventArgs e) {
+            var processingQueue = new Queue<string>();
+            var processedFiles = new HashSet<string>();
+
+            // Check if the file is already being processed
+            if (processedFiles.Contains(e.FullPath)) {
                 Console.WriteLine($"{e.FullPath} is already in the processing queue, waiting...");
                 return;
             }
+            
+            // Check if the file is inside Dawntrail Converted, if so, ignore it
+            if (e.FullPath.Contains("Dawntrail Converted")) {
+                return;
+            }
 
-            var queueItem = new ProcessingQueueItem {
-                FilePath = e.FullPath,
-                Status = ProcessingStatus.Queued
-            };
+            processingQueue.Enqueue(e.FullPath);
+            processedFiles.Add(e.FullPath);
 
-            _processingQueue.Files.Enqueue(queueItem);
+            while (processingQueue.Count > 0) {
+                string filePath = processingQueue.Dequeue();
 
-            try {
-                if (e.FullPath.EndsWith(".pmp") || e.FullPath.EndsWith(".ttmp") || e.FullPath.EndsWith(".ttmp2")) {
-                    bool value = false;
-                    SendModToPenumbra(e.FullPath, ref value);
-                } else if (e.FullPath.EndsWith(".rpvsp")) {
-                    RoleplayingVoiceCheck();
-                    if (!string.IsNullOrEmpty(roleplayingVoiceCache)) {
-                        string directory = roleplayingVoiceCache + @"\VoicePack\" +
-                                           Path.GetFileNameWithoutExtension(e.FullPath);
-                        ZipFile.ExtractToDirectory(e.FullPath, directory);
-                        trayIcon.BalloonTipText = "Mod has been sent to Artemis Roleplaying Kit";
-                        trayIcon.ShowBalloonTip(5000);
-                    } else {
-                        if (MessageBox.Show(
-                                "This mod requires the Artemis Roleplaying Kit dalamud plugin to be installed. Would you like to install it now?",
-                                "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes) {
-                            try {
-                                Process.Start(new ProcessStartInfo {
-                                    FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
-                                    UseShellExecute = true,
-                                    Verb = "OPEN"
-                                });
-                            } catch {
-
-                            }
+                try {
+                    if (filePath.EndsWith(".pmp") || filePath.EndsWith(".ttmp") || filePath.EndsWith(".ttmp2")) {
+                        bool value = false;
+                        SendModToPenumbra(filePath, ref value);
+                    } else if (filePath.EndsWith(".rpvsp")) {
+                        RoleplayingVoiceCheck();
+                        if (!string.IsNullOrEmpty(roleplayingVoiceCache)) {
+                            string directory = Path.Combine(roleplayingVoiceCache, "VoicePack", Path.GetFileNameWithoutExtension(filePath));
+                            ZipFile.ExtractToDirectory(filePath, directory);
+                            trayIcon.BalloonTipText = "Mod has been sent to Artemis Roleplaying Kit";
+                            trayIcon.ShowBalloonTip(5000);
+                        } else {
+                            PromptToInstallArtemis();
                         }
+                    } else if (filePath.EndsWith(".7z") || filePath.EndsWith(".rar") || filePath.EndsWith(".zip")) {
+                        await HandleCompressedModFile(filePath);
                     }
-                } else if (e.FullPath.EndsWith(".7z") || e.FullPath.EndsWith(".rar") || e.FullPath.EndsWith(".zip")) {
-                    await FileHandler.WaitForFileRelease(e.FullPath);
-                    List<string> validModFiles = new List<string>();
-                    List<string> extractedModFiles = new List<string>();
-                    try {
-                        SevenZipExtractor.SetLibraryPath(Path.Combine(
-                            AppDomain.CurrentDomain.BaseDirectory + Path.DirectorySeparatorChar + "Resources/",
-                            "7z.dll"));
-                        using (var archive = new SevenZipExtractor(e.FullPath)) {
-                            foreach (var item in archive.ArchiveFileNames) {
-                                // Process files that match criteria
-                                if (FileHandler.IsModFile(item)) {
-                                    // Create a flat output path, stripping directories
-                                    string fileName = Path.GetFileName(item);
-                                    string tempOutputPath = Path.Combine(Path.GetDirectoryName(e.FullPath), fileName);
-
-                                    // Extract the file to a flat path
-                                    validModFiles.Add(tempOutputPath);
-                                }
-                            }
-                        }
-                        // Dont question why we have to close and re-open the archive file. Apparently if we dont do it the files extract corrupted because we seeked file names first.
-                        using (var archive = new SevenZipExtractor(e.FullPath)) {
-                            if (Options.GetConfigValue<bool>("AllowChoicesBeforeExtractingArchive") && validModFiles.Count > 1) {
-                                ModPackSelectionWindow modPackSelectionWindow = new ModPackSelectionWindow();
-                                modPackSelectionWindow.ModPackItems = validModFiles.ToArray();
-                                if (modPackSelectionWindow.ShowDialog() == DialogResult.OK) {
-                                    foreach (var item in modPackSelectionWindow.SelectedIndexes) {
-                                        string fileName = InvalidPenumbraSymbolReplacer(validModFiles[item]);
-                                        using (FileStream outputFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write)) {
-                                            archive.ExtractFile(item, outputFileStream);
-                                            outputFileStream.Flush();
-                                        }
-                                        extractedModFiles.Add(validModFiles[item]);
-                                    }
-                                }
-                            } else {
-                                foreach (var item in validModFiles) {
-                                    string fileName = InvalidPenumbraSymbolReplacer(item);
-                                    using (FileStream outputFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write)) {
-                                        int index = archive.ArchiveFileNames.IndexOf(item);
-                                        archive.ExtractFile(index, outputFileStream);
-                                        outputFileStream.Flush();
-                                    }
-                                    extractedModFiles.Add(item);
-                                }
-                            }
-                        }
-                    } catch (Exception ex) {
-                        // Log the error as needed
-                        string error = ex.Message;
-
-                        queueItem.Status = ProcessingStatus.Failed;
-                        Console.WriteLine($"Failed to extract {e.FullPath}: {error}");
-                    }
-
-                    foreach (var item in extractedModFiles) {
-                        await FileHandler.WaitForFileRelease(item);
-                        bool success = false;
-                        SendModToPenumbra(item, ref success);
-                    }
-
-                    FileHandler.DeleteFile(e.FullPath);
+                } catch (Exception ex) {
+                    Console.WriteLine($"Error processing {filePath}: {ex.Message}");
+                } finally {
+                    processedFiles.Remove(filePath); // Remove from the set after processing
+                    Console.WriteLine($"Processed {filePath}");
                 }
-            } catch (Exception ex) {
-                Console.WriteLine($"Error processing {e.FullPath}: {ex.Message}");
-                queueItem.Status = ProcessingStatus.Failed;
-            } finally {
-                queueItem.Status = ProcessingStatus.Completed;
-                _processingQueue.Files.TryDequeue(out _);
-                Console.WriteLine($"Processed {e.FullPath}");
             }
         }
+
+        private void PromptToInstallArtemis() {
+            if (MessageBox.Show("This mod requires the Artemis Roleplaying Kit dalamud plugin to be installed. Would you like to install it now?", "Penumbra Mod Forwarder", MessageBoxButtons.YesNo) == DialogResult.Yes) {
+                try {
+                    Process.Start(new ProcessStartInfo {
+                        FileName = "https://github.com/Sebane1/RoleplayingVoiceDalamud",
+                        UseShellExecute = true,
+                        Verb = "OPEN"
+                    });
+                } catch { /* Handle error */ }
+            }
+        }
+
+        private async Task HandleCompressedModFile(string filePath) {
+            await FileHandler.WaitForFileRelease(filePath);
+            List<string> extractedModFiles = new List<string>();
+
+            try {
+                List<string> validModFiles = ExtractValidModFiles(filePath);
+                extractedModFiles = ExtractModFiles(filePath, validModFiles);
+                
+                Console.WriteLine($"Extracted files:");
+                foreach (var file in extractedModFiles) {
+                    Console.WriteLine(file);
+                }
+            } catch (Exception ex) {
+                Console.WriteLine($"Failed to extract {filePath}: {ex.Message}");
+                return;
+            }
+
+            foreach (var item in extractedModFiles) {
+                await FileHandler.WaitForFileRelease(item);
+                bool success = false;
+                
+                Console.WriteLine($"Sending file to Penumbra: {item}");
+        
+                SendModToPenumbra(item, ref success);
+        
+                if (!success) {
+                    Console.WriteLine($"Failed to send file to Penumbra: {item}");
+                }
+            }
+
+            FileHandler.DeleteFile(filePath);
+        }
+
+
+        private List<string> ExtractValidModFiles(string filePath) {
+            var validModFiles = new List<string>();
+
+            SevenZipExtractor.SetLibraryPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory + Path.DirectorySeparatorChar + "Resources/", "7z.dll"));
+            using (var archive = new SevenZipExtractor(filePath)) {
+                foreach (var item in archive.ArchiveFileNames) {
+                    if (FileHandler.IsModFile(item)) {
+                        // Just add the file name (without modifying the path)
+                        validModFiles.Add(item);
+                    }
+                }
+            }
+
+            return validModFiles;
+        }
+
+        private List<string> ExtractModFiles(string filePath, List<string> validModFiles) {
+            var extractedModFiles = new List<string>();
+            var processedFiles = new HashSet<string>();
+
+            using (var archive = new SevenZipExtractor(filePath)) {
+                if (Options.GetConfigValue<bool>("AllowChoicesBeforeExtractingArchive") && validModFiles.Count > 1) {
+                    ModPackSelectionWindow modPackSelectionWindow = new ModPackSelectionWindow {
+                        ModPackItems = validModFiles.ToArray()
+                    };
+
+                    if (modPackSelectionWindow.ShowDialog() == DialogResult.OK) {
+                        foreach (var item in modPackSelectionWindow.SelectedIndexes) {
+                            string modFile = validModFiles[item];
+                            if (!processedFiles.Contains(modFile)) { 
+                                string extractedFile = ExtractFile(archive, modFile);
+                                extractedModFiles.Add(extractedFile);
+                                processedFiles.Add(modFile);
+                            }
+                        }
+                    }
+                } else {
+                    foreach (var modFile in validModFiles) {
+                        if (!processedFiles.Contains(modFile)) { 
+                            string extractedFile = ExtractFile(archive, modFile);
+                            extractedModFiles.Add(extractedFile);
+                            processedFiles.Add(modFile); 
+                        }
+                    }
+                }
+            }
+
+            return extractedModFiles;
+        }
+
+        private string ExtractFile(SevenZipExtractor archive, string fileName) {
+            string outputFile = InvalidPenumbraSymbolReplacer(Path.Combine(Path.GetDirectoryName(archive.FileName), Path.GetFileName(fileName)));
+    
+            using (FileStream outputFileStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write)) {
+                int index = archive.ArchiveFileNames.IndexOf(fileName);
+
+                if (index < 0) {
+                    throw new InvalidOperationException($"File '{fileName}' not found in the archive.");
+                }
+
+                archive.ExtractFile(index, outputFileStream);
+                outputFileStream.Flush();
+            }
+
+            return outputFile;
+        }
+
 
         public void GetDownloadPath() {
             string downloadPath = Options.GetConfigValue<string>("DownloadPath");
@@ -429,6 +488,12 @@ namespace FFXIVModExractor {
             if (autoLoadModCheckbox.Checked && !exitInitiated) {
                 Hide();
                 e.Cancel = true;
+            }
+            if (exitInitiated)
+            {
+                // If an exit was initiated, we need to make sure that the Dawntrail directory has been removed
+                string dawntrailConvertedDir = Path.Combine(downloads.FilePath.Text, @"Dawntrail Converted\");
+                FileHandler.DeleteDirectory(dawntrailConvertedDir);
             }
         }
 
