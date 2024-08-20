@@ -74,7 +74,7 @@ jobs:
         run: |
           version="${{ github.event.inputs.tagName }}"
           version="${version#v}"  # Strip the leading 'v'
-          csproj_file="./PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj"
+          csproj_file="./PenumbraModForwarder/PenumbraModForwarder.csproj"
           sed -i "s|<Version>.*</Version>|<Version>${version}</Version>|" "$csproj_file"
         shell: bash
 
