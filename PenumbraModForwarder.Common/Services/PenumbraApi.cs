@@ -12,9 +12,9 @@ namespace PenumbraModForwarder.Common.Services
         private const int TimeoutMs = 5000;
         private static readonly HttpClient HttpClient;
         private static bool _warningShown;
-        private readonly ITrayNotificationService _trayNotificationService;
         private readonly IErrorWindowService _errorWindowService;
         private readonly ILogger<PenumbraApi> _logger;
+        private readonly ISystemTrayManager _systemTrayManager;
 
         static PenumbraApi()
         {
@@ -24,11 +24,11 @@ namespace PenumbraModForwarder.Common.Services
             };
         }
 
-        public PenumbraApi(ILogger<PenumbraApi> logger, ITrayNotificationService trayNotificationService, IErrorWindowService errorWindowService)
+        public PenumbraApi(ILogger<PenumbraApi> logger, IErrorWindowService errorWindowService, ISystemTrayManager systemTrayManager)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _trayNotificationService = trayNotificationService;
             _errorWindowService = errorWindowService;
+            _systemTrayManager = systemTrayManager;
         }
 
         public async Task InstallAsync(string modPath)
@@ -40,10 +40,9 @@ namespace PenumbraModForwarder.Common.Services
                 _logger.LogInformation("Sending install request for mod at {ModPath}", modPath);
                 await PostAsync("/installmod", data);
                 _logger.LogInformation("Install request sent successfully for mod at {ModPath}", modPath);
+                _systemTrayManager.ShowNotification("Mod Installed", $"Mod installed successfully: {Path.GetFileName(modPath)}");
                 
                 await Task.Delay(500);
-                
-                _trayNotificationService.ShowNotification("Mod installed successfully", $"Mod at {modPath} was installed successfully.");
             }
             catch (Exception ex)
             {

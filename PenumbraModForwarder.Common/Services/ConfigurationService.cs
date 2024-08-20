@@ -8,7 +8,7 @@ using PenumbraModForwarder.Common.Models;
 
 namespace PenumbraModForwarder.Common.Services
 {
-    public class ConfigurationService : IConfigurationService
+    public sealed class ConfigurationService : IConfigurationService
     {
         private string _configPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\config.json";
         private ConfigurationModel _config;
@@ -147,7 +147,7 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        protected virtual void OnConfigChanged()
+        private void OnConfigChanged()
         {
             ConfigChanged?.Invoke(this, EventArgs.Empty);
         }

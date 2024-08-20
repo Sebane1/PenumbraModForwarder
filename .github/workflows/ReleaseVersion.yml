@@ -1,0 +1,37 @@
+name: Release on PR Merge
+
+on:
+    pull_request:
+        types:
+            - closed
+
+permissions:
+    contents: write
+    packages: write
+
+jobs:
+    release:
+        if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
+        runs-on: windows-latest
+        environment: Release
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v3
+
+            - name: Build and Publish
+              uses: ./.github/templates/ReleaseAndPublish
+
+            - name: Upload Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  path: ./publish/PenumbraModForwarder.zip
+                  retention-days: 3
+                  name: "artifact"
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v2.0.8
+              with:
+                  tag_name: ${{ github.event.pull_request.head.ref }}
+                  files: ./publish/PenumbraModForwarder.zip
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

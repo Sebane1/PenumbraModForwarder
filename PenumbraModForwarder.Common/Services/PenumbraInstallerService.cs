@@ -8,15 +8,17 @@ public class PenumbraInstallerService : IPenumbraInstallerService
 {
     private readonly ILogger<PenumbraInstallerService> _logger;
     private readonly IPenumbraApi _penumbraApi;
+    private readonly ISystemTrayManager _systemTrayManager;
     private readonly IRegistryHelper _registryHelper;
     private readonly string _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 
-    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, IRegistryHelper registryHelper)
+    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, IRegistryHelper registryHelper, ISystemTrayManager systemTrayManager)
     {
         _logger = logger;
         _penumbraApi = penumbraApi;
         _registryHelper = registryHelper;
-        
+        _systemTrayManager = systemTrayManager;
+
         if (!Directory.Exists(_dtConversionPath))
         {
             Directory.CreateDirectory(_dtConversionPath);
@@ -80,6 +82,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
             }
 
             _logger.LogInformation($"Mod converted to DT: {dtPath}");
+            _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
 
             // Optionally delete the original mod if conversion was successful
             File.Delete(modPath);

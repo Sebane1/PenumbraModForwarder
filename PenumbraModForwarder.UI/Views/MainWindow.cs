@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
@@ -8,8 +9,8 @@ namespace PenumbraModForwarder.UI.Views;
 
 public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 {
+    private readonly ISystemTrayManager _systemTrayManager;
     public MainWindowViewModel ViewModel { get; set; }
-    private readonly ITrayNotificationService _notificationService;
     
     object IViewFor.ViewModel
     {
@@ -17,12 +18,12 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         set => ViewModel = (MainWindowViewModel) value;
     }
     
-    public MainWindow(MainWindowViewModel viewModel, ITrayNotificationService notificationService)
+    public MainWindow(MainWindowViewModel viewModel, ISystemTrayManager systemTrayManager)
     {
         InitializeComponent();
 
         ViewModel = viewModel;
-        _notificationService = notificationService;
+        _systemTrayManager = systemTrayManager;
 
 
         this.WhenActivated(disposables =>
@@ -61,6 +62,21 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             this.Bind(ViewModel, vm => vm.SelectBoxEnabled, v => v.select_directory.Enabled)
                 .DisposeWith(disposables);
 
+            #region Handling Window State
+
+            Observable.FromEventPattern<EventArgs>(this, nameof(Resize))
+                .Select(_ => WindowState)
+                .Where(state => state == FormWindowState.Minimized)
+                .Subscribe(_ =>
+                {
+                    Hide();
+                    _systemTrayManager.ShowNotification("Penumbra Mod Forwarder", "Minimized to tray.");
+                })
+                .DisposeWith(disposables);
+
+            #endregion
+            
+
             #region Link Buttons
             
             this.BindCommand(ViewModel, vm => vm.OpenXivArchiveCommand, v => v.xivarchive_Button)
@@ -89,8 +105,6 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 
             #endregion
             
-            // Register the notification service for disposal
-            disposables.Add(_notificationService);
         });
     }
 }

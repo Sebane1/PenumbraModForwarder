@@ -12,18 +12,25 @@ public class MainWindowViewModel : ReactiveObject
     private readonly ILogger<MainWindowViewModel> _logger;
     // This will start the file watcher for us
     private readonly IFileWatcher _fileWatcher;
-    private readonly ITrayNotificationService _trayNotificationService;
     private readonly IProcessHelperService _processHelperService;
+    private readonly ISystemTrayManager _systemTrayManager;
     
     private string _selectedFolderPath;
     private bool _autoDelete;
     private bool _autoLoad;
     private bool _extractAll;
+    private bool _notificationEnabled;
     private bool _selectBoxEnabled;
     public string SelectedFolderPath
     {
         get => _selectedFolderPath;
         set => this.RaiseAndSetIfChanged(ref _selectedFolderPath, value);
+    }
+    
+    public bool NotificationEnabled
+    {
+        get => _notificationEnabled;
+        set => this.RaiseAndSetIfChanged(ref _notificationEnabled, value);
     }
     
     public bool AutoDelete
@@ -58,6 +65,7 @@ public class MainWindowViewModel : ReactiveObject
     public ReactiveCommand<bool, Unit> UpdateAutoDeleteCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateAutoLoadCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateExtractAllCommand { get; }
+    public ReactiveCommand<bool, Unit> UpdateNotificationCommand { get; }
 
     #region Link Buttons
     
@@ -73,13 +81,14 @@ public class MainWindowViewModel : ReactiveObject
     #endregion
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager)
     {
         _configurationService = configurationService;
         _logger = logger;
         // This will start the file watcher for us
         _fileWatcher = fileWatcher;
         _processHelperService = processHelperService;
+        _systemTrayManager = systemTrayManager;
         SetAllConfigValues();
         
         _logger.LogInformation("MainWindowViewModel created.");
@@ -87,6 +96,7 @@ public class MainWindowViewModel : ReactiveObject
         UpdateAutoDeleteCommand = ReactiveCommand.Create<bool>(UpdateAutoDelete);
         UpdateAutoLoadCommand = ReactiveCommand.Create<bool>(UpdateAutoLoad);
         UpdateExtractAllCommand = ReactiveCommand.Create<bool>(UpdateExtractAll);
+        UpdateNotificationCommand = ReactiveCommand.Create<bool>(UpdateNotification);
         
         #region Link Buttons
         
@@ -108,6 +118,7 @@ public class MainWindowViewModel : ReactiveObject
         AutoDelete = _configurationService.GetConfigValue(config => config.AutoDelete);
         AutoLoad = _configurationService.GetConfigValue(config => config.AutoLoad);
         ExtractAll = _configurationService.GetConfigValue(config => config.ExtractAll);
+        NotificationEnabled = _configurationService.GetConfigValue(config => config.NotificationEnabled);
     }
 
     #region Link Buttons
@@ -156,6 +167,15 @@ public class MainWindowViewModel : ReactiveObject
     }
 
     #endregion
+
+    private void UpdateNotification(bool value)
+    {
+        _logger.LogInformation($"NotificationEnabled: {value}");
+        _configurationService.SetConfigValue(
+            (config, notification) => config.NotificationEnabled = notification, 
+            value
+        );
+    }
     
     private void UpdateAutoDelete(bool value)
     {
