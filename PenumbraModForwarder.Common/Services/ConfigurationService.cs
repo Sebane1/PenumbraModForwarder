@@ -109,8 +109,6 @@ namespace PenumbraModForwarder.Common.Services
                         }
 
                         var newConfigModel = _mapper.Map<ConfigurationModel>(oldConfigModel);
-                        // We want to manually set this is false to start things off, as the logic has changed around this time.
-                        newConfigModel.ExtractAll = false;
                         _config = newConfigModel;
                         SaveConfig();
                         _logger.LogInformation("Migrated Config.json");
