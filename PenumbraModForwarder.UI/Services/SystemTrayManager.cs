@@ -24,11 +24,16 @@ public class SystemTrayManager : ISystemTrayManager
         };
 
         var contextMenu = new ContextMenuStrip();
-        contextMenu.Items.Add("Exit", null, (sender, args) => Application.Exit());
-        contextMenu.Items.Add("Show", null, (sender, args) => Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show());
+        AddItemsToContextMenu(contextMenu);
         _notifyIcon.ContextMenuStrip = contextMenu;
         
         _notifyIcon.DoubleClick += OnTrayIconDoubleClick;
+    }
+    
+    private void AddItemsToContextMenu(ContextMenuStrip contextMenu)
+    {
+        contextMenu.Items.Add("Show", null, (sender, args) => Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show());
+        contextMenu.Items.Add("Exit", null, (sender, args) => Application.Exit());
     }
     
     public void ShowNotification(string title, string message)
