@@ -33,7 +33,7 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        public void ExtractArchive(string filePath)
+        public virtual void ExtractArchive(string filePath)
         {
             var files = GetFilesInArchive(filePath);
 
@@ -120,7 +120,7 @@ namespace PenumbraModForwarder.Common.Services
             return Path.Combine(_extractionPath, entry.Key);
         }
 
-        private string[] GetFilesInArchive(string filePath)
+        public virtual string[] GetFilesInArchive(string filePath)
         {
             if (string.IsNullOrEmpty(filePath))
             {

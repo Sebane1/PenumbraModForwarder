@@ -16,10 +16,9 @@ runs:
           run: dotnet restore
           shell: bash
 
-#        There are no tests so this is kinda useless
-#        - name: Test
-#          run: dotnet test
-#          shell: bash
+        - name: Test
+          run: dotnet test
+          shell: bash
           
         - name: Build
           run: dotnet build --configuration Release --no-restore
