@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
@@ -11,6 +12,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 {
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly ToolTip _toolTip;
+    private readonly IResourceManager _resourceManager;
     public MainWindowViewModel ViewModel { get; set; }
     
     object IViewFor.ViewModel
@@ -19,14 +21,17 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         set => ViewModel = (MainWindowViewModel) value;
     }
     
-    public MainWindow(MainWindowViewModel viewModel, ISystemTrayManager systemTrayManager)
+    public MainWindow(MainWindowViewModel viewModel, ISystemTrayManager systemTrayManager, IResourceManager resourceManager)
     {
         InitializeComponent();
 
         ViewModel = viewModel;
         _systemTrayManager = systemTrayManager;
-        
+        _resourceManager = resourceManager;
+
         _toolTip = new ToolTip();
+        
+        Icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico");
 
 
         this.WhenActivated(disposables =>

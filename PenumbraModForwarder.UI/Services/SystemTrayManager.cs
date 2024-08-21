@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
 
 namespace PenumbraModForwarder.UI.Services;
@@ -11,16 +12,18 @@ public class SystemTrayManager : ISystemTrayManager
     private readonly IErrorWindowService _errorWindowService;
     private readonly IConfigurationService _configurationService;
     private readonly IProcessHelperService _processHelperService;
+    private readonly IResourceManager _resourceManager;
 
-    public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService)
+    public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService, IResourceManager resourceManager)
     {
         _logger = logger;
         _errorWindowService = errorWindowService;
         _configurationService = configurationService;
         _processHelperService = processHelperService;
+        _resourceManager = resourceManager;
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Information,
+            Icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico"),
             Visible = true,
             Text = "Penumbra Mod Fowarder",
         };

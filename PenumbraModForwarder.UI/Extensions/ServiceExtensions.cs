@@ -45,6 +45,7 @@ public static class ServiceExtensions
         services.AddSingleton<IAssociateFileTypeService, AssociateFileTypesService>();
         services.AddSingleton<IStartupService, StartupService>();
         services.AddSingleton<IShortcutService, ShortcutService>();
+        services.AddSingleton<IResourceManager, ResourceManager>();
     }
     
     private static void ConfigureViews(IServiceCollection services)

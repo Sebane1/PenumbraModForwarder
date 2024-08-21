@@ -72,7 +72,10 @@ partial class ErrorWindow
         Controls.Add(openDiscord_Button);
         Controls.Add(openlog_Button);
         Controls.Add(error_TextBox);
+        MaximizeBox = false;
+        MinimizeBox = false;
         Name = "ErrorWindow";
+        ShowIcon = false;
         Text = "Error Window";
         ResumeLayout(false);
     }
