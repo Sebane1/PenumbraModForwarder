@@ -12,4 +12,10 @@ public interface IProcessHelperService
     void OpenAetherLink();
     void OpenPrettyKitty();
     void OpenArk();
+    void CrossGenPorting();
+    void XivModResources();
+    void TexToolsDiscord();
+    void SoundAndTextureResources();
+    void PixelatedAssistance();
+    void PenumbraResources();
 }

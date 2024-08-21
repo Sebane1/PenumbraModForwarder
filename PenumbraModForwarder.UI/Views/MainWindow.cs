@@ -93,7 +93,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 
             #region Tool Tips
 
-            _toolTip.SetToolTip(select_directory, "Select the folder where the game is installed.");
+            _toolTip.SetToolTip(select_directory, "Select the folder where mods are downloaded to.");
             _toolTip.SetToolTip(notification_checkbox, "Show a notification when a mod is forwarded.");
             _toolTip.SetToolTip(autodelete_checkbox, "Automatically delete the mod after forwarding to penumbra.");
             _toolTip.SetToolTip(autoforward_checkbox, "Automatically forward the mod to penumbra.");

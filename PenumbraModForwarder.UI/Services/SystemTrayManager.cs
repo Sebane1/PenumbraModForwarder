@@ -34,22 +34,59 @@ public class SystemTrayManager : ISystemTrayManager
     
     private void AddItemsToContextMenu(ContextMenuStrip contextMenu)
     {
-        contextMenu.Items.Add("Show", null, (sender, args) => Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show());
+        contextMenu.Items.Add("Open Configuration", null, (sender, args) =>
+        {
+            Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show();
+            Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Activate();
+        });
         
         contextMenu.Items.Add(new ToolStripSeparator());
         
         contextMenu.Items.Add(CreateQuickLinksSubmenu());
+        contextMenu.Items.Add(CreateResourcesSubmenu());
         
         contextMenu.Items.Add(new ToolStripSeparator());
         
-        contextMenu.Items.Add("Exit", null, (sender, args) => Application.Exit());
+        var donateButton = ColouredMenuItem("Donate", Color.Green);
+        donateButton.Click += (sender, args) => _processHelperService.OpenDonate();
+        contextMenu.Items.Add(donateButton);
+        
+        contextMenu.Items.Add(new ToolStripSeparator());
+        
+        var exitButton = ColouredMenuItem("Exit", Color.Red);
+        exitButton.Click += (sender, args) => Application.Exit();
+        contextMenu.Items.Add(exitButton);
+    }
+    
+    private static ToolStripMenuItem ColouredMenuItem(string text, Color colour)
+    {
+        var item = new ToolStripMenuItem(text);
+        item.ForeColor = colour;
+        return item;
     }
 
+    private ToolStripMenuItem CreateResourcesSubmenu()
+    {
+        var resources = new ToolStripMenuItem("Resources");
+        resources.DropDownItems.Add("CrossGenPorting", null, (sender, args) => _processHelperService.CrossGenPorting());
+        resources.DropDownItems.Add("Xiv Mod Resources", null, (sender, args) => _processHelperService.XivModResources());
+        resources.DropDownItems.Add("TexTools Discord", null, (sender, args) => _processHelperService.TexToolsDiscord());
+        resources.DropDownItems.Add("Sound and Texture Resources", null, (sender, args) => _processHelperService.SoundAndTextureResources());
+        // resources.DropDownItems.Add("Pixelated Assistance", null, (sender, args) => _processHelperService.PixelatedAssistance());
+        resources.DropDownItems.Add("Penumbra Resources", null, (sender, args) => _processHelperService.PenumbraResources());
+        
+        return resources;
+    }
+    
     private ToolStripMenuItem CreateQuickLinksSubmenu()
     {
         var quickLinks = new ToolStripMenuItem("Quick Links");
         quickLinks.DropDownItems.Add("Xiv Mod Archive", null, (sender, args) => _processHelperService.OpenXivArchive());
-        quickLinks.DropDownItems.Add("Glamour Dressor", null, (sender, args) => _processHelperService.OpenGlamourDresser());
+        quickLinks.DropDownItems.Add("Glamour Dresser", null, (sender, args) => _processHelperService.OpenGlamourDresser());
+        quickLinks.DropDownItems.Add("Nexus Mods", null, (sender, args) => _processHelperService.OpenNexusMods());
+        quickLinks.DropDownItems.Add("Aetherlink", null, (sender, args) => _processHelperService.OpenAetherLink());
+        quickLinks.DropDownItems.Add("Heliosphere", null, (sender, args) => _processHelperService.OpenHelios());
+        quickLinks.DropDownItems.Add("The Pretty Kitty Emporium", null, (sender, args) => _processHelperService.OpenPrettyKitty());
         
         return quickLinks;
     }
@@ -72,6 +109,7 @@ public class SystemTrayManager : ISystemTrayManager
     private void OnTrayIconDoubleClick(object sender, EventArgs e)
     {
         Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show();
+        Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Activate();
     }
     
     public void Dispose()

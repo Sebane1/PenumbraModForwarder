@@ -33,6 +33,9 @@ namespace PenumbraModForwarder.UI.Views
                 this.BindCommand(ViewModel, vm => vm.ConfirmSelectionCommand, v => v.confirmButton)
                     .DisposeWith(disposables);
                 
+                this.BindCommand(ViewModel, vm => vm.CancelSelectionCommand, v => v.cancel_Button)
+                    .DisposeWith(disposables);
+                
                 this.Bind(ViewModel, vm => vm.ArchiveFileName, v => v.archivefile_Label.Text)
                     .DisposeWith(disposables);
 
