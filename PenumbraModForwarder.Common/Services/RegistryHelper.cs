@@ -89,5 +89,38 @@ namespace PenumbraModForwarder.Common.Services
                 throw;
             }
         }
+        
+        public void AddApplicationToStartup(string appName, string appPath)
+        {
+            try
+            {
+                using (var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
+                {
+                    registryKey?.SetValue(appName, $"\"{appPath}\"");
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error adding application to startup");
+                _errorWindowService.ShowError(e.ToString());
+            }
+        }
+
+        public void RemoveApplicationFromStartup(string appName)
+        {
+            try
+            {
+                using (var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
+                {
+                    registryKey?.DeleteValue(appName, false);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error removing application from startup");
+                _errorWindowService.ShowError(e.ToString());
+            }
+        }
+
     }
 }

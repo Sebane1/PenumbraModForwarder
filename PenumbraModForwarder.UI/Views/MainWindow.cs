@@ -39,6 +39,14 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             
             this.BindCommand(ViewModel, vm => vm.OpenFolderDialog, v => v.select_directory)
                 .DisposeWith(disposables);
+            
+            this.Bind(ViewModel, vm => vm.RunOnStartup, v => v.startup_Checkboxx.Checked)
+                .DisposeWith(disposables);
+            
+            startup_Checkboxx.CheckedChanged += (s, e) =>
+            {
+                ViewModel.UpdateStartupCommand.Execute(startup_Checkboxx.Checked).Subscribe();
+            };
 
             this.Bind(ViewModel, vm => vm.FileLinkingEnabled, v => v.associate_Checkbox.Checked)
                 .DisposeWith(disposables);
@@ -100,6 +108,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             _toolTip.SetToolTip(donate_Button, "Donate to the Developer.");
             _toolTip.SetToolTip(version_Label, "Current Version of Penumbra Mod Forwarder.");
             _toolTip.SetToolTip(associate_Checkbox, "Let Penumbra Mod Forwarder handle mod files when double clicked.");
+            _toolTip.SetToolTip(startup_Checkboxx, "Start Penumbra Mod Forwarder on Windows Startup.");
 
             #endregion
 

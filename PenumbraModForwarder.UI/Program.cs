@@ -17,6 +17,7 @@ static class Program
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
         CheckForUpdates(serviceProvider);
         MigrateOldConfigIfExists(serviceProvider);
+        CreateStartMenuShortcut(serviceProvider);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         Application.ApplicationExit += OnApplicationExit;
@@ -43,5 +44,11 @@ static class Program
     {
         var updateService = serviceProvider.GetRequiredService<IUpdateService>();
         updateService.CheckForUpdates();
+    }
+    
+    private static void CreateStartMenuShortcut(IServiceProvider serviceProvider)
+    {
+        var shortcutService = serviceProvider.GetRequiredService<IShortcutService>();
+        shortcutService.CreateShortcutInStartMenus();
     }
 }

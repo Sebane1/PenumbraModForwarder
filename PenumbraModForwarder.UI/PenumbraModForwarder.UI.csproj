@@ -8,6 +8,19 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Version>1.0.1.1</Version>
         <AssemblyTitle>Penumbra Mod Forwarder</AssemblyTitle>
+        <AssemblyName>PenumbraModForwarder</AssemblyName>
+        <PackageId>PenumbraModForwarder</PackageId>
+        <Authors>PenumbraModForwarder</Authors>
+        <Company>PenumbraModForwarder</Company>
+        <Product>PenumbraModForwarder</Product>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <PlatformTarget>x64</PlatformTarget>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,6 +34,7 @@
       <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.1-dev-10398" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
       <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+      <PackageReference Include="WindowsShortcutFactory" Version="1.2.0" />
     </ItemGroup>
 
     <ItemGroup>

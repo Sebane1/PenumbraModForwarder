@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0-preview.7.24405.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SharpCompress" Version="0.37.2" />
+    <PackageReference Include="WindowsShortcutFactory" Version="1.2.0" />
   </ItemGroup>
 
 </Project>

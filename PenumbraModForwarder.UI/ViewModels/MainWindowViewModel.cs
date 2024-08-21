@@ -3,6 +3,7 @@ using System.Reactive;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.UI.Interfaces;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
@@ -15,6 +16,7 @@ public class MainWindowViewModel : ReactiveObject
     private readonly IProcessHelperService _processHelperService;
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly IAssociateFileTypeService _associateFileTypeService;
+    private readonly IStartupService _startupService;
     private string _selectedFolderPath;
     private bool _autoDelete;
     private bool _autoLoad;
@@ -23,6 +25,13 @@ public class MainWindowViewModel : ReactiveObject
     private bool _selectBoxEnabled;
     private string _versionNumber;
     private bool _fileLinkingEnabled;
+    private bool _runOnStartup;
+    
+    public bool RunOnStartup
+    {
+        get => _runOnStartup;
+        set => this.RaiseAndSetIfChanged(ref _runOnStartup, value);
+    }
     
     public bool FileLinkingEnabled
     {
@@ -82,6 +91,7 @@ public class MainWindowViewModel : ReactiveObject
     public ReactiveCommand<bool, Unit> UpdateExtractAllCommand { get; }
     public ReactiveCommand<bool, Unit> UpdateNotificationCommand { get; }
     public ReactiveCommand<bool, Unit> EnableFileLinkingCommand { get; }
+    public ReactiveCommand<bool, Unit> UpdateStartupCommand { get; }
 
     #region Link Buttons
     
@@ -97,7 +107,7 @@ public class MainWindowViewModel : ReactiveObject
     #endregion
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager, IAssociateFileTypeService associateFileTypeService)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager, IAssociateFileTypeService associateFileTypeService, IStartupService startupService)
     {
         _configurationService = configurationService;
         _logger = logger;
@@ -106,6 +116,7 @@ public class MainWindowViewModel : ReactiveObject
         _processHelperService = processHelperService;
         _systemTrayManager = systemTrayManager;
         _associateFileTypeService = associateFileTypeService;
+        _startupService = startupService;
         SetAllConfigValues();
         SetVersionNumber();
         
@@ -116,6 +127,7 @@ public class MainWindowViewModel : ReactiveObject
         UpdateExtractAllCommand = ReactiveCommand.Create<bool>(UpdateExtractAll);
         UpdateNotificationCommand = ReactiveCommand.Create<bool>(UpdateNotification);
         EnableFileLinkingCommand = ReactiveCommand.Create<bool>(EnableFileLinking);
+        UpdateStartupCommand = ReactiveCommand.Create<bool>(UpdateStartup);
         
         #region Link Buttons
         
@@ -139,6 +151,7 @@ public class MainWindowViewModel : ReactiveObject
         ExtractAll = _configurationService.GetConfigValue(config => config.ExtractAll);
         NotificationEnabled = _configurationService.GetConfigValue(config => config.NotificationEnabled);
         FileLinkingEnabled = _configurationService.GetConfigValue(config => config.FileLinkingEnabled);
+        RunOnStartup = _configurationService.GetConfigValue(config => config.StartOnBoot);
     }
     
     private void SetVersionNumber()
@@ -193,6 +206,16 @@ public class MainWindowViewModel : ReactiveObject
 
     #endregion
 
+    private void UpdateStartup(bool value)
+    {
+        _logger.LogInformation($"RunOnStartup: {value}");
+        _configurationService.SetConfigValue(
+            (config, startup) => config.StartOnBoot = startup, 
+            value
+        );
+        _startupService.RunOnStartup();
+    }
+    
     private void UpdateNotification(bool value)
     {
         _logger.LogInformation($"NotificationEnabled: {value}");

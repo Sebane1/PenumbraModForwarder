@@ -43,6 +43,8 @@ public static class ServiceExtensions
         services.AddSingleton<IArkService, ArkService>();
         services.AddSingleton<ISystemTrayManager, SystemTrayManager>();
         services.AddSingleton<IAssociateFileTypeService, AssociateFileTypesService>();
+        services.AddSingleton<IStartupService, StartupService>();
+        services.AddSingleton<IShortcutService, ShortcutService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
