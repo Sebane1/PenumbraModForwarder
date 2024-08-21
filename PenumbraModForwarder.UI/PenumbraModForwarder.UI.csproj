@@ -13,6 +13,7 @@
         <Authors>PenumbraModForwarder</Authors>
         <Company>PenumbraModForwarder</Company>
         <Product>PenumbraModForwarder</Product>
+        <ApplicationIcon>Resources\PMFI.ico</ApplicationIcon>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
