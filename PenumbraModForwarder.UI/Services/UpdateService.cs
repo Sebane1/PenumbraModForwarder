@@ -18,7 +18,7 @@ public class UpdateService : IUpdateService
         AutoUpdater.DownloadPath = Application.StartupPath;
         AutoUpdater.Synchronous = true;
         AutoUpdater.Mandatory = true;
-        AutoUpdater.UpdateMode = Mode.Forced;
+        AutoUpdater.UpdateMode = Mode.ForcedDownload;
 
         AutoUpdater.InstalledVersion = GetInstalledVersion();
     }
