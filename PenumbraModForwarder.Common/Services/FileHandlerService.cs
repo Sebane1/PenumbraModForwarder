@@ -29,7 +29,7 @@ public class FileHandlerService : IFileHandlerService
         {
             _logger.LogInformation("File is an Archive");
             // Extract the archive using ArchiveHelperService
-            _archiveHelperService.ExtractArchive(filePath);
+            _archiveHelperService.QueueExtractionAsync(filePath);
         }
         
         //Check if the file is a mod file

@@ -47,16 +47,41 @@ public class FileSelectViewModel : ReactiveObject
     public void LoadFiles(IEnumerable<string> files)
     {
         Files.Clear();
-        foreach (var file in files)
+        
+        var fileNameCounts = new Dictionary<string, int>();
+
+        var enumerable = files as string[] ?? files.ToArray();
+        
+        foreach (var file in enumerable)
         {
+            var fileName = Path.GetFileName(file);
+            
+            if (fileNameCounts.TryGetValue(fileName, out var value))
+            {
+                fileNameCounts[fileName] = ++value;
+            }
+            else
+            {
+                fileNameCounts[fileName] = 1;
+            }
+        }
+
+        foreach (var file in enumerable)
+        {
+            var fileName = Path.GetFileName(file);
+            
+            var displayName = fileNameCounts[fileName] > 1 ? $"{fileName} ({file})" : fileName;
+
             var fileItem = new FileItem
             {
                 FullPath = file,
-                FileName = Path.GetFileName(file)
+                FileName = displayName
             };
+
             Files.Add(fileItem);
         }
     }
+
     
     private void CancelSelection()
     {

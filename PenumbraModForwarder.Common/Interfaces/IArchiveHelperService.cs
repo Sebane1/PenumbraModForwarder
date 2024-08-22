@@ -2,6 +2,6 @@
 
 public interface IArchiveHelperService
 {
-    public void ExtractArchive(string filePath);
+    public Task QueueExtractionAsync(string filePath);
     public string[] GetFilesInArchive(string filePath);
 }

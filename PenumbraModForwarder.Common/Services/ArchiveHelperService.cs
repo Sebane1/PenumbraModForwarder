@@ -1,5 +1,9 @@
-﻿using PenumbraModForwarder.Common.Interfaces;
+﻿using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
+using PenumbraModForwarder.Common.Interfaces;
 using Microsoft.Extensions.Logging;
+using PenumbraModForwarder.Common.Models;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Rar;
 using SharpCompress.Archives.SevenZip;
@@ -18,7 +22,18 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IArkService _arkService;
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
 
-        public ArchiveHelperService(ILogger<ArchiveHelperService> logger, IFileSelector fileSelector, IPenumbraInstallerService penumbraInstallerService, IConfigurationService configurationService, IErrorWindowService errorWindowService, IArkService arkService)
+        // Queue and semaphore for managing operations
+        private readonly ConcurrentQueue<ExtractionOperation> _operationQueue = new();
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+        private bool _isFileSelectionWindowOpen = false;
+
+        public ArchiveHelperService(
+            ILogger<ArchiveHelperService> logger, 
+            IFileSelector fileSelector, 
+            IPenumbraInstallerService penumbraInstallerService, 
+            IConfigurationService configurationService, 
+            IErrorWindowService errorWindowService, 
+            IArkService arkService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
@@ -33,11 +48,42 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        public virtual void ExtractArchive(string filePath)
+        public async Task QueueExtractionAsync(string filePath)
+        {
+            var operation = new ExtractionOperation(filePath);
+            _operationQueue.Enqueue(operation);
+            await ProcessQueueAsync();
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            // Only allow one operation to proceed at a time
+            await _semaphore.WaitAsync();
+            
+            try
+            {
+                while (_operationQueue.TryDequeue(out var operation))
+                {
+                    // Wait for the file selection window to close before proceeding to the next operation
+                    await ProcessExtractionAsync(operation);
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        private async Task ProcessExtractionAsync(ExtractionOperation operation)
+        {
+            // Perform extraction logic asynchronously
+            await Task.Run(() => ExtractArchive(operation.FilePath));
+        }
+
+        private void ExtractArchive(string filePath)
         {
             var files = GetFilesInArchive(filePath);
 
-            // Check if the archive contains any .rpvsp files
             if (ContainsRolePlayVoiceFile(files))
             {
                 _logger.LogInformation("File is a RolePlayVoice File");
@@ -51,16 +97,33 @@ namespace PenumbraModForwarder.Common.Services
                 {
                     _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
                     var fileName = Path.GetFileName(filePath);
-                    var selectedFiles = _fileSelector.SelectFiles(files, fileName);
-                    if (selectedFiles.Length == 0)
+                    
+                    // Check if a file selection window is already open
+                    if (_isFileSelectionWindowOpen)
                     {
-                        _logger.LogWarning("No files selected. Aborting extraction.");
+                        _logger.LogInformation("File selection window already open. Queueing operation.");
                         return;
                     }
 
-                    foreach (var file in selectedFiles)
+                    _isFileSelectionWindowOpen = true;
+                    
+                    try
                     {
-                        ExtractAndInstallFile(filePath, file);
+                        var selectedFiles = _fileSelector.SelectFiles(files, fileName);
+                        if (selectedFiles.Length == 0)
+                        {
+                            _logger.LogWarning("No files selected. Aborting extraction.");
+                            return;
+                        }
+
+                        foreach (var file in selectedFiles)
+                        {
+                            ExtractAndInstallFile(filePath, file);
+                        }
+                    }
+                    finally
+                    {
+                        _isFileSelectionWindowOpen = false;
                     }
                 }
                 else
@@ -83,8 +146,7 @@ namespace PenumbraModForwarder.Common.Services
                 File.Delete(filePath);
             }
         }
-        
-        
+
         private bool ContainsRolePlayVoiceFile(string[] files)
         {
             return files.Any(file => file.EndsWith(".rpvsp", StringComparison.OrdinalIgnoreCase));
@@ -191,6 +253,5 @@ namespace PenumbraModForwarder.Common.Services
                 throw;
             }
         }
-
     }
 }
