@@ -18,7 +18,7 @@ runs:
           
           
         - name: Publish
-          run: dotnet publish --configuration Release --no-restore --output ./publish
+          run: dotnet publish --configuration Release --no-restore --output ./publish --self-contained -p:PublishReadyToRun=true -p:PublishTrimmed=true -p:PublishSingleFile=true -r win-x64
           shell: bash
           
         - name: Archive
