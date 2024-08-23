@@ -43,8 +43,8 @@ public class TexToolsHelper : ITexToolsHelper
             }
             else
             {
-                _logger.LogWarning("Query for ConsoleTools.exe failed.");
-                _errorWindowService.ShowError("Query for ConsoleTools.exe failed.");
+                _logger.LogWarning("ConsoleTools.exe not found.");
+                _configurationService.SetConfigValue((config, path) => config.TexToolPath = path, string.Empty);
             }
         }
         catch (Exception e)
