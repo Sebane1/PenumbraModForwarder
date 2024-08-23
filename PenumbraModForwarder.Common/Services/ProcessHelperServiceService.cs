@@ -21,7 +21,7 @@ public class ProcessHelperServiceService : IProcessHelperService
 
     public void OpenLogFolder()
     {
-        var logFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+        var logFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PenumbraModForwarder", "logs");
         _logger.LogInformation("Opening log folder at {LogFolderPath}.", logFolderPath);
         Process.Start(new ProcessStartInfo("explorer.exe", logFolderPath) { UseShellExecute = true });
     }

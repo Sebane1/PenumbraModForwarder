@@ -61,24 +61,29 @@ public static class ServiceExtensions
     
     private static void ConfigureLogging(IServiceCollection services)
     {
+        var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PenumbraModForwarder", "logs");
+        Directory.CreateDirectory(appDataPath);
+
 #if DEBUG
         var minimumLevel = LogEventLevel.Debug;
 #else
     var minimumLevel = LogEventLevel.Warning;
 #endif
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(minimumLevel)
             .WriteTo.Console()
-            .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day, 
+            .WriteTo.File(Path.Combine(appDataPath, "log.txt"), rollingInterval: RollingInterval.Day,
                 restrictedToMinimumLevel: LogEventLevel.Information)
             .CreateLogger();
-        
+
         services.AddLogging(builder =>
         {
-            builder.ClearProviders(); 
+            builder.ClearProviders();
             builder.AddSerilog();
         });
     }
+
 
     private static void ConfigureAutoMapper(IServiceCollection services)
     {
