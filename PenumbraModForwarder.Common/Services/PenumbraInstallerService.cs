@@ -10,14 +10,16 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     private readonly IPenumbraApi _penumbraApi;
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly IRegistryHelper _registryHelper;
+    private readonly IConfigurationService _configurationService;
     private readonly string _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 
-    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, IRegistryHelper registryHelper, ISystemTrayManager systemTrayManager)
+    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, IRegistryHelper registryHelper, ISystemTrayManager systemTrayManager, IConfigurationService configurationService)
     {
         _logger = logger;
         _penumbraApi = penumbraApi;
         _registryHelper = registryHelper;
         _systemTrayManager = systemTrayManager;
+        _configurationService = configurationService;
 
         if (!Directory.Exists(_dtConversionPath))
         {
@@ -31,14 +33,22 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         _logger.LogInformation($"Installing mod: {dtPath}");
         var result = _penumbraApi.InstallAsync(dtPath).Result;
         if (!result) return;
-        // Check if the file is in use
-        while (FileInUse(dtPath))
+        if (_configurationService.GetConfigValue(p => p.AutoDelete))
         {
-            _logger.LogInformation($"File in use: {dtPath}");
+            DeleteMod(dtPath);
+        }
+
+    }
+
+    private void DeleteMod(string modPath)
+    {
+        while (FileInUse(modPath))
+        {
+            _logger.LogInformation($"File in use: {modPath}");
             Thread.Sleep(1000);
         }
-        File.Delete(dtPath);
-        _logger.LogInformation($"Deleted mod: {dtPath}");
+        File.Delete(modPath);
+        _logger.LogInformation($"Deleted mod: {modPath}");
     }
     
     private bool FileInUse(string path)
