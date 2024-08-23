@@ -17,8 +17,8 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IErrorWindowService _errorWindowService;
         private Timer _debounceTimer;
         private ConcurrentQueue<string> _changeQueue;
-        private HashSet<string> _processingFiles;
-        private readonly TimeSpan _debounceInterval = TimeSpan.FromMilliseconds(500);
+        private ConcurrentDictionary<string, bool> _processingFiles;
+        private readonly TimeSpan _debounceInterval = TimeSpan.FromSeconds(1);
         private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
         public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IFileHandlerService fileHandlerService, IErrorWindowService errorWindowService)
@@ -29,7 +29,7 @@ namespace PenumbraModForwarder.Common.Services
             _errorWindowService = errorWindowService;
 
             _changeQueue = new ConcurrentQueue<string>();
-            _processingFiles = new HashSet<string>();
+            _processingFiles = new ConcurrentDictionary<string, bool>();
 
             _debounceTimer = new Timer(_debounceInterval.TotalMilliseconds)
             {
@@ -47,27 +47,28 @@ namespace PenumbraModForwarder.Common.Services
 
         private void OnConfigChange(object sender, EventArgs e)
         {
-            _logger.LogInformation("Config changed");
+            _logger.LogInformation("Config changed, reinitializing watcher.");
             InitializeWatcher();
         }
 
         private void InitializeWatcher()
         {
-            _logger.LogInformation("Initializing watcher");
+            _logger.LogInformation("Initializing file system watcher.");
 
-            // Clean up old watcher
             if (_watcher != null)
             {
                 _watcher.Created -= OnFileCreated;
                 _watcher.Renamed -= OnFileRenamed;
                 _watcher.Dispose();
+                _logger.LogInformation("Previous watcher disposed.");
             }
 
             var directory = _configurationService.GetConfigValue(config => config.DownloadPath);
+            _logger.LogInformation($"Download path from configuration: {directory}");
 
             if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
             {
-                _logger.LogWarning("Directory does not exist or is invalid.");
+                _logger.LogWarning($"Directory '{directory}' does not exist or is invalid.");
                 return;
             }
 
@@ -81,11 +82,12 @@ namespace PenumbraModForwarder.Common.Services
             _watcher.Renamed += OnFileRenamed;
             _watcher.EnableRaisingEvents = true;
 
-            _logger.LogInformation($"Watching directory: {directory}");
+            _logger.LogInformation($"Watcher set up and watching directory: {directory}");
         }
 
         private void OnFileRenamed(object sender, RenamedEventArgs e)
         {
+            _logger.LogInformation($"File renamed: {e.FullPath}");
             if (_configurationService.GetConfigValue(o => o.AutoLoad))
             {
                 ProcessFileEvent(e.FullPath);
@@ -94,6 +96,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
+            _logger.LogInformation($"File created: {e.FullPath}");
             if (_configurationService.GetConfigValue(o => o.AutoLoad))
             {
                 ProcessFileEvent(e.FullPath);
@@ -102,24 +105,31 @@ namespace PenumbraModForwarder.Common.Services
 
         private void ProcessFileEvent(string filePath)
         {
-            if (_processingFiles.Contains(filePath)) return;
+            if (_processingFiles.ContainsKey(filePath))
+            {
+                _logger.LogInformation($"File '{filePath}' is already being processed.");
+                return;
+            }
 
             var fileExtension = Path.GetExtension(filePath).ToLower();
+            _logger.LogInformation($"File extension: {fileExtension}");
 
-            if (_allowedExtensions.Contains(fileExtension))
+            if (_allowedExtensions.Contains(fileExtension) && IsFileReady(filePath))
             {
+                _logger.LogInformation($"Enqueuing file for processing: {filePath}");
                 _changeQueue.Enqueue(filePath);
                 _debounceTimer.Stop();
                 _debounceTimer.Start();
             }
             else
             {
-                _logger.LogInformation($"Ignored file with unsupported extension: {filePath}");
+                _logger.LogInformation($"Ignored file: {filePath}, unsupported extension or file not ready.");
             }
         }
 
         private void OnDebounceTimerElapsed(object sender, ElapsedEventArgs e)
         {
+            _logger.LogInformation("Debounce timer elapsed, processing queued files.");
             _debounceTimer.Stop();
             ProcessFileChanges();
         }
@@ -128,8 +138,8 @@ namespace PenumbraModForwarder.Common.Services
         {
             while (_changeQueue.TryDequeue(out var file))
             {
-                _processingFiles.Add(file);
-                _logger.LogInformation($"Processing file: {file}");
+                _logger.LogInformation($"Dequeuing file: {file} for processing.");
+                _processingFiles.TryAdd(file, true);
 
                 try
                 {
@@ -137,11 +147,27 @@ namespace PenumbraModForwarder.Common.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Failed to extract archive: {file}");
-                    _errorWindowService.ShowError($"Failed to extract archive: {file}");
+                    _logger.LogError(ex, $"Failed to process file: {file}");
+                    _errorWindowService.ShowError($"Failed to process file: {file}");
                 }
 
-                _processingFiles.Remove(file);
+                _processingFiles.TryRemove(file, out _);
+                _logger.LogInformation($"File processing completed: {file}");
+            }
+        }
+
+        private bool IsFileReady(string filePath)
+        {
+            try
+            {
+                using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+                _logger.LogInformation($"File '{filePath}' is ready for processing.");
+                return true;
+            }
+            catch (IOException)
+            {
+                _logger.LogWarning($"File '{filePath}' is not ready for processing.");
+                return false;
             }
         }
     }

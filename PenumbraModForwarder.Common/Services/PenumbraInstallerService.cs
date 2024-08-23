@@ -31,37 +31,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     {
         var dtPath = UpdateToDt(modPath);
         _logger.LogInformation($"Installing mod: {dtPath}");
-        var result = _penumbraApi.InstallAsync(dtPath).Result;
-        if (!result) return;
-        if (_configurationService.GetConfigValue(p => p.AutoDelete))
-        {
-            DeleteMod(dtPath);
-        }
-
-    }
-
-    private void DeleteMod(string modPath)
-    {
-        while (FileInUse(modPath))
-        {
-            _logger.LogInformation($"File in use: {modPath}");
-            Thread.Sleep(1000);
-        }
-        File.Delete(modPath);
-        _logger.LogInformation($"Deleted mod: {modPath}");
-    }
-    
-    private bool FileInUse(string path)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-            return false;
-        }
-        catch (IOException)
-        {
-            return true;
-        }
+        _penumbraApi.InstallAsync(dtPath);
     }
     
     private string UpdateToDt(string modPath)
@@ -86,7 +56,6 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     private string ConvertToDt(string modPath)
     {
         _logger.LogInformation($"Converting mod to DT: {modPath}");
-        _systemTrayManager.ShowNotification("Mod Conversion", $"Converting mod to DT: {Path.GetFileName(modPath)}");
         var dtPath = GetConvertedModPath(modPath);
 
         var process = new Process

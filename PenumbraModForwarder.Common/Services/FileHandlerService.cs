@@ -21,127 +21,136 @@ public class FileHandlerService : IFileHandlerService
         _errorWindowService = errorWindowService;
         _arkService = arkService;
     }
-    
+
     public void HandleFile(string filePath)
     {
-        //Check if the file is an archive
+        _logger.LogInformation($"Handling file: {filePath}");
+
         if (IsArchive(filePath))
         {
-            _logger.LogInformation("File is an Archive");
-            // Extract the archive using ArchiveHelperService
+            _logger.LogInformation($"File '{filePath}' is an archive. Initiating extraction.");
             _archiveHelperService.QueueExtractionAsync(filePath);
         }
-        
-        //Check if the file is a mod file
-        if (IsModFile(filePath))
+        else if (IsModFile(filePath))
         {
-            _logger.LogInformation("File is a Mod File");
-            // Install the mod using PenumbraInstallerService
-            _penumbraInstallerService.InstallMod(filePath);
+            _logger.LogInformation($"File '{filePath}' is a mod file. Installing mod.");
+            try
+            {
+                _penumbraInstallerService.InstallMod(filePath);
+                _logger.LogInformation($"Mod file '{filePath}' installed successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to install mod: {filePath}");
+                _errorWindowService.ShowError($"Failed to install mod: {filePath}");
+            }
         }
-        
-        //Check if the file is a RolePlayVoice File
-        if (IsRPVSFile(filePath))
+        else if (IsRPVSFile(filePath))
         {
-            _logger.LogInformation("File is a RolePlayVoice File");
-            _arkService.InstallArkFile(filePath);
+            _logger.LogInformation($"File '{filePath}' is a RolePlayVoice file. Installing file.");
+            try
+            {
+                _arkService.InstallArkFile(filePath);
+                _logger.LogInformation($"RolePlayVoice file '{filePath}' installed successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to install RolePlayVoice file: {filePath}");
+                _errorWindowService.ShowError($"Failed to install RolePlayVoice file: {filePath}");
+            }
         }
-        
+        else
+        {
+            _logger.LogWarning($"File '{filePath}' does not match any known types (archive, mod, or RolePlayVoice file).");
+        }
     }
 
     public void CleanUpTempFiles()
     {
+        _logger.LogInformation("Starting cleanup of temporary files.");
+
         if (_configurationService.GetConfigValue(config => config.AutoDelete) == false)
         {
-            _logger.LogInformation("Temp files cleanup disabled");
+            _logger.LogInformation("Temp files cleanup is disabled by configuration.");
             return;
         }
-        
-        var _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
-        var _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
+
+        var extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
+        var dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 
         try
         {
-            if (Directory.Exists(_extractionPath))
-            {
-                // Delete all files and folders in the extraction folder
-                foreach (var file in Directory.GetFiles(_extractionPath))
-                {
-                    File.Delete(file);
-                }
-                foreach (var dir in Directory.GetDirectories(_extractionPath))
-                {
-                    Directory.Delete(dir, true);
-                }
-            }
-        
-            if (Directory.Exists(_dtConversionPath))
-            {
-                // Delete all files and folders in the dtConversion folder
-                foreach (var file in Directory.GetFiles(_dtConversionPath))
-                {
-                    File.Delete(file);
-                }
-                foreach (var dir in Directory.GetDirectories(_dtConversionPath))
-                {
-                    Directory.Delete(dir, true);
-                }
-            }
-            
-            // Check if any files are left inside the DownloadPath and delete them
+            CleanDirectory(extractionPath);
+            CleanDirectory(dtConversionPath);
+
             var downloadPath = _configurationService.GetConfigValue(config => config.DownloadPath);
+            _logger.LogInformation($"Checking for mod files in download path: {downloadPath}");
+
             if (Directory.Exists(downloadPath))
             {
-                // Check if the files are mod files
                 foreach (var file in Directory.GetFiles(downloadPath))
                 {
                     if (IsModFile(file))
                     {
+                        _logger.LogInformation($"Deleting mod file: {file}");
                         File.Delete(file);
                     }
                 }
             }
 
-            _logger.LogInformation("Temp files cleaned up successfully");
-        } 
+            _logger.LogInformation("Temp files cleaned up successfully.");
+        }
         catch (Exception e)
         {
-            _logger.LogError($"Error cleaning up temp files: {e.Message}");
+            _logger.LogError(e, "Error cleaning up temp files.");
             _errorWindowService.ShowError(e.ToString());
         }
     }
-    
+
+    private void CleanDirectory(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            _logger.LogInformation($"Cleaning directory: {path}");
+            foreach (var file in Directory.GetFiles(path))
+            {
+                _logger.LogInformation($"Deleting file: {file}");
+                File.Delete(file);
+            }
+            foreach (var dir in Directory.GetDirectories(path))
+            {
+                _logger.LogInformation($"Deleting directory: {dir}");
+                Directory.Delete(dir, true);
+            }
+        }
+        else
+        {
+            _logger.LogInformation($"Directory '{path}' does not exist, skipping cleanup.");
+        }
+    }
+
     private bool IsArchive(string filePath)
     {
-        var extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
-        {
-            return false;
-        }
+        var extension = Path.GetExtension(filePath).ToLower();
+        _logger.LogInformation($"Checking if file '{filePath}' is an archive with extension: {extension}");
 
         var allowedExtensions = new[] { ".zip", ".rar", ".7z" };
         return allowedExtensions.Contains(extension);
     }
-    
+
     private bool IsModFile(string filePath)
     {
-        var extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
-        {
-            return false;
-        }
+        var extension = Path.GetExtension(filePath).ToLower();
+        _logger.LogInformation($"Checking if file '{filePath}' is a mod file with extension: {extension}");
 
         var allowedExtensions = new[] { ".pmp", ".ttmp2", ".ttmp" };
         return allowedExtensions.Contains(extension);
     }
-    
+
     private bool IsRPVSFile(string filePath)
     {
-        var extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
-        {
-            return false;
-        }
+        var extension = Path.GetExtension(filePath).ToLower();
+        _logger.LogInformation($"Checking if file '{filePath}' is a RolePlayVoice file with extension: {extension}");
 
         var allowedExtensions = new[] { ".rpvsp" };
         return allowedExtensions.Contains(extension);

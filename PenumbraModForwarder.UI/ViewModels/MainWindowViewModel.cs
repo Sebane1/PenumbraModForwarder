@@ -120,7 +120,7 @@ public class MainWindowViewModel : ReactiveObject
         SetAllConfigValues();
         SetVersionNumber();
         
-        _logger.LogInformation("MainWindowViewModel created.");
+        _logger.LogInformation("MainWindowViewModel initialized");
         OpenFolderDialog = ReactiveCommand.Create(OpenFolder);
         UpdateAutoDeleteCommand = ReactiveCommand.Create<bool>(UpdateAutoDelete);
         UpdateAutoLoadCommand = ReactiveCommand.Create<bool>(UpdateAutoLoad);
