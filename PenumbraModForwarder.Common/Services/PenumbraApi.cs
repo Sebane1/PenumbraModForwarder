@@ -31,27 +31,32 @@ namespace PenumbraModForwarder.Common.Services
             _systemTrayManager = systemTrayManager;
         }
 
-        public async Task InstallAsync(string modPath)
+        public async Task<bool> InstallAsync(string modPath)
         {
             var data = new ModInstallData(modPath);
 
             try
             {
                 _logger.LogInformation("Sending install request for mod at {ModPath}", modPath);
-                await PostAsync("/installmod", data);
-                _logger.LogInformation("Install request sent successfully for mod at {ModPath}", modPath);
-                _systemTrayManager.ShowNotification("Mod Installed", $"Mod installed successfully: {Path.GetFileName(modPath)}");
+                var result = await PostAsync("/installmod", data);
                 
-                await Task.Delay(500);
+                if (result)
+                {
+                    _logger.LogInformation("Install request sent successfully for mod at {ModPath}", modPath);
+                    _systemTrayManager.ShowNotification("Mod Installed", $"Mod installed successfully: {Path.GetFileName(modPath)}");
+                    return true;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to install mod at {ModPath}", modPath);
                 throw; // Re-throw to allow higher-level handlers to process it
             }
+
+            return false;
         }
 
-        private async Task PostAsync(string route, object content)
+        private async Task<bool> PostAsync(string route, object content)
         {
             try
             {
@@ -63,9 +68,11 @@ namespace PenumbraModForwarder.Common.Services
                     _logger.LogError("HTTP request error: {StatusCode} - {ReasonPhrase}. Response body: {ResponseBody}", 
                         response.StatusCode, response.ReasonPhrase, responseBody);
                     response.EnsureSuccessStatusCode();
+                    return false;
                 }
                 
                 _logger.LogInformation("Successfully posted to {Route}", route);
+                return true;
             }
             catch (HttpRequestException httpEx)
             {
@@ -77,6 +84,8 @@ namespace PenumbraModForwarder.Common.Services
                 _logger.LogError(ex, "Unexpected error occurred while posting to {Route}", route);
                 HandleWarning(ex);
             }
+            
+            return false;
         }
 
         private async Task<HttpResponseMessage> PostRequestAsync(string route, object content)

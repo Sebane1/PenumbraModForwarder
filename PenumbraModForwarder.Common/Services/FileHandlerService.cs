@@ -51,6 +51,12 @@ public class FileHandlerService : IFileHandlerService
 
     public void CleanUpTempFiles()
     {
+        if (_configurationService.GetConfigValue(config => config.AutoDelete) == false)
+        {
+            _logger.LogInformation("Temp files cleanup disabled");
+            return;
+        }
+        
         var _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
         var _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 

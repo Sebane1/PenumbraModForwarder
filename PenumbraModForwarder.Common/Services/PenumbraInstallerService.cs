@@ -29,7 +29,29 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     {
         var dtPath = UpdateToDt(modPath);
         _logger.LogInformation($"Installing mod: {dtPath}");
-        _penumbraApi.InstallAsync(dtPath);
+        var result = _penumbraApi.InstallAsync(dtPath).Result;
+        if (!result) return;
+        // Check if the file is in use
+        while (FileInUse(dtPath))
+        {
+            _logger.LogInformation($"File in use: {dtPath}");
+            Thread.Sleep(1000);
+        }
+        File.Delete(dtPath);
+        _logger.LogInformation($"Deleted mod: {dtPath}");
+    }
+    
+    private bool FileInUse(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
     }
     
     private string UpdateToDt(string modPath)

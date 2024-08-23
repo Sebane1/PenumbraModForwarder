@@ -2,5 +2,5 @@
 
 public interface IPenumbraApi
 {
-    public Task InstallAsync(string modPath);
+    public Task<bool> InstallAsync(string modPath);
 }
