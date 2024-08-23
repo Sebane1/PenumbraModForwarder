@@ -9,15 +9,13 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     private readonly ILogger<PenumbraInstallerService> _logger;
     private readonly IPenumbraApi _penumbraApi;
     private readonly ISystemTrayManager _systemTrayManager;
-    private readonly IRegistryHelper _registryHelper;
     private readonly IConfigurationService _configurationService;
     private readonly string _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 
-    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, IRegistryHelper registryHelper, ISystemTrayManager systemTrayManager, IConfigurationService configurationService)
+    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, ISystemTrayManager systemTrayManager, IConfigurationService configurationService)
     {
         _logger = logger;
         _penumbraApi = penumbraApi;
-        _registryHelper = registryHelper;
         _systemTrayManager = systemTrayManager;
         _configurationService = configurationService;
 
@@ -43,13 +41,9 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         }
         
         var textToolPath = _configurationService.GetConfigValue(config => config.TexToolPath);
-        if (string.IsNullOrEmpty(textToolPath) || !File.Exists(textToolPath))
-        {
-            _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
-            return modPath;
-        }
-
-        return ConvertToDt(modPath);
+        if (!string.IsNullOrEmpty(textToolPath) && File.Exists(textToolPath)) return ConvertToDt(modPath);
+        _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
+        return modPath;
     }
 
     

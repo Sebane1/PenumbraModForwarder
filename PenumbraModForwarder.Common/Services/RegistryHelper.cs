@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using PenumbraModForwarder.Common.Interfaces;
-using System;
-using System.IO;
 
 namespace PenumbraModForwarder.Common.Services
 {
@@ -47,8 +45,7 @@ namespace PenumbraModForwarder.Common.Services
 
             // The path just returns the folder, we need to find ConsoleTools.exe which is at the location /path/FFXIV_TexTools/ConsoleTools.exe
             var combinedPath = Path.Combine(path, "FFXIV_TexTools", "ConsoleTools.exe");
-
-            // Check if ConsoleTools.exe exists
+            
             return File.Exists(combinedPath) ? combinedPath : string.Empty;
         }
 
@@ -65,12 +62,8 @@ namespace PenumbraModForwarder.Common.Services
                 else
                 {
                     _logger.LogWarning("TexTools console path not found");
-                    var filePath = _errorWindowService.TexToolPathError();
-
-                    if (!string.IsNullOrEmpty(filePath))
-                    {
-                        _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, filePath);
-                    }
+                    
+                    _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, string.Empty);
                 }
             }
             catch (Exception e)
@@ -79,9 +72,7 @@ namespace PenumbraModForwarder.Common.Services
                 _errorWindowService.ShowError(e.ToString());
             }
         }
-
-
-
+        
         public void CreateFileAssociation(string extension, string applicationPath)
         {
             try
@@ -126,10 +117,8 @@ namespace PenumbraModForwarder.Common.Services
         {
             try
             {
-                using (var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
-                {
-                    registryKey?.SetValue(appName, $"\"{appPath}\"");
-                }
+                using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                registryKey?.SetValue(appName, $"\"{appPath}\"");
             }
             catch (Exception e)
             {
@@ -142,10 +131,8 @@ namespace PenumbraModForwarder.Common.Services
         {
             try
             {
-                using (var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
-                {
-                    registryKey?.DeleteValue(appName, false);
-                }
+                using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                registryKey?.DeleteValue(appName, false);
             }
             catch (Exception e)
             {
@@ -153,6 +140,5 @@ namespace PenumbraModForwarder.Common.Services
                 _errorWindowService.ShowError(e.ToString());
             }
         }
-
     }
 }
