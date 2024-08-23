@@ -41,8 +41,8 @@ public class PenumbraInstallerService : IPenumbraInstallerService
             _logger.LogInformation($"Converted mod already exists: {modPath}");
             return GetConvertedModPath(modPath);
         }
-
-        var textToolPath = _registryHelper.GetTexToolsConsolePath();
+        
+        var textToolPath = _configurationService.GetConfigValue(config => config.TexToolPath);
         if (string.IsNullOrEmpty(textToolPath) || !File.Exists(textToolPath))
         {
             _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
@@ -62,7 +62,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = _registryHelper.GetTexToolsConsolePath(),
+                FileName = _configurationService.GetConfigValue(config => config.TexToolPath),
                 Arguments = $"/upgrade \"{modPath}\" \"{dtPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,

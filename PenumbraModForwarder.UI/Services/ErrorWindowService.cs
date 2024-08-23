@@ -31,6 +31,19 @@ public class ErrorWindowService : IErrorWindowService
         }
     }
     
+    public string? TexToolPathError()
+    {
+        MessageBox.Show("TexTools console path not found, please select where its installed", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        using var dialog = new OpenFileDialog
+        {
+            Filter = "ConsoleTools.exe|ConsoleTools.exe",
+            Title = "Select ConsoleTools.exe",
+            CheckFileExists = true,
+            CheckPathExists = true
+        };
+        return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : null;
+    }
+    
     private void ShowErrorInternal(string message)
     {
         // We need to manually pass in _processHelperService here, as the constructor of ErrorWindowViewModel won't have access to it.

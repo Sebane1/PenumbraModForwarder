@@ -3,4 +3,5 @@
 public interface IErrorWindowService
 {
     public void ShowError(string message);
+    public string? TexToolPathError();
 }

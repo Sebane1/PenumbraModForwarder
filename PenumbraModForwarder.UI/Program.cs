@@ -20,6 +20,7 @@ static class Program
         CreateStartMenuShortcut(serviceProvider);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+        SetTexToolsPath(serviceProvider);
         Application.ApplicationExit += OnApplicationExit;
         Application.Run(serviceProvider.GetRequiredService<MainWindow>());
     }
@@ -50,5 +51,11 @@ static class Program
     {
         var shortcutService = serviceProvider.GetRequiredService<IShortcutService>();
         shortcutService.CreateShortcutInStartMenus();
+    }
+    
+    private static void SetTexToolsPath(IServiceProvider serviceProvider)
+    {
+        var registryHelper = serviceProvider.GetRequiredService<IRegistryHelper>();
+        registryHelper.SetTexToolsConsolePath();
     }
 }

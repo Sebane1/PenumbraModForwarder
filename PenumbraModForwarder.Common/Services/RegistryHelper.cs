@@ -11,14 +11,16 @@ namespace PenumbraModForwarder.Common.Services
         private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
         private readonly IErrorWindowService _errorWindowService;
         private readonly ILogger<RegistryHelper> _logger;
+        private readonly IConfigurationService _configurationService;
 
-        public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger)
+        public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger, IConfigurationService configurationService)
         {
             _errorWindowService = errorWindowService;
             _logger = logger;
+            _configurationService = configurationService;
         }
 
-        private string GetRegistryValue(string keyValue)
+        private string GetTexToolGetRegistryValue(string keyValue)
         {
             try
             {
@@ -32,10 +34,10 @@ namespace PenumbraModForwarder.Common.Services
                 return null;
             }
         }
-
+        
         public string GetTexToolsConsolePath()
         {
-            var path = GetRegistryValue("InstallLocation");
+            var path = GetTexToolGetRegistryValue("InstallLocation");
 
             // Strip the path of ""
             if (path.StartsWith("\"") && path.EndsWith("\""))
@@ -49,6 +51,36 @@ namespace PenumbraModForwarder.Common.Services
             // Check if ConsoleTools.exe exists
             return File.Exists(combinedPath) ? combinedPath : string.Empty;
         }
+
+        public void SetTexToolsConsolePath()
+        {
+            try 
+            {
+                var combinedPath = GetTexToolsConsolePath();
+
+                if (!string.IsNullOrEmpty(combinedPath))
+                {
+                    _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, combinedPath);
+                }
+                else
+                {
+                    _logger.LogWarning("TexTools console path not found");
+                    var filePath = _errorWindowService.TexToolPathError();
+
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, filePath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error setting TexTools console path");
+                _errorWindowService.ShowError(e.ToString());
+            }
+        }
+
+
 
         public void CreateFileAssociation(string extension, string applicationPath)
         {
