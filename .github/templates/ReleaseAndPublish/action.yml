@@ -17,7 +17,7 @@ runs:
           shell: bash
           
         - name: Publish
-          run: dotnet publish PenumbraModForwarder.UI/ -c Release -r win-x64 -p:PublishSingleFile=true -o ./publish
+          run: dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o ./publish
           shell: bash
 
         - name: Archive
