@@ -1,6 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.IO;
-using System.Linq;
 using System.Timers;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
@@ -148,7 +146,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private void OnDebounceTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            _logger.LogInformation("Debounce timer elapsed, processing queued files.");
+            _logger.LogDebug("Debounce timer elapsed, processing queued files.");
             _debounceTimer.Stop();
             ProcessFileChanges();
         }
@@ -157,7 +155,7 @@ namespace PenumbraModForwarder.Common.Services
         {
             while (_changeQueue.TryDequeue(out var file))
             {
-                _logger.LogInformation($"Dequeuing file: {file} for processing.");
+                _logger.LogDebug($"Dequeuing file: {file} for processing.");
                 _processingFiles.TryAdd(file, true);
 
                 try
@@ -190,14 +188,14 @@ namespace PenumbraModForwarder.Common.Services
             {
                 if (IsFileReady(filePath))
                 {
-                    _logger.LogInformation($"File '{filePath}' is now ready, enqueuing for processing.");
+                    _logger.LogDebug($"File '{filePath}' is now ready, enqueuing for processing.");
                     _changeQueue.Enqueue(filePath);
                     _debounceTimer.Stop();
                     _debounceTimer.Start();
                 }
                 else
                 {
-                    _logger.LogInformation($"File '{filePath}' is still not ready, requeuing.");
+                    _logger.LogDebug($"File '{filePath}' is still not ready, requeuing.");
                     _retryQueue.Enqueue(filePath);
                 }
             }
@@ -208,12 +206,12 @@ namespace PenumbraModForwarder.Common.Services
             try
             {
                 using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
-                _logger.LogInformation($"File '{filePath}' is ready for processing.");
+                _logger.LogDebug($"File '{filePath}' is ready for processing.");
                 return true;
             }
             catch (IOException)
             {
-                _logger.LogWarning($"File '{filePath}' is not ready for processing.");
+                _logger.LogDebug($"File '{filePath}' is not ready for processing.");
                 return false;
             }
         }
