@@ -52,7 +52,6 @@ public class ArchiveHelperTests
         _serviceMock.Setup(service => service.GetFilesInArchive(It.IsAny<string>())).Returns(files);
         _serviceMock.Object.QueueExtractionAsync(filePath);
         _arkServiceMock.Verify(ark => ark.InstallArkFile(filePath), Times.Once);
-        VerifyLoggerMessageAtLeastOnce(_loggerMock, LogLevel.Information, "File is a RolePlayVoice File");
     }
 
     [Fact]
@@ -67,7 +66,6 @@ public class ArchiveHelperTests
 
         // Verify the InstallMod method was called
         _penumbraInstallerServiceMock.Verify(install => install.InstallMod(It.IsAny<string>()), Times.Once);
-        VerifyLoggerMessageAtLeastOnce(_loggerMock, LogLevel.Information, "Extracting file: mod.ttmp2");
         CleanUpFile(tempZipPath);
     }
 

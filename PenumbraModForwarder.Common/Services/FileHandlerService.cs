@@ -92,7 +92,7 @@ public class FileHandlerService : IFileHandlerService
                 {
                     if (IsModFile(file))
                     {
-                        _logger.LogInformation($"Deleting mod file: {file}");
+                        _logger.LogDebug($"Deleting mod file: {file}");
                         File.Delete(file);
                     }
                 }
@@ -114,12 +114,12 @@ public class FileHandlerService : IFileHandlerService
             _logger.LogInformation($"Cleaning directory: {path}");
             foreach (var file in Directory.GetFiles(path))
             {
-                _logger.LogInformation($"Deleting file: {file}");
+                _logger.LogDebug($"Deleting file: {file}");
                 File.Delete(file);
             }
             foreach (var dir in Directory.GetDirectories(path))
             {
-                _logger.LogInformation($"Deleting directory: {dir}");
+                _logger.LogDebug($"Deleting directory: {dir}");
                 Directory.Delete(dir, true);
             }
         }
