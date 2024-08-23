@@ -47,7 +47,6 @@ public class PenumbraInstallerService : IPenumbraInstallerService
             return modPath;
         }
 
-        _logger.LogInformation($"Converting mod to DT: {modPath}");
         return ConvertToDt(modPath);
     }
 
@@ -55,6 +54,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     private string ConvertToDt(string modPath)
     {
         _logger.LogInformation($"Converting mod to DT: {modPath}");
+        _systemTrayManager.ShowNotification("Mod Conversion", $"Converting mod to DT: {Path.GetFileName(modPath)}");
         var dtPath = GetConvertedModPath(modPath);
 
         var process = new Process
@@ -86,6 +86,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
 
             // Optionally delete the original mod if conversion was successful
             File.Delete(modPath);
+            _logger.LogInformation($"Deleted original mod: {modPath}");
 
             return dtPath;
         }
