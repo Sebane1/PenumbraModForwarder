@@ -39,7 +39,7 @@ namespace PenumbraModForwarder.Common.Services
 
         public T GetConfigValue<T>(Func<ConfigurationModel, T> getValue)
         {
-            _logger.LogInformation("Getting config value");
+            _logger.LogDebug("Getting config value");
             lock (_lock)
             {
                 return getValue(_config);
@@ -48,7 +48,7 @@ namespace PenumbraModForwarder.Common.Services
 
         public void SetConfigValue<T>(Action<ConfigurationModel, T> setValue, T value)
         {
-            _logger.LogInformation("Setting config value");
+            _logger.LogDebug("Setting config value");
             lock (_lock)
             {
                 setValue(_config, value);
@@ -68,10 +68,10 @@ namespace PenumbraModForwarder.Common.Services
 
             foreach (var file in filesToMigrate)
             {
-                _logger.LogInformation($"Checking for old config file: {file}");
+                _logger.LogDebug($"Checking for old config file: {file}");
                 if (!File.Exists(file))
                 {
-                    _logger.LogInformation("Old config file not found");
+                    _logger.LogDebug("Old config file not found");
                     continue;
                 }
 
@@ -81,17 +81,17 @@ namespace PenumbraModForwarder.Common.Services
 
                     if (file.Contains("DownloadPath"))
                     {
-                        _logger.LogInformation("Migrating DownloadPath");
+                        _logger.LogDebug("Migrating DownloadPath");
                         SetConfigValue((config, value) => config.DownloadPath = value, oldConfig);
                     }
                     else if (file.Contains("AutoLoad"))
                     {
-                        _logger.LogInformation("Migrating AutoLoad");
+                        _logger.LogDebug("Migrating AutoLoad");
                         SetConfigValue((config, value) => config.AutoLoad = value, bool.Parse(oldConfig));
                     }
                     else if (file.Contains("Config.json"))
                     {
-                        _logger.LogInformation("Migrating Config.json");
+                        _logger.LogDebug("Migrating Config.json");
                         if (string.IsNullOrWhiteSpace(oldConfig) || !oldConfig.StartsWith("{"))
                         {
                             _logger.LogError("Old config file is empty or invalid JSON");
@@ -124,7 +124,7 @@ namespace PenumbraModForwarder.Common.Services
                                      @"\PenumbraModForwarder\PenumbraModForwarder";
             if (Directory.Exists(oldConfigDirectory))
             {
-                _logger.LogInformation("Deleting old config directory");
+                _logger.LogDebug("Deleting old config directory");
                 Directory.Delete(oldConfigDirectory, true);
             }
         }
@@ -132,7 +132,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private void SaveConfig()
         {
-            _logger.LogInformation("Saving config");
+            _logger.LogDebug("Saving config");
             lock (_lock)
             {
                 File.WriteAllText(_configPath, JsonConvert.SerializeObject(_config, Formatting.Indented));

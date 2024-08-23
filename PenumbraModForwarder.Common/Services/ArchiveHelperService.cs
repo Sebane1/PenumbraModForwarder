@@ -86,7 +86,7 @@ namespace PenumbraModForwarder.Common.Services
 
             if (ContainsRolePlayVoiceFile(files))
             {
-                _logger.LogInformation("File is a RolePlayVoice File");
+                _logger.LogDebug("File is a RolePlayVoice File");
                 _arkService.InstallArkFile(filePath);
                 return;
             }
@@ -95,7 +95,7 @@ namespace PenumbraModForwarder.Common.Services
             {
                 if (!_configurationService.GetConfigValue(o => o.ExtractAll))
                 {
-                    _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
+                    _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
                     var fileName = Path.GetFileName(filePath);
                     
                     // Check if a file selection window is already open
@@ -154,7 +154,6 @@ namespace PenumbraModForwarder.Common.Services
 
         private void ExtractAndInstallFile(string archivePath, string filePath)
         {
-            _logger.LogInformation("Extracting file: {0}", filePath);
             var extractedFile = ExtractFileFromArchive(archivePath, filePath);
             _penumbraInstallerService.InstallMod(extractedFile);
         }
@@ -169,7 +168,7 @@ namespace PenumbraModForwarder.Common.Services
             // We should never get here if the file is not found
             if (entry == null) throw new InvalidOperationException("File not found in archive.");
             
-            _logger.LogInformation("Extracting file: {0}", entry.Key);
+            _logger.LogDebug("Extracting file: {0}", entry.Key);
 
             entry.WriteToDirectory(_extractionPath, new ExtractionOptions()
             {
@@ -193,7 +192,7 @@ namespace PenumbraModForwarder.Common.Services
             var allowedExtensions = new[] {".pmp", ".ttmp2", ".ttmp", ".rpvsp"};
             var fileEntries = new HashSet<string>();
             
-            _logger.LogInformation("Opening archive: {0}", filePath);
+            _logger.LogDebug("Opening archive: {0}", filePath);
 
             using (var archive = OpenArchive(filePath))
             {
@@ -225,7 +224,7 @@ namespace PenumbraModForwarder.Common.Services
                 throw new ArgumentNullException(nameof(filePath));
             }
 
-            _logger.LogInformation($"Attempting to open archive: {filePath}");
+            _logger.LogDebug($"Attempting to open archive: {filePath}");
 
             try
             {

@@ -37,12 +37,12 @@ namespace PenumbraModForwarder.Common.Services
 
             try
             {
-                _logger.LogInformation("Sending install request for mod at {ModPath}", modPath);
+                _logger.LogDebug("Sending install request for mod at {ModPath}", modPath);
                 var result = await PostAsync("/installmod", data);
                 
                 if (result)
                 {
-                    _logger.LogInformation("Install request sent successfully for mod at {ModPath}", modPath);
+                    _logger.LogDebug("Install request sent successfully for mod at {ModPath}", modPath);
                     _systemTrayManager.ShowNotification("Mod Installed", $"Mod installed successfully: {Path.GetFileName(modPath)}");
                     return true;
                 }
@@ -71,7 +71,7 @@ namespace PenumbraModForwarder.Common.Services
                     return false;
                 }
                 
-                _logger.LogInformation("Successfully posted to {Route}", route);
+                _logger.LogDebug("Successfully posted to {Route}", route);
                 return true;
             }
             catch (HttpRequestException httpEx)
@@ -104,7 +104,7 @@ namespace PenumbraModForwarder.Common.Services
             };
 
             var requestUri = new Uri(new Uri(BaseUrl), route);
-            _logger.LogInformation("Posting request to {RequestUri} with content: {Content}", requestUri, json);
+            _logger.LogDebug("Posting request to {RequestUri} with content: {Content}", requestUri, json);
             return await HttpClient.PostAsync(requestUri, byteContent);
         }
 
