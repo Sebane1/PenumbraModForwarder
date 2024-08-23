@@ -61,6 +61,12 @@
       <EmbeddedResource Include="Resources\ffxiv2-1.png" />
       <EmbeddedResource Include="Resources\icon.png" />
       <EmbeddedResource Include="Resources\PMFI.ico" />
+      <None Include="Resources\Everything32.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="Resources\Everything64.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

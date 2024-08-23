@@ -55,7 +55,7 @@ static class Program
     
     private static void SetTexToolsPath(IServiceProvider serviceProvider)
     {
-        var registryHelper = serviceProvider.GetRequiredService<IRegistryHelper>();
-        registryHelper.SetTexToolsConsolePath();
+        var texToolsHelper = serviceProvider.GetRequiredService<ITexToolsHelper>();
+        texToolsHelper.SetTexToolsConsolePath();
     }
 }

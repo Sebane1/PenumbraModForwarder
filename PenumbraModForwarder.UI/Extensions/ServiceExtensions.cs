@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Interfaces;
+using PenumbraModForwarder.UI.Interops;
 using PenumbraModForwarder.UI.Services;
 using Serilog;
 using Serilog.Events;
@@ -46,6 +47,8 @@ public static class ServiceExtensions
         services.AddSingleton<IStartupService, StartupService>();
         services.AddSingleton<IShortcutService, ShortcutService>();
         services.AddSingleton<IResourceManager, ResourceManager>();
+        services.AddSingleton<IVoidToolsEverything, VoidToolsEverything>();
+        services.AddSingleton<ITexToolsHelper, TexToolsHelper>();
     }
     
     private static void ConfigureViews(IServiceCollection services)

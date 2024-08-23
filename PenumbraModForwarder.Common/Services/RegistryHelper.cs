@@ -17,61 +17,6 @@ namespace PenumbraModForwarder.Common.Services
             _logger = logger;
             _configurationService = configurationService;
         }
-
-        private string GetTexToolGetRegistryValue(string keyValue)
-        {
-            try
-            {
-                using var key = Registry.LocalMachine.OpenSubKey(RegistryPath);
-                return key?.GetValue(keyValue)?.ToString();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error reading registry");
-                _errorWindowService.ShowError(e.ToString());
-                return null;
-            }
-        }
-        
-        public string GetTexToolsConsolePath()
-        {
-            var path = GetTexToolGetRegistryValue("InstallLocation");
-
-            // Strip the path of ""
-            if (path.StartsWith("\"") && path.EndsWith("\""))
-            {
-                path = path[1..^1];
-            }
-
-            // The path just returns the folder, we need to find ConsoleTools.exe which is at the location /path/FFXIV_TexTools/ConsoleTools.exe
-            var combinedPath = Path.Combine(path, "FFXIV_TexTools", "ConsoleTools.exe");
-            
-            return File.Exists(combinedPath) ? combinedPath : string.Empty;
-        }
-
-        public void SetTexToolsConsolePath()
-        {
-            try 
-            {
-                var combinedPath = GetTexToolsConsolePath();
-
-                if (!string.IsNullOrEmpty(combinedPath))
-                {
-                    _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, combinedPath);
-                }
-                else
-                {
-                    _logger.LogWarning("TexTools console path not found");
-                    
-                    _configurationService.SetConfigValue((config, textToolPath) => config.TexToolPath = textToolPath, string.Empty);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error setting TexTools console path");
-                _errorWindowService.ShowError(e.ToString());
-            }
-        }
         
         public void CreateFileAssociation(string extension, string applicationPath)
         {
