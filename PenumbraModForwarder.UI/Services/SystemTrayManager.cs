@@ -13,6 +13,8 @@ public class SystemTrayManager : ISystemTrayManager
     private readonly IConfigurationService _configurationService;
     private readonly IProcessHelperService _processHelperService;
     private readonly IResourceManager _resourceManager;
+    
+    private Icon _icon;
 
     public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService, IResourceManager resourceManager)
     {
@@ -21,9 +23,10 @@ public class SystemTrayManager : ISystemTrayManager
         _configurationService = configurationService;
         _processHelperService = processHelperService;
         _resourceManager = resourceManager;
+        _icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico");
         _notifyIcon = new NotifyIcon
         {
-            Icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico"),
+            Icon = _icon,
             Visible = true,
             Text = "Penumbra Mod Fowarder",
         };
