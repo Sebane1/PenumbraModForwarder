@@ -97,7 +97,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
                             break;
                     }
 
-                    _progressWindowService.UpdateProgress(fileName, "Converting to DT", (int)progress);
+                    _progressWindowService.UpdateProgress(fileName, "Converting to DawnTrail", (int)progress);
                     
                     Thread.Sleep(50);  // Update every 50 milliseconds for smoother progress
                 }
