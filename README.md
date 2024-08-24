@@ -60,7 +60,6 @@ To build Penumbra Mod Forwarder from source, follow these steps:
     dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained false -r win-x64 -o ./publish -f net8.0-windows
     ```
 
-
 4. **Run the Application:**
     Once the build is successful, navigate to the `publish` directory and run the executable file to start the application.
 

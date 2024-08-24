@@ -139,14 +139,21 @@ namespace PenumbraModForwarder.Common.Services
 
         private void ExtractFiles(string filePath, string[] selectedFiles)
         {
+            var allFilesExtractedSuccessfully = true;
+
             foreach (var file in selectedFiles)
             {
                 var report = ExtractAndInstallFile(filePath, file);
-                // If we return true you can safely delete the archive
-                if (report)
+                if (!report)
                 {
-                    DeleteArchiveIfNeeded(filePath);
+                    allFilesExtractedSuccessfully = false;
                 }
+            }
+
+            // Delete the archive only if all files were extracted successfully
+            if (allFilesExtractedSuccessfully)
+            {
+                DeleteArchiveIfNeeded(filePath);
             }
         }
 
