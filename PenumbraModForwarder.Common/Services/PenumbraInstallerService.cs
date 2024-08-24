@@ -47,7 +47,6 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
         return modPath;
     }
-
     
     private string ConvertToDt(string modPath)
     {
@@ -76,30 +75,26 @@ public class PenumbraInstallerService : IPenumbraInstallerService
             {
                 process.Start();
 
-                // Simulate smoother oscillating progress
                 var progress = 0.0;  // Use double for smoother transitions
-                var increment = 0.5;  // Smaller increments for smoother transitions
-                var direction = 1.0;  // 1 for increasing, -1 for decreasing
+                var maxProgress = 88.0;
 
                 while (!process.HasExited)
                 {
-                    progress += increment * direction;
+                    // Parabolic easing to slow down as we approach maxProgress
+                    // The closer progress gets to maxProgress, the smaller the increments become
+                    var easedIncrement = (1.0 - (progress / maxProgress)) * 1.2; // Slow down as progress increases
 
-                    switch (progress)
+                    progress += easedIncrement;
+
+                    // Cap progress at maxProgress to ensure it never reaches 100%
+                    if (progress >= maxProgress)
                     {
-                        case >= 100:
-                            progress = 100; // Cap at 100 to avoid overshooting
-                            direction = -1;
-                            break;
-                        case <= 0:
-                            progress = 0; // Cap at 0 to avoid undershooting
-                            direction = 1; 
-                            break;
+                        progress = maxProgress;
                     }
 
                     _progressWindowService.UpdateProgress(fileName, "Converting to DawnTrail", (int)progress);
-                    
-                    Thread.Sleep(50);  // Update every 50 milliseconds for smoother progress
+
+                    Thread.Sleep(50); 
                 }
 
                 process.WaitForExit();
@@ -109,6 +104,8 @@ public class PenumbraInstallerService : IPenumbraInstallerService
                     _logger.LogWarning($"Error converting mod to DT or conversion isn't needed: {modPath}");
                     return modPath;
                 }
+                
+                _progressWindowService.UpdateProgress(fileName, "Conversion Complete", 100);
 
                 _logger.LogInformation($"Mod converted to DT: {dtPath}");
                 _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
@@ -121,12 +118,9 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         }
         finally
         {
-            // Close the progress window after the conversion is complete
             _progressWindowService.CloseProgressWindow();
         }
     }
-
-
     
     private bool IsConversionNeeded(string modPath)
     {
