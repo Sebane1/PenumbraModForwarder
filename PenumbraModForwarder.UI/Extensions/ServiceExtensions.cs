@@ -75,11 +75,13 @@ public static class ServiceExtensions
 #else
     var minimumLevel = LogEventLevel.Warning;
 #endif
+        
+        var logFileName = $"log_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(minimumLevel)
             .WriteTo.Console()
-            .WriteTo.File(Path.Combine(appDataPath, "log.txt"), rollingInterval: RollingInterval.Day,
+            .WriteTo.File(Path.Combine(appDataPath, logFileName), 
                 restrictedToMinimumLevel: LogEventLevel.Information)
             .CreateLogger();
 
@@ -89,6 +91,7 @@ public static class ServiceExtensions
             builder.AddSerilog();
         });
     }
+
 
 
     private static void ConfigureAutoMapper(IServiceCollection services)

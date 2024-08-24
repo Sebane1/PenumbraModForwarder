@@ -39,11 +39,9 @@ namespace PenumbraModForwarder.UI.Services
                 _logger.LogInformation("Files selected: {0}", string.Join(", ", fileSelectForm.ViewModel.SelectedFiles));
                 return fileSelectForm.ViewModel.SelectedFiles;
             }
-            else
-            {
-                _logger.LogWarning("File selection was canceled.");
-                return Array.Empty<string>();
-            }
+
+            _logger.LogWarning("File selection was canceled.");
+            return [];
         }
     }
 }
