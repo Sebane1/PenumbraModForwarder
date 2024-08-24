@@ -4,11 +4,11 @@ using PenumbraModForwarder.Common.Interfaces;
 
 namespace PenumbraModForwarder.Common.Services;
 
-public class ProcessHelperServiceService : IProcessHelperService
+public class ProcessHelperService : IProcessHelperService
 {
-    private readonly ILogger<ProcessHelperServiceService> _logger;
+    private readonly ILogger<ProcessHelperService> _logger;
 
-    public ProcessHelperServiceService(ILogger<ProcessHelperServiceService> logger)
+    public ProcessHelperService(ILogger<ProcessHelperService> logger)
     {
         _logger = logger;
     }

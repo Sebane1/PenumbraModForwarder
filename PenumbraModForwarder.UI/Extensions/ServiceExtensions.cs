@@ -40,7 +40,7 @@ public static class ServiceExtensions
         services.AddSingleton<IPenumbraInstallerService, PenumbraInstallerService>();
         services.AddTransient<IUpdateService, UpdateService>();
         services.AddSingleton<IErrorWindowService, ErrorWindowService>();
-        services.AddSingleton<IProcessHelperService, ProcessHelperServiceService>();
+        services.AddSingleton<IProcessHelperService, ProcessHelperService>();
         services.AddSingleton<IArkService, ArkService>();
         services.AddSingleton<ISystemTrayManager, SystemTrayManager>();
         services.AddSingleton<IAssociateFileTypeService, AssociateFileTypesService>();
@@ -49,6 +49,7 @@ public static class ServiceExtensions
         services.AddSingleton<IResourceManager, ResourceManager>();
         services.AddSingleton<IVoidToolsEverything, VoidToolsEverything>();
         services.AddSingleton<ITexToolsHelper, TexToolsHelper>();
+        services.AddSingleton<IProgressWindowService, ProgressWindowService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)
@@ -60,6 +61,8 @@ public static class ServiceExtensions
         services.AddTransient<FileSelect>();
         services.AddTransient<ErrorWindowViewModel>();
         services.AddTransient<ErrorWindow>();
+        services.AddTransient<ProgressWindowViewModel>();
+        services.AddTransient<ProgressWindow>();
     }
     
     private static void ConfigureLogging(IServiceCollection services)

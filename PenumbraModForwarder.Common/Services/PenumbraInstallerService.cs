@@ -10,14 +10,16 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     private readonly IPenumbraApi _penumbraApi;
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly IConfigurationService _configurationService;
+    private readonly IProgressWindowService _progressWindowService;
     private readonly string _dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
 
-    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, ISystemTrayManager systemTrayManager, IConfigurationService configurationService)
+    public PenumbraInstallerService(ILogger<PenumbraInstallerService> logger, IPenumbraApi penumbraApi, ISystemTrayManager systemTrayManager, IConfigurationService configurationService, IProgressWindowService progressWindowService)
     {
         _logger = logger;
         _penumbraApi = penumbraApi;
         _systemTrayManager = systemTrayManager;
         _configurationService = configurationService;
+        _progressWindowService = progressWindowService;
 
         if (!Directory.Exists(_dtConversionPath))
         {
@@ -51,6 +53,8 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     {
         _logger.LogInformation($"Converting mod to DT: {modPath}");
         var dtPath = GetConvertedModPath(modPath);
+        
+        _progressWindowService.ShowProgressWindow();
 
         var process = new Process
         {
@@ -65,27 +69,63 @@ public class PenumbraInstallerService : IPenumbraInstallerService
             }
         };
 
-        using (process)
+        try
         {
-            process.Start();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0 || !File.Exists(dtPath))
+            var fileName = Path.GetFileName(modPath);
+            using (process)
             {
-                _logger.LogWarning($"Error converting mod to DT or conversion isn't needed: {modPath}");
-                return modPath;
+                process.Start();
+
+                // Simulate smoother oscillating progress
+                var progress = 0.0;  // Use double for smoother transitions
+                var increment = 0.5;  // Smaller increments for smoother transitions
+                var direction = 1.0;  // 1 for increasing, -1 for decreasing
+
+                while (!process.HasExited)
+                {
+                    progress += increment * direction;
+
+                    switch (progress)
+                    {
+                        case >= 100:
+                            progress = 100; // Cap at 100 to avoid overshooting
+                            direction = -1;
+                            break;
+                        case <= 0:
+                            progress = 0; // Cap at 0 to avoid undershooting
+                            direction = 1; 
+                            break;
+                    }
+
+                    _progressWindowService.UpdateProgress(fileName, "Converting to DT", (int)progress);
+                    
+                    Thread.Sleep(50);  // Update every 50 milliseconds for smoother progress
+                }
+
+                process.WaitForExit();
+
+                if (process.ExitCode != 0 || !File.Exists(dtPath))
+                {
+                    _logger.LogWarning($"Error converting mod to DT or conversion isn't needed: {modPath}");
+                    return modPath;
+                }
+
+                _logger.LogInformation($"Mod converted to DT: {dtPath}");
+                _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
+                
+                File.Delete(modPath);
+                _logger.LogInformation($"Deleted original mod: {modPath}");
+
+                return dtPath;
             }
-
-            _logger.LogInformation($"Mod converted to DT: {dtPath}");
-            _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
-
-            // Optionally delete the original mod if conversion was successful
-            File.Delete(modPath);
-            _logger.LogInformation($"Deleted original mod: {modPath}");
-
-            return dtPath;
+        }
+        finally
+        {
+            // Close the progress window after the conversion is complete
+            _progressWindowService.CloseProgressWindow();
         }
     }
+
 
     
     private bool IsConversionNeeded(string modPath)

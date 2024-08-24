@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Interfaces;
 using Microsoft.Extensions.Logging;
+using PenumbraModForwarder.Common.Helpers;
 using PenumbraModForwarder.Common.Models;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Rar;
@@ -20,7 +21,10 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IConfigurationService _configurationService;
         private readonly IErrorWindowService _errorWindowService;
         private readonly IArkService _arkService;
-        private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
+        private readonly IProgressWindowService _progressWindowService;
+
+        private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                                                  @"\PenumbraModForwarder\Extraction";
 
         // Queue and semaphore for managing operations
         private readonly ConcurrentQueue<ExtractionOperation> _operationQueue = new();
@@ -28,12 +32,13 @@ namespace PenumbraModForwarder.Common.Services
         private bool _isFileSelectionWindowOpen = false;
 
         public ArchiveHelperService(
-            ILogger<ArchiveHelperService> logger, 
-            IFileSelector fileSelector, 
-            IPenumbraInstallerService penumbraInstallerService, 
-            IConfigurationService configurationService, 
-            IErrorWindowService errorWindowService, 
-            IArkService arkService)
+            ILogger<ArchiveHelperService> logger,
+            IFileSelector fileSelector,
+            IPenumbraInstallerService penumbraInstallerService,
+            IConfigurationService configurationService,
+            IErrorWindowService errorWindowService,
+            IArkService arkService,
+            IProgressWindowService progressWindowService)
         {
             _logger = logger;
             _fileSelector = fileSelector;
@@ -41,6 +46,7 @@ namespace PenumbraModForwarder.Common.Services
             _configurationService = configurationService;
             _errorWindowService = errorWindowService;
             _arkService = arkService;
+            _progressWindowService = progressWindowService;
 
             if (!Directory.Exists(_extractionPath))
             {
@@ -57,14 +63,12 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ProcessQueueAsync()
         {
-            // Only allow one operation to proceed at a time
             await _semaphore.WaitAsync();
-            
+
             try
             {
                 while (_operationQueue.TryDequeue(out var operation))
                 {
-                    // Wait for the file selection window to close before proceeding to the next operation
                     await ProcessExtractionAsync(operation);
                 }
             }
@@ -76,73 +80,156 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ProcessExtractionAsync(ExtractionOperation operation)
         {
-            // Perform extraction logic asynchronously
-            await Task.Run(() => ExtractArchive(operation.FilePath));
+            var files = GetFilesInArchive(operation.FilePath);
+
+            if (HandleRolePlayVoiceFile(operation.FilePath, files))
+            {
+                return;
+            }
+
+            // If there are multiple files, handle file selection first
+            var selectedFiles = files;
+
+            if (files.Length > 1 && !_configurationService.GetConfigValue(o => o.ExtractAll))
+            {
+                selectedFiles = HandleFileSelection(operation.FilePath, files);
+                if (selectedFiles == null || selectedFiles.Length == 0)
+                {
+                    _logger.LogWarning("No files selected. Aborting extraction.");
+                    return;
+                }
+            }
+
+            // Only show the progress window after file selection
+            _progressWindowService.ShowProgressWindow();
+
+            try
+            {
+                // Proceed with extraction
+                await Task.Run(() => ExtractFiles(operation.FilePath, selectedFiles));
+            }
+            finally
+            {
+                _progressWindowService.CloseProgressWindow();
+            }
+        }
+        
+        private string[] HandleFileSelection(string filePath, string[] files)
+        {
+            _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
+            var fileName = Path.GetFileName(filePath);
+
+            if (_isFileSelectionWindowOpen)
+            {
+                _logger.LogInformation("File selection window already open. Queueing operation.");
+                return null;
+            }
+
+            _isFileSelectionWindowOpen = true;
+
+            try
+            {
+                return _fileSelector.SelectFiles(files, fileName);
+            }
+            finally
+            {
+                _isFileSelectionWindowOpen = false;
+            }
+        }
+
+        private void ExtractFiles(string filePath, string[] selectedFiles)
+        {
+            foreach (var file in selectedFiles)
+            {
+                ExtractAndInstallFile(filePath, file);
+            }
+
+            DeleteArchiveIfNeeded(filePath);
         }
 
         private void ExtractArchive(string filePath)
         {
             var files = GetFilesInArchive(filePath);
 
+            if (HandleRolePlayVoiceFile(filePath, files))
+            {
+                return;
+            }
+
+            if (files.Length > 1 && !_configurationService.GetConfigValue(o => o.ExtractAll))
+            {
+                HandleMultipleFiles(filePath, files);
+            }
+            else
+            {
+                ExtractAllFiles(filePath, files);
+            }
+
+            DeleteArchiveIfNeeded(filePath);
+        }
+
+        private bool HandleRolePlayVoiceFile(string filePath, string[] files)
+        {
             if (ContainsRolePlayVoiceFile(files))
             {
                 _logger.LogDebug("File is a RolePlayVoice File");
                 _arkService.InstallArkFile(filePath);
+                return true;
+            }
+            return false;
+        }
+
+        private void HandleMultipleFiles(string filePath, string[] files)
+        {
+            _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
+            var fileName = Path.GetFileName(filePath);
+
+            if (_isFileSelectionWindowOpen)
+            {
+                _logger.LogInformation("File selection window already open. Queueing operation.");
                 return;
             }
 
-            if (files.Length > 1)
+            _isFileSelectionWindowOpen = true;
+
+            try
             {
-                if (!_configurationService.GetConfigValue(o => o.ExtractAll))
+                var selectedFiles = _fileSelector.SelectFiles(files, fileName);
+                if (selectedFiles.Length == 0)
                 {
-                    _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
-                    var fileName = Path.GetFileName(filePath);
-                    
-                    // Check if a file selection window is already open
-                    if (_isFileSelectionWindowOpen)
-                    {
-                        _logger.LogInformation("File selection window already open. Queueing operation.");
-                        return;
-                    }
-
-                    _isFileSelectionWindowOpen = true;
-                    
-                    try
-                    {
-                        var selectedFiles = _fileSelector.SelectFiles(files, fileName);
-                        if (selectedFiles.Length == 0)
-                        {
-                            _logger.LogWarning("No files selected. Aborting extraction.");
-                            return;
-                        }
-
-                        foreach (var file in selectedFiles)
-                        {
-                            ExtractAndInstallFile(filePath, file);
-                        }
-                    }
-                    finally
-                    {
-                        _isFileSelectionWindowOpen = false;
-                    }
+                    _logger.LogWarning("No files selected. Aborting extraction.");
+                    return;
                 }
-                else
-                {
-                    foreach (var file in files)
-                    {
-                        ExtractAndInstallFile(filePath, file);
-                    }
-                }
+
+                ExtractSelectedFiles(filePath, selectedFiles);
             }
-            else
+            finally
             {
-                ExtractAndInstallFile(filePath, files[0]);
+                _isFileSelectionWindowOpen = false;
             }
+        }
 
-            // Delete the archive after extraction
+        private void ExtractSelectedFiles(string filePath, string[] selectedFiles)
+        {
+            foreach (var file in selectedFiles)
+            {
+                ExtractAndInstallFile(filePath, file);
+            }
+        }
+
+        private void ExtractAllFiles(string filePath, string[] files)
+        {
+            foreach (var file in files)
+            {
+                ExtractAndInstallFile(filePath, file);
+            }
+        }
+
+        private void DeleteArchiveIfNeeded(string filePath)
+        {
             if (_configurationService.GetConfigValue(option => option.AutoDelete))
             {
-                _logger.LogInformation("Deleting archive: {0}", filePath);
+                _logger.LogDebug("Deleting archive: {0}", filePath);
                 File.Delete(filePath);
             }
         }
@@ -157,28 +244,44 @@ namespace PenumbraModForwarder.Common.Services
             var extractedFile = ExtractFileFromArchive(archivePath, filePath);
             _penumbraInstallerService.InstallMod(extractedFile);
         }
-        
+
         private string ExtractFileFromArchive(string archivePath, string filePath)
         {
             using var archive = OpenArchive(archivePath);
-            // We should never get here if the archive is null
             if (archive == null) throw new InvalidOperationException("Archive could not be opened.");
 
             var entry = archive.Entries.FirstOrDefault(e => e.Key == filePath);
-            // We should never get here if the file is not found
             if (entry == null) throw new InvalidOperationException("File not found in archive.");
-            
+
             _logger.LogDebug("Extracting file: {0}", entry.Key);
 
-            entry.WriteToDirectory(_extractionPath, new ExtractionOptions()
+            var destinationPath = Path.Combine(_extractionPath, entry.Key);
+
+            // Ensure the directory exists before writing the file
+            var directoryPath = Path.GetDirectoryName(destinationPath);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
-                ExtractFullPath = true,
-                Overwrite = true
-            });
-            
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            var totalSize = entry.Size;
+            var fileName = Path.GetFileName(entry.Key);
+            using (var destinationStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+            {
+                // Wrap the destination stream with ProgressStream
+                using (var progressStream = new ProgressStream(destinationStream, totalSize, new Progress<double>(percentage =>
+                       {
+                           _progressWindowService.UpdateProgress(fileName, "Extracting", (int)percentage);
+                       })))
+                {
+                    entry.WriteTo(progressStream); // Write to the progress stream
+                }
+            }
+
             _logger.LogInformation($"File: {entry.Key} extracted to: {_extractionPath}");
-            
-            return Path.Combine(_extractionPath, entry.Key);
+            _progressWindowService.CloseProgressWindow();
+
+            return destinationPath;
         }
 
         public virtual string[] GetFilesInArchive(string filePath)
@@ -191,7 +294,7 @@ namespace PenumbraModForwarder.Common.Services
 
             var allowedExtensions = new[] {".pmp", ".ttmp2", ".ttmp", ".rpvsp"};
             var fileEntries = new HashSet<string>();
-            
+
             _logger.LogDebug("Opening archive: {0}", filePath);
 
             using (var archive = OpenArchive(filePath))
@@ -228,22 +331,16 @@ namespace PenumbraModForwarder.Common.Services
 
             try
             {
-                // Determine the archive type based on the file extension
                 var extension = Path.GetExtension(filePath).ToLower();
                 _logger.LogInformation($"Archive extension: {extension}");
-                switch (extension)
+
+                return extension switch
                 {
-                    case ".7z":
-                        return SevenZipArchive.Open(filePath);
-                    case ".zip":
-                        return ZipArchive.Open(filePath);
-                    case ".rar":
-                        return RarArchive.Open(filePath);
-                    default:
-                        _logger.LogError($"Unsupported archive format: {extension}");
-                        _errorWindowService.ShowError($"The file format {extension} is not supported.");
-                        throw new NotSupportedException($"The file format {extension} is not supported.");
-                }
+                    ".7z" => SevenZipArchive.Open(filePath),
+                    ".zip" => ZipArchive.Open(filePath),
+                    ".rar" => RarArchive.Open(filePath),
+                    _ => throw new NotSupportedException($"The file format {extension} is not supported.")
+                };
             }
             catch (Exception ex)
             {
