@@ -141,31 +141,13 @@ namespace PenumbraModForwarder.Common.Services
         {
             foreach (var file in selectedFiles)
             {
-                ExtractAndInstallFile(filePath, file);
+                var report = ExtractAndInstallFile(filePath, file);
+                // If we return true you can safely delete the archive
+                if (report)
+                {
+                    DeleteArchiveIfNeeded(filePath);
+                }
             }
-
-            DeleteArchiveIfNeeded(filePath);
-        }
-
-        private void ExtractArchive(string filePath)
-        {
-            var files = GetFilesInArchive(filePath);
-
-            if (HandleRolePlayVoiceFile(filePath, files))
-            {
-                return;
-            }
-
-            if (files.Length > 1 && !_configurationService.GetConfigValue(o => o.ExtractAll))
-            {
-                HandleMultipleFiles(filePath, files);
-            }
-            else
-            {
-                ExtractAllFiles(filePath, files);
-            }
-
-            DeleteArchiveIfNeeded(filePath);
         }
 
         private bool HandleRolePlayVoiceFile(string filePath, string[] files)
@@ -177,52 +159,6 @@ namespace PenumbraModForwarder.Common.Services
                 return true;
             }
             return false;
-        }
-
-        private void HandleMultipleFiles(string filePath, string[] files)
-        {
-            _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
-            var fileName = Path.GetFileName(filePath);
-
-            if (_isFileSelectionWindowOpen)
-            {
-                _logger.LogInformation("File selection window already open. Queueing operation.");
-                return;
-            }
-
-            _isFileSelectionWindowOpen = true;
-
-            try
-            {
-                var selectedFiles = _fileSelector.SelectFiles(files, fileName);
-                if (selectedFiles.Length == 0)
-                {
-                    _logger.LogWarning("No files selected. Aborting extraction.");
-                    return;
-                }
-
-                ExtractSelectedFiles(filePath, selectedFiles);
-            }
-            finally
-            {
-                _isFileSelectionWindowOpen = false;
-            }
-        }
-
-        private void ExtractSelectedFiles(string filePath, string[] selectedFiles)
-        {
-            foreach (var file in selectedFiles)
-            {
-                ExtractAndInstallFile(filePath, file);
-            }
-        }
-
-        private void ExtractAllFiles(string filePath, string[] files)
-        {
-            foreach (var file in files)
-            {
-                ExtractAndInstallFile(filePath, file);
-            }
         }
 
         private void DeleteArchiveIfNeeded(string filePath)
@@ -239,10 +175,15 @@ namespace PenumbraModForwarder.Common.Services
             return files.Any(file => file.EndsWith(".rpvsp", StringComparison.OrdinalIgnoreCase));
         }
 
-        private void ExtractAndInstallFile(string archivePath, string filePath)
+        private bool ExtractAndInstallFile(string archivePath, string filePath)
         {
             var extractedFile = ExtractFileFromArchive(archivePath, filePath);
+            if (string.IsNullOrEmpty(extractedFile))
+            {
+                return false;
+            }
             _penumbraInstallerService.InstallMod(extractedFile);
+            return true;
         }
 
         private string ExtractFileFromArchive(string archivePath, string filePath)
@@ -266,22 +207,31 @@ namespace PenumbraModForwarder.Common.Services
 
             var totalSize = entry.Size;
             var fileName = Path.GetFileName(entry.Key);
-            using (var destinationStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+            try
             {
-                // Wrap the destination stream with ProgressStream
-                using (var progressStream = new ProgressStream(destinationStream, totalSize, new Progress<double>(percentage =>
-                       {
-                           _progressWindowService.UpdateProgress(fileName, "Extracting", (int)percentage);
-                       })))
+                using (var destinationStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
                 {
-                    entry.WriteTo(progressStream); // Write to the progress stream
+                    // Wrap the destination stream with ProgressStream
+                    using (var progressStream = new ProgressStream(destinationStream, totalSize, new Progress<double>(percentage =>
+                           {
+                               _progressWindowService.UpdateProgress(fileName, "Extracting", (int)percentage);
+                           })))
+                    {
+                        entry.WriteTo(progressStream); // Write to the progress stream
+                    }
                 }
+
+                _logger.LogInformation($"File: {entry.Key} extracted to: {_extractionPath}");
+                _progressWindowService.CloseProgressWindow();
+
+                return destinationPath;
             }
-
-            _logger.LogInformation($"File: {entry.Key} extracted to: {_extractionPath}");
-            _progressWindowService.CloseProgressWindow();
-
-            return destinationPath;
+            catch (CryptographicException ex)
+            {
+                _logger.LogError(ex, "Failed to extract file: {0}", entry.Key);
+                _errorWindowService.ShowError($"{fileName} is encrypted.\nPenumbra Mod Forwarder doesn't support password protected.\nPlease close this window and extract the file manually.");
+                return null;
+            }
         }
 
         public virtual string[] GetFilesInArchive(string filePath)
