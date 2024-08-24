@@ -62,8 +62,6 @@ namespace PenumbraModForwarder.UI.Services
             {
                 _progressWindow.Close();
             }
-
-            _progressWindow = null; // Reset the reference to the window after closing
         }
 
         private void ShowProgressWindowInternal()
