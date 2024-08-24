@@ -72,7 +72,9 @@
             MinimizeBox = false;
             Name = "ProgressWindow";
             ShowIcon = false;
+            ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
+            TopMost = true;
             ResumeLayout(false);
             PerformLayout();
         }
