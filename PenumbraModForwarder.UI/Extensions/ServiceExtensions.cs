@@ -63,6 +63,8 @@ public static class ServiceExtensions
         services.AddTransient<ErrorWindow>();
         services.AddTransient<ProgressWindowViewModel>();
         services.AddTransient<ProgressWindow>();
+        services.AddTransient<ArchivePasswordViewModel>();
+        services.AddTransient<ArchivePasswordWindow>();
     }
     
     private static void ConfigureLogging(IServiceCollection services)
