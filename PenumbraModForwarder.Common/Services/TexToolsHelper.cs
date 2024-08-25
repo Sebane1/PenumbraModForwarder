@@ -20,6 +20,12 @@ public class TexToolsHelper : ITexToolsHelper
 
     public void SetTexToolsConsolePath()
     {
+        if (_configurationService.GetConfigValue(config => !string.IsNullOrEmpty(config.TexToolPath)))
+        {
+            _logger.LogInformation("TexTools Console path already set");
+            return;
+        }
+        
         var path = _registryHelper.GetTexToolGetRegistryValue("InstallLocation");
         
         if (string.IsNullOrEmpty(path))
