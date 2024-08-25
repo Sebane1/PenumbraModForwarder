@@ -6,16 +6,31 @@ namespace PenumbraModForwarder.Common.Services
 {
     public class RegistryHelper : IRegistryHelper
     {
-        private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
         private readonly IErrorWindowService _errorWindowService;
         private readonly ILogger<RegistryHelper> _logger;
         private readonly IConfigurationService _configurationService;
+        private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
 
         public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger, IConfigurationService configurationService)
         {
             _errorWindowService = errorWindowService;
             _logger = logger;
             _configurationService = configurationService;
+        }
+        
+        public string GetTexToolGetRegistryValue(string keyValue)
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(RegistryPath);
+                return key?.GetValue(keyValue)?.ToString();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error reading registry");
+                _errorWindowService.ShowError(e.ToString());
+                return null;
+            }
         }
         
         public void CreateFileAssociation(string extension, string applicationPath)

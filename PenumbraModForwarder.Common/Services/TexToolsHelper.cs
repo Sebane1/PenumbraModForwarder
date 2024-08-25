@@ -6,51 +6,46 @@ namespace PenumbraModForwarder.Common.Services;
 public class TexToolsHelper : ITexToolsHelper
 {
     private readonly ILogger<TexToolsHelper> _logger;
-    private readonly IVoidToolsEverything _voidToolsEverything;
     private readonly IConfigurationService _configurationService;
     private readonly IErrorWindowService _errorWindowService;
+    private readonly IRegistryHelper _registryHelper;
 
-    public TexToolsHelper(ILogger<TexToolsHelper> logger, IVoidToolsEverything voidToolsEverything, IConfigurationService configurationService, IErrorWindowService errorWindowService)
+    public TexToolsHelper(ILogger<TexToolsHelper> logger, IConfigurationService configurationService, IErrorWindowService errorWindowService, IRegistryHelper registryHelper)
     {
         _logger = logger;
-        _voidToolsEverything = voidToolsEverything;
         _configurationService = configurationService;
         _errorWindowService = errorWindowService;
+        _registryHelper = registryHelper;
     }
 
     public void SetTexToolsConsolePath()
     {
-        try
+        var path = _registryHelper.GetTexToolGetRegistryValue("InstallLocation");
+        
+        if (string.IsNullOrEmpty(path))
         {
-            _voidToolsEverything.SetSearch("ConsoleTools.exe");
-
-            if (_voidToolsEverything.Query(true))
-            {
-                var numResults = _voidToolsEverything.GetNumResults();
-                _logger.LogDebug($"Found {numResults} results for ConsoleTools.exe.");
-
-                for (var i = 0; i < numResults; i++)
-                {
-                    var resultPath = _voidToolsEverything.GetResultFullPathName(i);
-                    _logger.LogDebug($"Result {i + 1}: {resultPath}");
-
-                    if (!resultPath.Contains("FFXIV TexTools\\FFXIV_TexTools\\", StringComparison.OrdinalIgnoreCase)
-                        || !resultPath.EndsWith("ConsoleTools.exe", StringComparison.OrdinalIgnoreCase)) continue;
-                    
-                    _logger.LogInformation($"Found ConsoleTools.exe at {resultPath}");
-                    _configurationService.SetConfigValue((config, path) => config.TexToolPath = path, resultPath);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("ConsoleTools.exe not found.");
-                _configurationService.SetConfigValue((config, path) => config.TexToolPath = path, string.Empty);
-            }
+            _logger.LogWarning("TexTools Console not found in registry");
+            _configurationService.SetConfigValue((config, texToolPath) => config.TexToolPath = texToolPath, string.Empty);
+            return;
         }
-        catch (Exception e)
+        
+        // Strip the path of ""
+        if (path.StartsWith("\"") && path.EndsWith("\""))
         {
-            _logger.LogError(e, "Error setting TexTools path.");
-            _errorWindowService.ShowError(e.ToString());
+            path = path[1..^1];
         }
+        
+        var combinedPath = Path.Combine(path, "FFXIV_TexTools", "ConsoleTools.exe");
+        
+        if (!File.Exists(combinedPath))
+        {
+            _logger.LogWarning("TexTools Console not found at {TexToolsConsolePath}", combinedPath);
+            _configurationService.SetConfigValue((config, texToolPath) => config.TexToolPath = texToolPath, string.Empty);
+            return;
+        }
+        
+        _logger.LogInformation("Setting TexTools Console path to {TexToolsConsolePath}", combinedPath);
+        
+        _configurationService.SetConfigValue((config, texToolPath) => config.TexToolPath = texToolPath, combinedPath);
     }
 }
