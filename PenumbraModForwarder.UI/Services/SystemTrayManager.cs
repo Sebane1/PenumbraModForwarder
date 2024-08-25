@@ -16,6 +16,8 @@ public class SystemTrayManager : ISystemTrayManager
     
     private Icon _icon;
 
+    public event Action OnExitRequested;
+
     public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService, IResourceManager resourceManager)
     {
         _logger = logger;
@@ -42,6 +44,7 @@ public class SystemTrayManager : ISystemTrayManager
     {
         contextMenu.Items.Add("Open Configuration", null, (sender, args) =>
         {
+            _logger.LogInformation("Opening configuration window.");
             Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show();
             Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Activate();
         });
@@ -64,7 +67,7 @@ public class SystemTrayManager : ISystemTrayManager
         contextMenu.Items.Add(new ToolStripSeparator());
         
         var exitButton = ColouredMenuItem("Exit", Color.Red);
-        exitButton.Click += (sender, args) => Application.Exit();
+        exitButton.Click += (sender, args) => OnExitRequested?.Invoke();
         contextMenu.Items.Add(exitButton);
     }
     

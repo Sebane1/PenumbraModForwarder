@@ -208,32 +208,35 @@ namespace PenumbraModForwarder.Common.Services
 
             _logger.LogDebug("Extracting file: {0}", entry.Key);
 
-            var destinationPath = Path.Combine(_extractionPath, entry.Key);
+            // Sanitize the file path to prevent issues with special characters
+            var sanitizedFilePath = SanitizePath(entry.Key);
 
-            // Ensure the directory exists before writing the file
+            var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
+
+            // Ensure all directories are created
             var directoryPath = Path.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
+                _logger.LogDebug("Creating directory: {0}", directoryPath);
                 Directory.CreateDirectory(directoryPath);
             }
 
             var totalSize = entry.Size;
-            var fileName = Path.GetFileName(entry.Key);
+            var fileName = Path.GetFileName(sanitizedFilePath);
             try
             {
                 using (var destinationStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
                 {
-                    // Wrap the destination stream with ProgressStream
                     using (var progressStream = new ProgressStream(destinationStream, totalSize, new Progress<double>(percentage =>
                            {
                                _progressWindowService.UpdateProgress(fileName, "Extracting", (int)percentage);
                            })))
                     {
-                        entry.WriteTo(progressStream); // Write to the progress stream
+                        entry.WriteTo(progressStream);
                     }
                 }
 
-                _logger.LogInformation($"File: {entry.Key} extracted to: {_extractionPath}");
+                _logger.LogInformation($"File: {sanitizedFilePath} extracted to: {_extractionPath}");
                 _progressWindowService.CloseProgressWindow();
 
                 return destinationPath;
@@ -245,6 +248,13 @@ namespace PenumbraModForwarder.Common.Services
                 return null;
             }
         }
+
+        private string SanitizePath(string path)
+        {
+            // Replace any illegal characters from the path to avoid issues
+            return Path.GetInvalidPathChars().Aggregate(path, (current, c) => current.Replace(c.ToString(), string.Empty));
+        }
+
 
         public virtual string[] GetFilesInArchive(string filePath)
         {

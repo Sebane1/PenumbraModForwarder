@@ -55,6 +55,12 @@ namespace PenumbraModForwarder.Common.Services
 
             return false;
         }
+        
+        // TODO: Create a function to poll the /reloadmod endpoint to check if our mod has been installed correctly, give it a retry count of 15
+        private async Task<bool> IsModInstalledAsync(string modPath, string modName)
+        {
+            throw new NotImplementedException();
+        }
 
         private async Task<bool> PostAsync(string route, object content)
         {

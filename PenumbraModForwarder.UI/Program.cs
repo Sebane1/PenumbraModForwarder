@@ -15,6 +15,7 @@ static class Program
     static void Main()
     {
         var serviceProvider = Extensions.ServiceExtensions.Configuration();
+        IsProgramAlreadyRunning(serviceProvider);
         CheckForUpdates(serviceProvider);
         MigrateOldConfigIfExists(serviceProvider);
         CreateStartMenuShortcut(serviceProvider);
@@ -57,5 +58,14 @@ static class Program
     {
         var texToolsHelper = serviceProvider.GetRequiredService<ITexToolsHelper>();
         texToolsHelper.SetTexToolsConsolePath();
+    }
+
+    private static void IsProgramAlreadyRunning(IServiceProvider serviceProvider)
+    {
+        var processHelperService = serviceProvider.GetRequiredService<IProcessHelperService>();
+        var result = processHelperService.IsApplicationAlreadyOpen();
+        if (!result) return;
+        MessageBox.Show("An instance of Penumbra Mod Forwarder is already running.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        Environment.Exit(0);
     }
 }

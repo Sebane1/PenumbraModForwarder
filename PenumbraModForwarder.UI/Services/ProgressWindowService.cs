@@ -34,23 +34,44 @@ namespace PenumbraModForwarder.UI.Services
         public void UpdateProgress(string fileName, string operation, int progress)
         {
             _logger.LogDebug("Updating progress window with {FileName}, {Operation}, {Progress}.", fileName, operation, progress);
-            if (_progressWindow is {InvokeRequired: true})
+
+            // Check if _progressWindow is not null and not disposed
+            if (_progressWindow is {IsDisposed: false})
             {
-                // Ensure we use the UI thread for updating the form
-                _progressWindow.Invoke(() =>
+                try
                 {
-                    _progressWindow.ViewModel.FileName = fileName;
-                    _progressWindow.ViewModel.Operation = operation;
-                    _progressWindow.ViewModel.Progress = progress;
-                });
+                    if (_progressWindow.InvokeRequired)
+                    {
+                        // Ensure we use the UI thread for updating the form
+                        _progressWindow.Invoke(() =>
+                        {
+                            if (_progressWindow.IsDisposed) return;
+                            
+                            _progressWindow.ViewModel.FileName = fileName;
+                            _progressWindow.ViewModel.Operation = operation;
+                            _progressWindow.ViewModel.Progress = progress;
+                        });
+                    }
+                    else
+                    {
+                        if (_progressWindow.IsDisposed) return;
+                        
+                        _progressWindow.ViewModel.FileName = fileName;
+                        _progressWindow.ViewModel.Operation = operation;
+                        _progressWindow.ViewModel.Progress = progress;
+                    }
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    _logger.LogWarning(ex, "Progress window was disposed while attempting to update progress.");
+                }
             }
             else
             {
-                _progressWindow.ViewModel.FileName = fileName;
-                _progressWindow.ViewModel.Operation = operation;
-                _progressWindow.ViewModel.Progress = progress;
+                _logger.LogWarning("Progress window is null or disposed, cannot update progress.");
             }
         }
+
 
         public void CloseProgressWindow()
         {

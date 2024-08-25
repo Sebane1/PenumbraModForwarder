@@ -26,6 +26,12 @@ public class ProcessHelperService : IProcessHelperService
         Process.Start(new ProcessStartInfo("explorer.exe", logFolderPath) { UseShellExecute = true });
     }
 
+    public bool IsApplicationAlreadyOpen()
+    {
+        var processName = Process.GetCurrentProcess().ProcessName;
+        return Process.GetProcessesByName(processName).Length > 1;
+    }
+
     public void OpenSupportDiscord() => OpenUrl("https://discord.gg/rtGXwMn7pX", "Opening Discord.");
 
     public void OpenXivArchive() => OpenUrl("https://www.xivmodarchive.com/", "Opening XivArchive.");

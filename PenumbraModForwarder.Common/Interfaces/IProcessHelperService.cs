@@ -3,6 +3,7 @@
 public interface IProcessHelperService
 {
     void OpenLogFolder();
+    bool IsApplicationAlreadyOpen();
     void OpenSupportDiscord();
     void OpenXivArchive();
     void OpenHelios();

@@ -13,6 +13,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly ToolTip _toolTip;
     private readonly IResourceManager _resourceManager;
+    private bool _isExiting = false;
     public MainWindowViewModel ViewModel { get; set; }
     
     object IViewFor.ViewModel
@@ -32,6 +33,12 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         _toolTip = new ToolTip();
         
         Icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico");
+        
+        _systemTrayManager.OnExitRequested += () =>
+        {
+            _isExiting = true;
+            Application.Exit();
+        };
 
 
         this.WhenActivated(disposables =>
@@ -119,11 +126,15 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
 
             #region Handling Window State
 
-            Observable.FromEventPattern<EventArgs>(this, nameof(Resize))
-                .Select(_ => WindowState)
-                .Where(state => state == FormWindowState.Minimized)
-                .Subscribe(_ =>
+            Observable.FromEventPattern<FormClosingEventArgs>(this, nameof(FormClosing))
+                .Subscribe(e =>
                 {
+                    if (_isExiting)
+                    {
+                        return;
+                    }
+                    
+                    e.EventArgs.Cancel = true;
                     Hide();
                     _systemTrayManager.ShowNotification("Penumbra Mod Forwarder", "Minimized to tray.");
                 })
