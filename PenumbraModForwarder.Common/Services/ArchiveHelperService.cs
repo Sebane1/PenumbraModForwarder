@@ -139,20 +139,25 @@ namespace PenumbraModForwarder.Common.Services
 
         private void ExtractFiles(string filePath, string[] selectedFiles)
         {
-            var allFilesExtractedSuccessfully = true;
+            var allFilesExtractedSuccessfully = false;
+            var count = 0;
+            var totalFiles = selectedFiles.Length;
 
             foreach (var file in selectedFiles)
             {
+                _logger.LogInformation("Extracting file {0}/{1}: {2}", count + 1, totalFiles, file);
+                count++;
                 var report = ExtractAndInstallFile(filePath, file);
-                if (!report)
+                if (report)
                 {
-                    allFilesExtractedSuccessfully = false;
+                    allFilesExtractedSuccessfully = true;
                 }
             }
 
             // Delete the archive only if all files were extracted successfully
             if (allFilesExtractedSuccessfully)
             {
+                _logger.LogInformation("All files extracted successfully. Deleting archive.");
                 DeleteArchiveIfNeeded(filePath);
             }
         }

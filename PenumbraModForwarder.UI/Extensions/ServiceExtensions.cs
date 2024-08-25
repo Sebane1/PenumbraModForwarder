@@ -4,7 +4,6 @@ using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
