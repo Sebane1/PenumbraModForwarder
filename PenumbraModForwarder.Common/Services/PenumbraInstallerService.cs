@@ -44,7 +44,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         
         var textToolPath = _configurationService.GetConfigValue(config => config.TexToolPath);
         if (!string.IsNullOrEmpty(textToolPath) && File.Exists(textToolPath)) return ConvertToDt(modPath);
-        _logger.LogWarning("TexTools not found in registry. Aborting Conversion.");
+        _logger.LogWarning("TexTools not found. Aborting Conversion.");
         return modPath;
     }
     

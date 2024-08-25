@@ -73,16 +73,21 @@ public static class ServiceExtensions
 #if DEBUG
         var minimumLevel = LogEventLevel.Debug;
 #else
-    var minimumLevel = LogEventLevel.Warning;
+    var minimumLevel = LogEventLevel.Information;
 #endif
-        
-        var logFileName = $"log_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+    
+        var logFilePath = Path.Combine(appDataPath, "log.txt");
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(minimumLevel)
             .WriteTo.Console()
-            .WriteTo.File(Path.Combine(appDataPath, logFileName), 
-                restrictedToMinimumLevel: LogEventLevel.Information)
+            .WriteTo.File(logFilePath,
+                restrictedToMinimumLevel: LogEventLevel.Information,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                fileSizeLimitBytes: 10 * 1024 * 1024,  
+                rollOnFileSizeLimit: true 
+            )
             .CreateLogger();
 
         services.AddLogging(builder =>
@@ -93,7 +98,7 @@ public static class ServiceExtensions
     }
 
 
-
+    
     private static void ConfigureAutoMapper(IServiceCollection services)
     {
         // AutoMapper configuration
