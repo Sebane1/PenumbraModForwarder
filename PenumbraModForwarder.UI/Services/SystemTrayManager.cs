@@ -48,6 +48,10 @@ public class SystemTrayManager : ISystemTrayManager
         
         contextMenu.Items.Add(new ToolStripSeparator());
         
+        contextMenu.Items.Add(CreateDebuggingSubMenu());
+        
+        contextMenu.Items.Add(new ToolStripSeparator());
+        
         contextMenu.Items.Add(CreateQuickLinksSubmenu());
         contextMenu.Items.Add(CreateResourcesSubmenu());
         
@@ -69,6 +73,13 @@ public class SystemTrayManager : ISystemTrayManager
         var item = new ToolStripMenuItem(text);
         item.ForeColor = colour;
         return item;
+    }
+
+    private ToolStripMenuItem CreateDebuggingSubMenu()
+    {
+        var debugging = new ToolStripMenuItem("Debugging");
+        debugging.DropDownItems.Add("Open Log Folder", null, (sender, args) => _processHelperService.OpenLogFolder());
+        return debugging;
     }
 
     private ToolStripMenuItem CreateResourcesSubmenu()

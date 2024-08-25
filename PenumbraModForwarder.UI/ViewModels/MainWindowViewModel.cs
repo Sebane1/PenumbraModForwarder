@@ -11,10 +11,8 @@ public class MainWindowViewModel : ReactiveObject
 {
     private readonly IConfigurationService _configurationService;
     private readonly ILogger<MainWindowViewModel> _logger;
-    // This will start the file watcher for us
-    private readonly IFileWatcher _fileWatcher;
     private readonly IProcessHelperService _processHelperService;
-    private readonly ISystemTrayManager _systemTrayManager;
+    private readonly IFileWatcher _fileWatcher;
     private readonly IAssociateFileTypeService _associateFileTypeService;
     private readonly IStartupService _startupService;
     private string _selectedFolderPath;
@@ -107,16 +105,15 @@ public class MainWindowViewModel : ReactiveObject
     #endregion
     
 
-    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IFileWatcher fileWatcher, IProcessHelperService processHelperService, ISystemTrayManager systemTrayManager, IAssociateFileTypeService associateFileTypeService, IStartupService startupService)
+    public MainWindowViewModel(IConfigurationService configurationService, ILogger<MainWindowViewModel> logger, IProcessHelperService processHelperService, IAssociateFileTypeService associateFileTypeService, IStartupService startupService, IFileWatcher fileWatcher)
     {
         _configurationService = configurationService;
         _logger = logger;
-        // This will start the file watcher for us
-        _fileWatcher = fileWatcher;
         _processHelperService = processHelperService;
-        _systemTrayManager = systemTrayManager;
         _associateFileTypeService = associateFileTypeService;
         _startupService = startupService;
+        // This will start the file watcher
+        _fileWatcher = fileWatcher;
         SetAllConfigValues();
         SetVersionNumber();
         

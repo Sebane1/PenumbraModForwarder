@@ -116,7 +116,7 @@ namespace PenumbraModForwarder.Common.Services
         
         private string[] HandleFileSelection(string filePath, string[] files)
         {
-            _logger.LogDebug("Multiple files found in archive. Showing file selection dialog.");
+            _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
             var fileName = Path.GetFileName(filePath);
 
             if (_isFileSelectionWindowOpen)

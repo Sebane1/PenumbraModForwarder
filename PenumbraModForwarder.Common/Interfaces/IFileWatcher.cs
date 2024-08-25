@@ -2,5 +2,5 @@
 
 public interface IFileWatcher
 {
-    
+    public void ClearQueues();
 }
