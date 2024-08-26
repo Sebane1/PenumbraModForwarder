@@ -1,6 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Threading;
-using System.Timers;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 using Timer = System.Timers.Timer;
@@ -22,10 +20,12 @@ namespace PenumbraModForwarder.Common.Services
         private readonly ConcurrentQueue<string> _changeQueue;
         private readonly ConcurrentQueue<string> _retryQueue;
         private readonly ConcurrentDictionary<string, bool> _processingFiles;
+        private readonly ConcurrentDictionary<string, DateTime> _trackedFiles;
         private readonly HashSet<string> _processedFiles;
 
         private readonly TimeSpan _debounceInterval = TimeSpan.FromSeconds(1);
         private readonly TimeSpan _retryInterval = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _eventCooldown = TimeSpan.FromSeconds(5);
         private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
         private int _ongoingProcessingCount;
@@ -43,6 +43,7 @@ namespace PenumbraModForwarder.Common.Services
             _changeQueue = new ConcurrentQueue<string>();
             _retryQueue = new ConcurrentQueue<string>();
             _processingFiles = new ConcurrentDictionary<string, bool>();
+            _trackedFiles = new ConcurrentDictionary<string, DateTime>();
             _processedFiles = new HashSet<string>();
 
             _debounceTimer = CreateDebounceTimer();
@@ -63,9 +64,10 @@ namespace PenumbraModForwarder.Common.Services
         {
             lock (_lock)
             {
-                _logger.LogInformation("Clearing all queues.");
+                _logger.LogInformation("Clearing all queues and tracked files.");
                 while (_changeQueue.TryDequeue(out _)) { }
                 while (_retryQueue.TryDequeue(out _)) { }
+                _trackedFiles.Clear();
             }
         }
 
@@ -86,7 +88,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private Timer CreateClearProcessedFilesTimer()
         {
-            var timer = new Timer(TimeSpan.FromMinutes(10).TotalMilliseconds) { AutoReset = true };
+            var timer = new Timer(TimeSpan.FromMinutes(5).TotalMilliseconds) { AutoReset = true };
             timer.Elapsed += (sender, args) => TryClearProcessedFiles();
             timer.Start();
             return timer;
@@ -148,19 +150,40 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        private void EnqueueFileEvent(string filePath)
+        private async void EnqueueFileEvent(string filePath)
         {
-            if (_processingFiles.ContainsKey(filePath))
+            var fileExtension = Path.GetExtension(filePath).ToLower();
+            if (!_allowedExtensions.Contains(fileExtension))
             {
-                _logger.LogInformation($"File '{filePath}' is already being processed.");
+                _logger.LogInformation($"Ignored file: {filePath}, unsupported extension.");
                 return;
             }
 
-            var fileExtension = Path.GetExtension(filePath).ToLower();
-            if (_allowedExtensions.Contains(fileExtension))
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+
+            lock (_lock) // Ensure only one event is processed at a time
             {
+                var now = DateTime.UtcNow;
+
+                if (_trackedFiles.TryGetValue(filePath, out var lastProcessed))
+                {
+                    if (now - lastProcessed < _eventCooldown)
+                    {
+                        _logger.LogInformation($"Ignoring file event for '{filePath}' due to cooldown.");
+                        return;
+                    }
+                }
+
+                if (_processingFiles.ContainsKey(filePath) || _processedFiles.Contains(filePath))
+                {
+                    _logger.LogInformation($"File '{filePath}' is already being processed or has been processed.");
+                    return;
+                }
+
                 if (IsFileReady(filePath))
                 {
+                    _trackedFiles[filePath] = now;
+                    _processingFiles.TryAdd(filePath, true);
                     _changeQueue.Enqueue(filePath);
                     RestartDebounceTimer();
                 }
@@ -169,34 +192,23 @@ namespace PenumbraModForwarder.Common.Services
                     _retryQueue.Enqueue(filePath);
                 }
             }
-            else
-            {
-                _logger.LogInformation($"Ignored file: {filePath}, unsupported extension.");
-            }
-        }
-
-        private void RestartDebounceTimer()
-        {
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
         }
 
         private void ProcessFileChanges()
         {
             while (_changeQueue.TryDequeue(out var file))
             {
-                if (_processedFiles.Contains(file))
-                {
-                    _logger.LogDebug($"File '{file}' has already been processed.");
-                    continue;
-                }
-
                 lock (_lock)
                 {
+                    if (_processedFiles.Contains(file))
+                    {
+                        _logger.LogDebug($"File '{file}' has already been processed.");
+                        _processingFiles.TryRemove(file, out _);
+                        continue;
+                    }
+
                     _ongoingProcessingCount++;
                 }
-
-                _processingFiles.TryAdd(file, true);
 
                 ProcessFileAsync(file, _cancellationTokenSource.Token);
             }
@@ -208,9 +220,12 @@ namespace PenumbraModForwarder.Common.Services
             {
                 await Task.Run(() =>
                 {
-                    _fileHandlerService.HandleFile(file);
-                    _processedFiles.Add(file);
-                    _logger.LogInformation($"Added file '{file}' to processed files collection.");
+                    lock (_lock)
+                    {
+                        _fileHandlerService.HandleFile(file);
+                        _processedFiles.Add(file);
+                        _logger.LogInformation($"Added file '{file}' to processed files collection.");
+                    }
                 }, cancellationToken);
             }
             catch (Exception ex)
@@ -220,19 +235,16 @@ namespace PenumbraModForwarder.Common.Services
             }
             finally
             {
-                _processingFiles.TryRemove(file, out _);
-
                 lock (_lock)
                 {
-                    if (_ongoingProcessingCount > 0)
-                    {
-                        _ongoingProcessingCount--;
-                    }
+                    _processingFiles.TryRemove(file, out _);
+                    _ongoingProcessingCount--;
                 }
 
                 _logger.LogInformation($"File processing completed: {file}");
             }
         }
+
 
         private void ProcessRetryQueue()
         {
@@ -270,6 +282,12 @@ namespace PenumbraModForwarder.Common.Services
                 return false;
             }
         }
+        
+        private void RestartDebounceTimer()
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
 
         private void TryClearProcessedFiles()
         {
@@ -278,10 +296,9 @@ namespace PenumbraModForwarder.Common.Services
             {
                 if (_ongoingProcessingCount == 0)
                 {
-                    _logger.LogInformation("Clearing processed files collection.");
+                    _logger.LogInformation("Clearing processed files collection and tracked files.");
                     _processedFiles.Clear();
-                    
-                    // We have cleared all processed files, so we *should* be okay to do a general cleanup.
+                    _trackedFiles.Clear();
                     _fileHandlerService.CleanUpTempFiles();
                 }
             }
