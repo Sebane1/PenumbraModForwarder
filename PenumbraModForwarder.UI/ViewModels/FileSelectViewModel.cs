@@ -13,7 +13,21 @@ public class FileSelectViewModel : ReactiveObject
 
     private string[] _selectedFiles = Array.Empty<string>();
     private string _archiveFileName = string.Empty;
+    private bool _showAllSelectedVisible;
+    private bool _showAllSelectedEnabled;
+
+    public bool ShowAllSelectedVisible
+    {
+        get => _showAllSelectedVisible;
+        set => this.RaiseAndSetIfChanged(ref _showAllSelectedVisible, value);
+    }
     
+    public bool ShowAllSelectedEnabled
+    {
+        get => _showAllSelectedEnabled;
+        set => this.RaiseAndSetIfChanged(ref _showAllSelectedEnabled, value);
+    }
+
     public string ArchiveFileName
     {
         get => _archiveFileName;
@@ -28,6 +42,7 @@ public class FileSelectViewModel : ReactiveObject
 
     public ReactiveCommand<Unit, Unit> ConfirmSelectionCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelSelectionCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectAllCommand { get; }
     public Action CloseAction { get; set; }
 
     public FileSelectViewModel(ILogger<FileSelectViewModel> logger)
@@ -42,6 +57,11 @@ public class FileSelectViewModel : ReactiveObject
             CancelSelection,
             outputScheduler: RxApp.MainThreadScheduler
         );
+        
+        SelectAllCommand = ReactiveCommand.Create(
+            SelectAll,
+            outputScheduler: RxApp.MainThreadScheduler
+        );
     }
 
     public void LoadFiles(IEnumerable<string> files)
@@ -49,7 +69,6 @@ public class FileSelectViewModel : ReactiveObject
         Files.Clear();
         
         var fileNameCounts = new Dictionary<string, int>();
-
         var enumerable = files as string[] ?? files.ToArray();
         
         foreach (var file in enumerable)
@@ -80,15 +99,23 @@ public class FileSelectViewModel : ReactiveObject
 
             Files.Add(fileItem);
         }
+
+        // Show and enable the Select All button if there are more than 3 files
+        ShowAllSelectedVisible = Files.Count > 3;
+        ShowAllSelectedEnabled = Files.Count > 3;
     }
 
-    
+    private void SelectAll()
+    {
+        SelectedFiles = Files.Count == SelectedFiles.Length ? [] : Files.Select(file => file.FullPath).ToArray();
+    }
+
+
     private void CancelSelection()
     {
         _logger.LogWarning("File selection was canceled.");
         CloseAction?.Invoke();
     }
-
 
     private void ConfirmSelection()
     {

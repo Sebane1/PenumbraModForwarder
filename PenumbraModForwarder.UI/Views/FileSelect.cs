@@ -36,10 +36,35 @@ namespace PenumbraModForwarder.UI.Views
                 this.BindCommand(ViewModel, vm => vm.CancelSelectionCommand, v => v.cancel_Button)
                     .DisposeWith(disposables);
                 
+                this.BindCommand(ViewModel, vm => vm.SelectAllCommand, v => v.selectall_Button)
+                    .DisposeWith(disposables);
+                
+                this.Bind(ViewModel, vm => vm.ShowAllSelectedEnabled, v => v.selectall_Button.Enabled)
+                    .DisposeWith(disposables);
+                
+                this.Bind(ViewModel, vm => vm.ShowAllSelectedVisible, v => v.selectall_Button.Visible)
+                    .DisposeWith(disposables);
+                
                 this.Bind(ViewModel, vm => vm.ArchiveFileName, v => v.archivefile_Label.Text)
                     .DisposeWith(disposables);
 
                 fileCheckedListBox.ItemCheck += FileCheckedListBox_ItemCheck;
+
+                // Observe changes to the SelectedFiles array and update the UI
+                ViewModel.WhenAnyValue(vm => vm.SelectedFiles)
+                    .ObserveOn(RxApp.MainThreadScheduler)
+                    .Subscribe(selectedFiles =>
+                    {
+                        BeginInvoke(() =>
+                        {
+                            for (var i = 0; i < fileCheckedListBox.Items.Count; i++)
+                            {
+                                var fileItem = (FileItem)fileCheckedListBox.Items[i];
+                                fileCheckedListBox.SetItemChecked(i, selectedFiles.Contains(fileItem.FullPath));
+                            }
+                        });
+                    })
+                    .DisposeWith(disposables);
 
                 // Dispose event handler
                 Disposable.Create(() => fileCheckedListBox.ItemCheck -= FileCheckedListBox_ItemCheck)
