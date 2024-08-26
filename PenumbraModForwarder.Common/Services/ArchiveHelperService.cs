@@ -26,7 +26,6 @@ namespace PenumbraModForwarder.Common.Services
         private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
                                                   @"\PenumbraModForwarder\Extraction";
 
-        // Queue and semaphore for managing operations
         private readonly ConcurrentQueue<ExtractionOperation> _operationQueue = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private bool _isFileSelectionWindowOpen = false;
@@ -87,31 +86,36 @@ namespace PenumbraModForwarder.Common.Services
                 return;
             }
 
-            // If there are multiple files, handle file selection first
-            var selectedFiles = files;
-
-            if (files.Length > 1 && !_configurationService.GetConfigValue(o => o.ExtractAll))
+            var selectedFiles = GetSelectedFiles(files, operation.FilePath);
+            if (selectedFiles == null || selectedFiles.Length == 0)
             {
-                selectedFiles = HandleFileSelection(operation.FilePath, files);
-                if (selectedFiles == null || selectedFiles.Length == 0)
-                {
-                    _logger.LogWarning("No files selected. Aborting extraction.");
-                    return;
-                }
+                _logger.LogWarning("No files selected. Aborting extraction.");
+                return;
             }
 
-            // Only show the progress window after file selection
             _progressWindowService.ShowProgressWindow();
 
             try
             {
-                // Proceed with extraction
                 await Task.Run(() => ExtractFiles(operation.FilePath, selectedFiles));
             }
             finally
             {
                 _progressWindowService.CloseProgressWindow();
             }
+        }
+
+        private string[] GetSelectedFiles(string[] files, string filePath)
+        {
+            if (files.Length <= 1 || _configurationService.GetConfigValue(o => o.ExtractAll)) return files;
+            
+            var selectedFiles = HandleFileSelection(filePath, files);
+            if (selectedFiles == null || selectedFiles.Length == 0)
+            {
+                return null;
+            }
+            return selectedFiles;
+
         }
         
         private string[] HandleFileSelection(string filePath, string[] files)
@@ -154,7 +158,6 @@ namespace PenumbraModForwarder.Common.Services
                 }
             }
 
-            // Delete the archive only if all files were extracted successfully
             if (allFilesExtractedSuccessfully)
             {
                 _logger.LogInformation("All files extracted successfully. Deleting archive.");
@@ -208,12 +211,9 @@ namespace PenumbraModForwarder.Common.Services
 
             _logger.LogDebug("Extracting file: {0}", entry.Key);
 
-            // Sanitize the file path to prevent issues with special characters
             var sanitizedFilePath = SanitizePath(entry.Key);
-
             var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
 
-            // Ensure all directories are created
             var directoryPath = Path.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
@@ -251,10 +251,8 @@ namespace PenumbraModForwarder.Common.Services
 
         private string SanitizePath(string path)
         {
-            // Replace any illegal characters from the path to avoid issues
             return Path.GetInvalidPathChars().Aggregate(path, (current, c) => current.Replace(c.ToString(), string.Empty));
         }
-
 
         public virtual string[] GetFilesInArchive(string filePath)
         {

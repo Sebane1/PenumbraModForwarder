@@ -114,6 +114,8 @@ public class FileSelectViewModel : ReactiveObject
     private void CancelSelection()
     {
         _logger.LogWarning("File selection was canceled.");
+        // We should clear the selected files array here too, just in case
+        SelectedFiles = [];
         CloseAction?.Invoke();
     }
 

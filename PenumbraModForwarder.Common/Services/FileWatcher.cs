@@ -33,9 +33,10 @@ namespace PenumbraModForwarder.Common.Services
 
         private CancellationTokenSource _cancellationTokenSource;
 
-        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService, IFileHandlerService fileHandlerService, IErrorWindowService errorWindowService)
+        public FileWatcher(ILogger<FileWatcher> logger, IConfigurationService configurationService,
+            IFileHandlerService fileHandlerService, IErrorWindowService errorWindowService)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger;
             _configurationService = configurationService;
             _fileHandlerService = fileHandlerService;
             _errorWindowService = errorWindowService;
@@ -161,7 +162,7 @@ namespace PenumbraModForwarder.Common.Services
 
             await Task.Delay(TimeSpan.FromMilliseconds(500));
 
-            lock (_lock) // Ensure only one event is processed at a time
+            lock (_lock)
             {
                 var now = DateTime.UtcNow;
 
@@ -216,6 +217,8 @@ namespace PenumbraModForwarder.Common.Services
 
         private async void ProcessFileAsync(string file, CancellationToken cancellationToken)
         {
+            bool successfullyProcessed = false;
+
             try
             {
                 await Task.Run(() =>
@@ -225,6 +228,7 @@ namespace PenumbraModForwarder.Common.Services
                         _fileHandlerService.HandleFile(file);
                         _processedFiles.Add(file);
                         _logger.LogInformation($"Added file '{file}' to processed files collection.");
+                        successfullyProcessed = true;
                     }
                 }, cancellationToken);
             }
@@ -237,6 +241,11 @@ namespace PenumbraModForwarder.Common.Services
             {
                 lock (_lock)
                 {
+                    if (successfullyProcessed)
+                    {
+                        _processedFiles.Remove(file);
+                        _logger.LogInformation($"Removed file '{file}' from processed files collection.");
+                    }
                     _processingFiles.TryRemove(file, out _);
                     _ongoingProcessingCount--;
                 }
@@ -244,7 +253,6 @@ namespace PenumbraModForwarder.Common.Services
                 _logger.LogInformation($"File processing completed: {file}");
             }
         }
-
 
         private void ProcessRetryQueue()
         {
