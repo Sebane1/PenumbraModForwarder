@@ -149,6 +149,24 @@ public class MainWindowViewModel : ReactiveObject
         NotificationEnabled = _configurationService.GetConfigValue(config => config.NotificationEnabled);
         FileLinkingEnabled = _configurationService.GetConfigValue(config => config.FileLinkingEnabled);
         RunOnStartup = _configurationService.GetConfigValue(config => config.StartOnBoot);
+        
+        RunConfigLogic();
+    }
+
+    private void RunConfigLogic()
+    {
+        _logger.LogInformation("Setting config logic");
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PenumbraModForwarder.exe");
+        
+        if (_configurationService.GetConfigValue(o => o.StartOnBoot))
+        {
+            _startupService.RunOnStartup();
+        }
+
+        if (_configurationService.GetConfigValue(o => o.FileLinkingEnabled))
+        {
+            _associateFileTypeService.AssociateFileTypes(path);
+        }
     }
     
     private void SetVersionNumber()
