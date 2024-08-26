@@ -224,10 +224,9 @@ namespace PenumbraModForwarder.Common.Services
 
                 lock (_lock)
                 {
-                    _ongoingProcessingCount--;
-                    if (_ongoingProcessingCount == 0)
+                    if (_ongoingProcessingCount > 0)
                     {
-                        TryClearProcessedFiles();
+                        _ongoingProcessingCount--;
                     }
                 }
 
