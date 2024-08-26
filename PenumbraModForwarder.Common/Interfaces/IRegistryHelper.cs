@@ -6,5 +6,5 @@ public interface IRegistryHelper
     public void RemoveFileAssociation(string extension);
     public void AddApplicationToStartup(string appName, string appPath);
     public void RemoveApplicationFromStartup(string appName);
-    public string GetTexToolGetRegistryValue(string keyValue);
+    public string GetTexToolRegistryValue(string keyValue);
 }

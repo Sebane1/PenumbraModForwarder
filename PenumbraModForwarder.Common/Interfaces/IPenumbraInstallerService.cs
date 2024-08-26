@@ -2,5 +2,5 @@
 
 public interface IPenumbraInstallerService
 {
-    public void InstallMod(string modPath);
+    public bool InstallMod(string modPath);
 }

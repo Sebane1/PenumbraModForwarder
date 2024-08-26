@@ -37,7 +37,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         _systemTrayManager.OnExitRequested += () =>
         {
             _isExiting = true;
-            Application.Exit();
+            Close();
         };
 
 

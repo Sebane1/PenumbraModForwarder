@@ -26,7 +26,7 @@ public class TexToolsHelper : ITexToolsHelper
             return;
         }
         
-        var path = _registryHelper.GetTexToolGetRegistryValue("InstallLocation");
+        var path = _registryHelper.GetTexToolRegistryValue("InstallLocation");
         
         if (string.IsNullOrEmpty(path))
         {

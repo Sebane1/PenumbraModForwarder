@@ -67,8 +67,15 @@ public class SystemTrayManager : ISystemTrayManager
         contextMenu.Items.Add(new ToolStripSeparator());
         
         var exitButton = ColouredMenuItem("Exit", Color.Red);
-        exitButton.Click += (sender, args) => OnExitRequested?.Invoke();
+        exitButton.Click += (sender, args) => TriggerExit();
         contextMenu.Items.Add(exitButton);
+    }
+
+
+    public void TriggerExit()
+    {
+        _logger.LogInformation("Exit triggered from SystemTrayManager.");
+        OnExitRequested?.Invoke();
     }
     
     private static ToolStripMenuItem ColouredMenuItem(string text, Color colour)

@@ -47,6 +47,7 @@ public static class ServiceExtensions
         services.AddSingleton<IResourceManager, ResourceManager>();
         services.AddSingleton<ITexToolsHelper, TexToolsHelper>();
         services.AddSingleton<IProgressWindowService, ProgressWindowService>();
+        services.AddSingleton<IAdminService, AdminService>();
     }
     
     private static void ConfigureViews(IServiceCollection services)

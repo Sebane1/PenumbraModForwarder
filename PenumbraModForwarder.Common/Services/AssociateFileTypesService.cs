@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Interop;
 
 namespace PenumbraModForwarder.Common.Services;
 
@@ -40,6 +41,9 @@ public class AssociateFileTypesService : IAssociateFileTypeService
                     _registryHelper.RemoveFileAssociation(extension);
                 }
             }
+            
+            // Let the computer know a change as occurred.
+            Imports.SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
 
         }
         catch (Exception e)

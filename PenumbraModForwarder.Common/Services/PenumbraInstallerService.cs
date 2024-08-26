@@ -27,12 +27,16 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         }
     }
     
-    public void InstallMod(string modPath)
+    public bool InstallMod(string modPath)
     {
         var dtPath = UpdateToDt(modPath);
         _logger.LogInformation($"Installing mod: {dtPath}");
-        _penumbraApi.InstallAsync(dtPath);
+
+        var result = Task.Run(async () => await _penumbraApi.InstallAsync(dtPath)).GetAwaiter().GetResult();
+
+        return result;
     }
+
     
     private string UpdateToDt(string modPath)
     {
