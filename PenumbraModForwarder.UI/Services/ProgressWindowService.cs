@@ -37,7 +37,8 @@ namespace PenumbraModForwarder.UI.Services
             {
                 if (!IsProgressWindowAvailable())
                 {
-                    _logger.LogWarning("Progress window is null or disposed, cannot update progress.");
+                    // These logs just spam the log file and make it harder to debug.
+                    // _logger.LogWarning("Progress window is null or disposed, cannot update progress.");
                     return;
                 }
 
@@ -96,7 +97,8 @@ namespace PenumbraModForwarder.UI.Services
             }
             catch (ObjectDisposedException ex)
             {
-                _logger.LogWarning(ex, "Progress window was disposed while attempting to update progress.");
+                // These logs just spam the log file and make it harder to debug.
+                // _logger.LogWarning(ex, "Progress window was disposed while attempting to update progress.");
             }
         }
 
@@ -133,7 +135,8 @@ namespace PenumbraModForwarder.UI.Services
             }
             catch (ObjectDisposedException ex)
             {
-                _logger.LogWarning(ex, "Progress window was disposed while attempting to close it.");
+                // These logs just spam the log file and make it harder to debug.
+                // _logger.LogWarning(ex, "Progress window was disposed while attempting to close it.");
             }
         }
     }
