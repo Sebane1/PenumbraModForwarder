@@ -25,7 +25,10 @@ namespace PenumbraModForwarder.Common.Services
             if (!File.Exists(_configPath))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_configPath));
-                _config = new ConfigurationModel();
+                _config = new ConfigurationModel
+                {
+                    AdvancedOptions = new AdvancedConfigurationModel()
+                };
                 SaveConfig();
             }
             else
@@ -54,6 +57,15 @@ namespace PenumbraModForwarder.Common.Services
                 setValue(_config, value);
                 SaveConfig();
                 OnConfigChanged();
+            }
+        }
+
+        public bool IsAdvancedOptionEnabled(Func<AdvancedConfigurationModel, bool> advancedOption)
+        {
+            _logger.LogDebug("Checking advanced config option");
+            lock (_lock)
+            {
+                return advancedOption(_config.AdvancedOptions);
             }
         }
 
@@ -143,9 +155,32 @@ namespace PenumbraModForwarder.Common.Services
         {
             lock (_lock)
             {
-                _config = JsonConvert.DeserializeObject<ConfigurationModel>(File.ReadAllText(_configPath));
+                var rawJson = File.ReadAllText(_configPath);
+                
+                _config = JsonConvert.DeserializeObject<ConfigurationModel>(rawJson);
+                
+                if (!rawJson.Contains("\"AdvancedOptions\""))
+                {
+                    _logger.LogInformation("AdvancedOptions is missing in the configuration file, adding default values.");
+                    
+                    if (_config.AdvancedOptions == null)
+                    {
+                        _config.AdvancedOptions = new AdvancedConfigurationModel();
+                    }
+                    
+                    SaveConfig();
+                }
+
+                if (_config != null) return;
+                _logger.LogWarning("Configuration deserialization failed. Creating a new configuration with default values.");
+                _config = new ConfigurationModel
+                {
+                    AdvancedOptions = new AdvancedConfigurationModel()
+                };
+                SaveConfig();
             }
         }
+
 
         private void OnConfigChanged()
         {

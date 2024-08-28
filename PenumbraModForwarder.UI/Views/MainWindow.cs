@@ -13,6 +13,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
     private readonly ISystemTrayManager _systemTrayManager;
     private readonly ToolTip _toolTip;
     private readonly IResourceManager _resourceManager;
+    private readonly IConfigurationService _configurationService;
     private bool _isExiting = false;
     public MainWindowViewModel ViewModel { get; set; }
     
@@ -22,13 +23,14 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
         set => ViewModel = (MainWindowViewModel) value;
     }
     
-    public MainWindow(MainWindowViewModel viewModel, ISystemTrayManager systemTrayManager, IResourceManager resourceManager)
+    public MainWindow(MainWindowViewModel viewModel, ISystemTrayManager systemTrayManager, IResourceManager resourceManager, IConfigurationService configurationService)
     {
         InitializeComponent();
 
         ViewModel = viewModel;
         _systemTrayManager = systemTrayManager;
         _resourceManager = resourceManager;
+        _configurationService = configurationService;
 
         _toolTip = new ToolTip();
         
@@ -125,6 +127,20 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
             #endregion
 
             #region Handling Window State
+
+            Observable.FromEventPattern<EventArgs>(this, nameof(Load))
+                .Subscribe(_ =>
+                {
+                    var hideWindowOnStartup = _configurationService.IsAdvancedOptionEnabled(p => p.HideWindowOnStartup);
+                    var runOnStartup = _configurationService.GetConfigValue(p => p.StartOnBoot);
+
+                    if (!hideWindowOnStartup || !runOnStartup) return;
+
+                    WindowState = FormWindowState.Minimized;
+                    ShowInTaskbar = false;
+                    _systemTrayManager.ShowNotification("Penumbra Mod Forwarder", "Minimized to tray.");
+                })
+                .DisposeWith(disposables);
 
             Observable.FromEventPattern<FormClosingEventArgs>(this, nameof(FormClosing))
                 .Subscribe(e =>

@@ -45,8 +45,21 @@ public class SystemTrayManager : ISystemTrayManager
         contextMenu.Items.Add("Open Configuration", null, (sender, args) =>
         {
             _logger.LogInformation("Opening configuration window.");
-            Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Show();
-            Application.OpenForms.OfType<MainWindow>().FirstOrDefault()?.Activate();
+            var mainWindow = Application.OpenForms.OfType<MainWindow>().FirstOrDefault();
+
+            if (mainWindow == null) return;
+            
+            if (mainWindow.WindowState == FormWindowState.Minimized)
+            {
+                mainWindow.WindowState = FormWindowState.Normal;
+            }
+                
+            if (!mainWindow.Visible)
+            {
+                mainWindow.Show();
+            }
+                
+            mainWindow.Activate();
         });
         
         contextMenu.Items.Add(new ToolStripSeparator());
