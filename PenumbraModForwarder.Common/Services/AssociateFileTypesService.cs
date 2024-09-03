@@ -28,20 +28,14 @@ public class AssociateFileTypesService : IAssociateFileTypeService
             if (_configurationService.GetConfigValue(c => c.FileLinkingEnabled))
             {
                 _logger.LogInformation("Associating file types");
-                foreach (var extension in allowedExtensions)
-                {
-                    _registryHelper.CreateFileAssociation(extension, applicationPath);
-                }
+                _registryHelper.CreateFileAssociation(allowedExtensions, applicationPath);
             }
             else
             {
                 _logger.LogInformation("Disassociating file types");
-                foreach (var extension in allowedExtensions)
-                {
-                    _registryHelper.RemoveFileAssociation(extension);
-                }
+                _registryHelper.RemoveFileAssociation(allowedExtensions);
             }
-            
+        
             // Let the computer know a change as occurred.
             Imports.SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
 
@@ -52,5 +46,4 @@ public class AssociateFileTypesService : IAssociateFileTypeService
             _errorWindowService.ShowError(e.ToString());
         }
     }
-    
 }

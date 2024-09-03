@@ -1,32 +1,34 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
 using PenumbraModForwarder.Common.Interfaces;
+using System.Diagnostics;
+using System.IO;
 
 public class RegistryHelper : IRegistryHelper
 {
     private readonly IErrorWindowService _errorWindowService;
     private readonly ILogger<RegistryHelper> _logger;
-    private readonly IConfigurationService _configurationService;
-    private readonly IAdminService _adminService;
 
     private const string HKLMOpenCommandPath = @"SOFTWARE\Classes\Penumbra Modpack File\shell\open\command";
-    private const string HKLMEditCommandPath = @"SOFTWARE\Classes\Penumbra Modpack File\shell\edit\command";
-    private const string HKLMDefaultIconPath = @"SOFTWARE\Classes\Penumbra Modpack File\DefaultIcon";
     private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
+    
+    private string SaveRegistryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Registry");
 
-    public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger, IConfigurationService configurationService, IAdminService adminService)
+    public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger)
     {
         _errorWindowService = errorWindowService;
         _logger = logger;
-        _configurationService = configurationService;
-        _adminService = adminService;
+
+        if (!Directory.Exists(SaveRegistryPath))
+        {
+            Directory.CreateDirectory(SaveRegistryPath);
+        }
     }
 
     public string GetTexToolRegistryValue(string keyValue)
     {
         try
         {
-            using var key = Registry.LocalMachine.OpenSubKey(RegistryPath);
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(RegistryPath);
             return key?.GetValue(keyValue)?.ToString();
         }
         catch (Exception e)
@@ -37,7 +39,7 @@ public class RegistryHelper : IRegistryHelper
         }
     }
 
-    public void CreateFileAssociation(string extension, string applicationPath)
+    public void CreateFileAssociation(IEnumerable<string> extensions, string applicationPath)
     {
         try
         {
@@ -47,37 +49,15 @@ public class RegistryHelper : IRegistryHelper
                 return;
             }
 
-            if (!_adminService.IsAdmin() && !IsRestartedWithAdminArg())
-            {
-                _logger.LogWarning("Admin privileges are required to set the file association.");
-                _adminService.PromptForAdminRestart();
-                return;
-            }
-
             _logger.LogInformation("Creating file association in registry");
-            using (var fileReg = Registry.CurrentUser.CreateSubKey($"Software\\Classes\\{extension}"))
-            {
-                if (fileReg == null)
-                    throw new InvalidOperationException($"Failed to create registry key for file extension '{extension}'.");
 
-                using (var commandKey = fileReg.CreateSubKey("shell\\open\\command"))
-                {
-                    if (commandKey == null)
-                        throw new InvalidOperationException($"Failed to create command registry key for file extension '{extension}'.");
+            var regFilePath = SaveRegistryPath + @"\file_associations.reg";  // Use a generic filename 
+            var regFileContent = GenerateSetFileAssociationRegContent(extensions, applicationPath);
 
-                    commandKey.SetValue("", $"\"{applicationPath}\" \"%1\"");
-                }
-            }
-
-            UpdateGlobalFileAssociation(applicationPath);
+            File.WriteAllText(regFilePath, regFileContent);
+            ExecuteRegFile(regFilePath);
 
             _logger.LogInformation("File association created successfully.");
-            _adminService.PromptForUserRestart();
-            Environment.Exit(0);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            _adminService.PromptForAdminRestart();
         }
         catch (Exception e)
         {
@@ -87,33 +67,24 @@ public class RegistryHelper : IRegistryHelper
         }
     }
 
-
-    public void RemoveFileAssociation(string extension)
+    public void RemoveFileAssociation(IEnumerable<string> extensions)
     {
         try
         {
-            if (!_adminService.IsAdmin() && !IsRestartedWithAdminArg())
-            {
-                _logger.LogWarning("Admin privileges are required to remove the file association.");
-                _adminService.PromptForAdminRestart();
-                return;
-            }
+            _logger.LogInformation("Removing file association in registry");
 
-            Registry.CurrentUser.DeleteSubKeyTree($"Software\\Classes\\{extension}", false);
-            RemoveGlobalFileAssociation();
+            var regFilePath = SaveRegistryPath + @"\file_associations.reg";
+            var regFileContent = GenerateRemoveFileAssociationRegContent(extensions);
+
+            File.WriteAllText(regFilePath, regFileContent);
+            ExecuteRegFile(regFilePath);
 
             _logger.LogInformation("File association removed successfully.");
-            _adminService.PromptForUserRestart();
-            Environment.Exit(0);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            _adminService.PromptForAdminRestart();
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error removing file association from registry");
-            _errorWindowService.ShowError($"Error removing file association from registry\nIf this message references something about insufficient permissions you can ignore this message. Error: {e.Message}");
+            _errorWindowService.ShowError(e.ToString());
             throw;
         }
     }
@@ -122,13 +93,25 @@ public class RegistryHelper : IRegistryHelper
     {
         try
         {
-            using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
-            registryKey?.SetValue(appName, $"\"{appPath}\"");
+            if (IsApplicationInStartup(appName))
+            {
+                _logger.LogInformation("Application is already present in startup.");
+                return;
+            }
+            
+            var regFilePath = SaveRegistryPath + @"\" + appName + ".reg";
+            var regFileContent = GenerateAddToStartupRegContent(appName, appPath);
+
+            File.WriteAllText(regFilePath, regFileContent);
+            ExecuteRegFile(regFilePath);
+
+            _logger.LogInformation("Application added to startup.");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error adding application to startup");
             _errorWindowService.ShowError(e.ToString());
+            throw;
         }
     }
 
@@ -136,81 +119,134 @@ public class RegistryHelper : IRegistryHelper
     {
         try
         {
-            using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
-            registryKey?.DeleteValue(appName, false);
+            if (!IsApplicationInStartup(appName))
+            {
+                _logger.LogInformation("Application is not present in startup.");
+                return;
+            }
+            
+            var regFilePath = SaveRegistryPath + @"\" + appName + ".reg";
+            var regFileContent = GenerateRemoveFromStartupRegContent(appName);
+
+            File.WriteAllText(regFilePath, regFileContent);
+            ExecuteRegFile(regFilePath);
+
+            _logger.LogInformation("Application removed from startup.");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error removing application from startup");
             _errorWindowService.ShowError(e.ToString());
-        }
-    }
-
-    private void UpdateGlobalFileAssociation(string applicationPath)
-    {
-        try
-        {
-            using (var openKey = Registry.LocalMachine.CreateSubKey(HKLMOpenCommandPath))
-            {
-                if (openKey == null)
-                    throw new InvalidOperationException("Failed to create or open the 'open' command registry key.");
-
-                openKey.SetValue("", $"\"{applicationPath}\" \"%1\"");
-            }
-
-            using (var editKey = Registry.LocalMachine.OpenSubKey(HKLMEditCommandPath, writable: true))
-            {
-                if (editKey != null)
-                {
-                    Registry.LocalMachine.DeleteSubKeyTree(HKLMEditCommandPath);
-                }
-            }
-
-            using (var iconKey = Registry.LocalMachine.CreateSubKey(HKLMDefaultIconPath))
-            {
-                if (iconKey != null)
-                {
-                    iconKey.SetValue("", $"\"{applicationPath}\",0");
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error updating global file association in registry");
-            _errorWindowService.ShowError(e.ToString());
             throw;
         }
     }
 
-    private void RemoveGlobalFileAssociation()
+    private void ExecuteRegFile(string regFilePath)
+    {
+        var processInfo = new ProcessStartInfo("regedit.exe", $"/s \"{regFilePath}\"")
+        {
+            UseShellExecute = true,
+            Verb = "runas"
+        };
+
+        using var process = Process.Start(processInfo);
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Failed to execute reg file: {regFilePath}. Process exited with code {process.ExitCode}.");
+        }
+
+        File.Delete(regFilePath);
+    }
+
+    private string GenerateSetFileAssociationRegContent(IEnumerable<string> extensions, string applicationPath)
+    {
+        var content = "";
+        var escapedAppPath = applicationPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+        content += "Windows Registry Editor Version 5.00";
+
+        foreach (var extension in extensions)
+        {
+            content += $@"
+
+[HKEY_CURRENT_USER\Software\Classes\.{extension}]
+@=""PenumbraModpackFile""
+
+[HKEY_CURRENT_USER\Software\Classes\PenumbraModpackFile\shell\open\command]
+@=""{escapedAppPath}"" ""%1""
+
+[HKEY_LOCAL_MACHINE\Software\Classes\Penumbra Modpack File\shell\open\command]
+@=""{escapedAppPath}"" ""%1""
+
+[HKEY_LOCAL_MACHINE\Software\Classes\Penumbra Modpack File\DefaultIcon]
+@=""{applicationPath}"", 0""
+";
+        }
+
+        return content;
+    }
+
+    private string GenerateRemoveFileAssociationRegContent(IEnumerable<string> extensions)
+    {
+        var content = "Windows Registry Editor Version 5.00";
+
+        foreach (var extension in extensions)
+        {
+            content += $@"
+
+[-HKEY_CURRENT_USER\Software\Classes\.{extension}]
+[-HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Penumbra Modpack File]
+";
+        }
+
+        return content;
+    }
+
+    private string GenerateAddToStartupRegContent(string appName, string appPath)
+    {
+        var escapedAppPath = appPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+        return $@"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+""{appName}""=""{escapedAppPath}""
+";
+    }
+
+    private string GenerateRemoveFromStartupRegContent(string appName)
+    {
+        return $@"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+""{appName}""=-
+";
+    }
+    
+    private bool IsApplicationInStartup(string appName)
     {
         try
         {
-            Registry.LocalMachine.DeleteSubKeyTree(@"SOFTWARE\Classes\Penumbra Modpack File", false);
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
+            var value = key?.GetValue(appName);
+            return value != null;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error removing global file association from registry");
-            _errorWindowService.ShowError(e.ToString());
-            throw;
+            _logger.LogError(e, "Error checking if application is in startup");
+            return false;
         }
-    }
-
-    private bool IsRestartedWithAdminArg()
-    {
-        return Environment.GetCommandLineArgs().Contains("--admin");
     }
 
     private bool IsFileAssociationSetCorrectly(string applicationPath)
     {
         try
         {
-            using (var key = Registry.LocalMachine.OpenSubKey(HKLMOpenCommandPath))
-            {
-                var currentValue = key?.GetValue("")?.ToString();
-                var expectedValue = $"\"{applicationPath}\" \"%1\"";
-                return currentValue == expectedValue;
-            }
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(HKLMOpenCommandPath);
+            var currentValue = key?.GetValue("")?.ToString();
+            var expectedValue = $"\"{applicationPath}\" \"%1\"";
+            return currentValue == expectedValue;
         }
         catch (Exception e)
         {
