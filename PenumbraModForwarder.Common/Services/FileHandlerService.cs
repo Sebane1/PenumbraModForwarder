@@ -77,11 +77,13 @@ public class FileHandlerService : IFileHandlerService
 
         var extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Extraction";
         var dtConversionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\DTConversion";
+        var registryPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Registry";
 
         try
         {
             CleanDirectory(extractionPath);
             CleanDirectory(dtConversionPath);
+            CleanDirectory(registryPath);
 
             var downloadPath = _configurationService.GetConfigValue(config => config.DownloadPath);
             _logger.LogInformation($"Checking for mod files in download path: {downloadPath}");
