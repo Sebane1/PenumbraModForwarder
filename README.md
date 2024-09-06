@@ -37,6 +37,39 @@ This program requires the .NET 8.0 desktop runtime to be installed. You can down
 
 ---
 
+## Documentation
+
+### Viewing Logs
+The application will generate logs based on what is currently happening, these can be found at `%appdata%/PenumbraModForwarder/logs`
+
+### Configuration
+The application uses json files to handle all user configuration, this can be found at `%appdata%/PenumbraModForwarder/config.json` the application will handle all of these settings automatically, except for Advanced Options
+
+The default settings will look like this
+```json
+{
+  "AutoLoad": false,
+  "AutoDelete": false,
+  "ExtractAll": false,
+  "NotificationEnabled": false,
+  "FileLinkingEnabled": false,
+  "StartOnBoot": false,
+  "DownloadPath": "",
+  "TexToolPath": "",
+  "AdvancedOptions": {
+    "HideWindowOnStartup": true,
+    "PenumbraTimeOutInSeconds": 60
+  }
+}
+``` 
+
+### Advanced Options
+These options are for advanced users who are after specific things from the application.
+
+Right now all they do is make it so the Main Window will show even if you have StartOnBoot enabled & handle how long the timeout is for when installing a mod via Penumbra Web Api
+
+---
+
 ## Building from Source
 
 To build Penumbra Mod Forwarder from source, follow these steps:
@@ -54,12 +87,12 @@ To build Penumbra Mod Forwarder from source, follow these steps:
     - **32-bit:** [Download .NET 8.0 SDK for Windows x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.401-windows-x86-installer)
 
 3. **Build the Solution:**
-    Navigate to the root directory of the repository and run the following command:
-    
+   Navigate to the root directory of the repository and run the following command:
+
     ```bash
     dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained false -r win-x64 -o ./publish -f net8.0-windows
     ```
 
 4. **Run the Application:**
-    Once the build is successful, navigate to the `publish` directory and run the executable file to start the application.
+   Once the build is successful, navigate to the `publish` directory and run the executable file to start the application.
 
