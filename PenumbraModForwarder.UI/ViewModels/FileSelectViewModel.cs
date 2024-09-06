@@ -1,11 +1,12 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Concurrency;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 
-public class FileSelectViewModel : ReactiveObject
+public partial class FileSelectViewModel : ReactiveObject
 {
     private readonly ILogger<FileSelectViewModel> _logger;
 
@@ -15,6 +16,13 @@ public class FileSelectViewModel : ReactiveObject
     private string _archiveFileName = string.Empty;
     private bool _showAllSelectedVisible;
     private bool _showAllSelectedEnabled;
+    private bool _showDtTextVisible;
+
+    public bool ShowDtTextVisible
+    {
+        get => _showDtTextVisible;
+        set => this.RaiseAndSetIfChanged(ref _showDtTextVisible, value);
+    }
 
     public bool ShowAllSelectedVisible
     {
@@ -67,14 +75,16 @@ public class FileSelectViewModel : ReactiveObject
     public void LoadFiles(IEnumerable<string> files)
     {
         Files.Clear();
-        
+    
         var fileNameCounts = new Dictionary<string, int>();
         var enumerable = files as string[] ?? files.ToArray();
-        
+    
+        var preDtPattern = PreDtRegex();  // Matches both with and without brackets
+
         foreach (var file in enumerable)
         {
             var fileName = Path.GetFileName(file);
-            
+
             if (fileNameCounts.TryGetValue(fileName, out var value))
             {
                 fileNameCounts[fileName] = ++value;
@@ -88,8 +98,15 @@ public class FileSelectViewModel : ReactiveObject
         foreach (var file in enumerable)
         {
             var fileName = Path.GetFileName(file);
-            
+
             var displayName = fileNameCounts[fileName] > 1 ? $"{fileName} ({file})" : fileName;
+
+            // Check if the file matches the "Pre-DT" pattern and append '*' if true
+            if (preDtPattern.IsMatch(file))
+            {
+                displayName += " *";
+                ShowDtTextVisible = true;
+            }
 
             var fileItem = new FileItem
             {
@@ -100,15 +117,29 @@ public class FileSelectViewModel : ReactiveObject
             Files.Add(fileItem);
         }
 
-        // Show and enable the Select All button if there are more than 3 files
         ShowAllSelectedVisible = Files.Count > 3;
         ShowAllSelectedEnabled = Files.Count > 3;
     }
 
     private void SelectAll()
     {
-        SelectedFiles = Files.Count == SelectedFiles.Length ? [] : Files.Select(file => file.FullPath).ToArray();
+        var preDtPattern = PreDtRegex();
+        
+        if (SelectedFiles.Length == Files.Count)
+        {
+            SelectedFiles = Files
+                .Where(file => preDtPattern.IsMatch(file.FileName) || file.FileName.EndsWith(" *"))
+                .Select(file => file.FullPath)
+                .ToArray();
+        }
+        else
+        {
+            SelectedFiles = Files
+                .Select(file => file.FullPath)
+                .ToArray();
+        }
     }
+
 
 
     private void CancelSelection()
@@ -134,4 +165,7 @@ public class FileSelectViewModel : ReactiveObject
             _logger.LogWarning("No files selected.");
         }
     }
+
+    [GeneratedRegex(@"\[?(?i)pre[\s\-]?dt\]?")]
+    private static partial Regex PreDtRegex();
 }

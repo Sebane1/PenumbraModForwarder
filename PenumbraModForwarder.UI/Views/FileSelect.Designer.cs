@@ -37,6 +37,7 @@ partial class FileSelect
         archivefile_Label = new Label();
         cancel_Button = new Button();
         selectall_Button = new Button();
+        predt_Label = new Label();
         SuspendLayout();
         // 
         // fileCheckedListBox
@@ -49,7 +50,7 @@ partial class FileSelect
         // 
         // confirmButton
         // 
-        confirmButton.Location = new Point(163, 142);
+        confirmButton.Location = new Point(163, 139);
         confirmButton.Name = "confirmButton";
         confirmButton.Size = new Size(119, 37);
         confirmButton.TabIndex = 1;
@@ -70,7 +71,7 @@ partial class FileSelect
         // 
         // cancel_Button
         // 
-        cancel_Button.Location = new Point(12, 142);
+        cancel_Button.Location = new Point(12, 139);
         cancel_Button.Name = "cancel_Button";
         cancel_Button.Size = new Size(119, 37);
         cancel_Button.TabIndex = 3;
@@ -80,7 +81,7 @@ partial class FileSelect
         // selectall_Button
         // 
         selectall_Button.Enabled = false;
-        selectall_Button.Location = new Point(12, 110);
+        selectall_Button.Location = new Point(12, 107);
         selectall_Button.Name = "selectall_Button";
         selectall_Button.Size = new Size(75, 23);
         selectall_Button.TabIndex = 4;
@@ -88,11 +89,22 @@ partial class FileSelect
         selectall_Button.UseVisualStyleBackColor = true;
         selectall_Button.Visible = false;
         // 
+        // predt_Label
+        // 
+        predt_Label.AutoSize = true;
+        predt_Label.Location = new Point(128, 111);
+        predt_Label.Name = "predt_Label";
+        predt_Label.Size = new Size(154, 15);
+        predt_Label.TabIndex = 5;
+        predt_Label.Text = "*  Pre DT version of the mod";
+        predt_Label.Visible = false;
+        // 
         // FileSelect
         // 
         AutoScaleDimensions = new SizeF(96F, 96F);
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(300, 191);
+        ClientSize = new Size(300, 181);
+        Controls.Add(predt_Label);
         Controls.Add(selectall_Button);
         Controls.Add(cancel_Button);
         Controls.Add(archivefile_Label);
@@ -116,4 +128,5 @@ partial class FileSelect
     private Label archivefile_Label;
     private Button cancel_Button;
     private Button selectall_Button;
+    private Label predt_Label;
 }

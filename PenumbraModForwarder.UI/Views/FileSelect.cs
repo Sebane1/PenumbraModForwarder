@@ -47,6 +47,9 @@ namespace PenumbraModForwarder.UI.Views
                 
                 this.Bind(ViewModel, vm => vm.ArchiveFileName, v => v.archivefile_Label.Text)
                     .DisposeWith(disposables);
+                
+                this.Bind(ViewModel, vm => vm.ShowDtTextVisible, v => v.predt_Label.Visible)
+                    .DisposeWith(disposables);
 
                 fileCheckedListBox.ItemCheck += FileCheckedListBox_ItemCheck;
 
