@@ -1,34 +1,28 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using PenumbraModForwarder.Common.Interfaces;
-using System.Diagnostics;
+using System;
 using System.IO;
 
 public class RegistryHelper : IRegistryHelper
 {
     private readonly IErrorWindowService _errorWindowService;
     private readonly ILogger<RegistryHelper> _logger;
-
-    private const string HKLMOpenCommandPath = @"SOFTWARE\Classes\Penumbra Modpack File\shell\open\command";
+    private const string HKLMOpenCommandPath = @"SOFTWARE\Classes\PenumbraModpackFile\shell\open\command";
+    private const string HKCUClassesPath = @"Software\Classes\";
     private const string RegistryPath = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\FFXIV_TexTools";
-    
-    private string SaveRegistryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\PenumbraModForwarder\Registry");
 
     public RegistryHelper(IErrorWindowService errorWindowService, ILogger<RegistryHelper> logger)
     {
         _errorWindowService = errorWindowService;
         _logger = logger;
-
-        if (!Directory.Exists(SaveRegistryPath))
-        {
-            Directory.CreateDirectory(SaveRegistryPath);
-        }
     }
-
+    
     public string GetTexToolRegistryValue(string keyValue)
     {
         try
         {
-            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(RegistryPath);
+            using var key = Registry.LocalMachine.OpenSubKey(RegistryPath);
             return key?.GetValue(keyValue)?.ToString();
         }
         catch (Exception e)
@@ -38,24 +32,29 @@ public class RegistryHelper : IRegistryHelper
             return null;
         }
     }
-
+    
     public void CreateFileAssociation(IEnumerable<string> extensions, string applicationPath)
     {
         try
         {
-            if (IsFileAssociationSetCorrectly(applicationPath))
+            foreach (var extension in extensions)
             {
-                _logger.LogInformation("The file association is already correctly set. No update needed.");
-                return;
+                var extensionKeyPath = $@"{HKCUClassesPath}.{extension}";
+                using (var key = Registry.CurrentUser.CreateSubKey(extensionKeyPath))
+                {
+                    key?.SetValue("", "PenumbraModpackFile");
+                }
             }
 
-            _logger.LogInformation("Creating file association in registry");
+            using (var iconKey = Registry.CurrentUser.CreateSubKey($@"{HKCUClassesPath}PenumbraModpackFile\DefaultIcon"))
+            {
+                iconKey?.SetValue("", $"{applicationPath},0");
+            }
 
-            var regFilePath = SaveRegistryPath + @"\file_associations.reg";  // Use a generic filename 
-            var regFileContent = GenerateSetFileAssociationRegContent(extensions, applicationPath);
-
-            File.WriteAllText(regFilePath, regFileContent);
-            ExecuteRegFile(regFilePath);
+            using (var commandKey = Registry.CurrentUser.CreateSubKey($@"{HKCUClassesPath}PenumbraModpackFile\shell\open\command"))
+            {
+                commandKey?.SetValue("", $"\"{applicationPath}\" \"%1\"");
+            }
 
             _logger.LogInformation("File association created successfully.");
         }
@@ -63,21 +62,20 @@ public class RegistryHelper : IRegistryHelper
         {
             _logger.LogError(e, "Error creating file association in registry");
             _errorWindowService.ShowError(e.ToString());
-            throw;
         }
     }
-
+    
     public void RemoveFileAssociation(IEnumerable<string> extensions)
     {
         try
         {
-            _logger.LogInformation("Removing file association in registry");
+            foreach (var extension in extensions)
+            {
+                var extensionKeyPath = $@"{HKCUClassesPath}.{extension}";
+                Registry.CurrentUser.DeleteSubKeyTree(extensionKeyPath, false);
+            }
 
-            var regFilePath = SaveRegistryPath + @"\file_associations.reg";
-            var regFileContent = GenerateRemoveFileAssociationRegContent(extensions);
-
-            File.WriteAllText(regFilePath, regFileContent);
-            ExecuteRegFile(regFilePath);
+            Registry.CurrentUser.DeleteSubKeyTree($@"{HKCUClassesPath}PenumbraModpackFile", false);
 
             _logger.LogInformation("File association removed successfully.");
         }
@@ -85,25 +83,15 @@ public class RegistryHelper : IRegistryHelper
         {
             _logger.LogError(e, "Error removing file association from registry");
             _errorWindowService.ShowError(e.ToString());
-            throw;
         }
     }
-
+    
     public void AddApplicationToStartup(string appName, string appPath)
     {
         try
         {
-            if (IsApplicationInStartup(appName))
-            {
-                _logger.LogInformation("Application is already present in startup.");
-                return;
-            }
-            
-            var regFilePath = SaveRegistryPath + @"\" + appName + ".reg";
-            var regFileContent = GenerateAddToStartupRegContent(appName, appPath);
-
-            File.WriteAllText(regFilePath, regFileContent);
-            ExecuteRegFile(regFilePath);
+            using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            registryKey?.SetValue(appName, $"\"{appPath}\"");
 
             _logger.LogInformation("Application added to startup.");
         }
@@ -111,25 +99,15 @@ public class RegistryHelper : IRegistryHelper
         {
             _logger.LogError(e, "Error adding application to startup");
             _errorWindowService.ShowError(e.ToString());
-            throw;
         }
     }
-
+    
     public void RemoveApplicationFromStartup(string appName)
     {
         try
         {
-            if (!IsApplicationInStartup(appName))
-            {
-                _logger.LogInformation("Application is not present in startup.");
-                return;
-            }
-            
-            var regFilePath = SaveRegistryPath + @"\" + appName + ".reg";
-            var regFileContent = GenerateRemoveFromStartupRegContent(appName);
-
-            File.WriteAllText(regFilePath, regFileContent);
-            ExecuteRegFile(regFilePath);
+            using var registryKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            registryKey?.DeleteValue(appName, false);
 
             _logger.LogInformation("Application removed from startup.");
         }
@@ -137,98 +115,14 @@ public class RegistryHelper : IRegistryHelper
         {
             _logger.LogError(e, "Error removing application from startup");
             _errorWindowService.ShowError(e.ToString());
-            throw;
         }
-    }
-
-    private void ExecuteRegFile(string regFilePath)
-    {
-        var processInfo = new ProcessStartInfo("regedit.exe", $"/s \"{regFilePath}\"")
-        {
-            UseShellExecute = true,
-            Verb = "runas"
-        };
-
-        using var process = Process.Start(processInfo);
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"Failed to execute reg file: {regFilePath}. Process exited with code {process.ExitCode}.");
-        }
-
-        File.Delete(regFilePath);
-    }
-
-    private string GenerateSetFileAssociationRegContent(IEnumerable<string> extensions, string applicationPath)
-    {
-        var content = "";
-        var escapedAppPath = applicationPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
-        content += "Windows Registry Editor Version 5.00";
-
-        foreach (var extension in extensions)
-        {
-            content += $@"
-
-[HKEY_CURRENT_USER\Software\Classes\.{extension}]
-@=""PenumbraModpackFile""
-
-[HKEY_CURRENT_USER\Software\Classes\PenumbraModpackFile\shell\open\command]
-@=""{escapedAppPath}"" ""%1""
-
-[HKEY_LOCAL_MACHINE\Software\Classes\Penumbra Modpack File\shell\open\command]
-@=""{escapedAppPath}"" ""%1""
-
-[HKEY_LOCAL_MACHINE\Software\Classes\Penumbra Modpack File\DefaultIcon]
-@=""{applicationPath}"", 0""
-";
-        }
-
-        return content;
-    }
-
-    private string GenerateRemoveFileAssociationRegContent(IEnumerable<string> extensions)
-    {
-        var content = "Windows Registry Editor Version 5.00";
-
-        foreach (var extension in extensions)
-        {
-            content += $@"
-
-[-HKEY_CURRENT_USER\Software\Classes\.{extension}]
-[-HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Penumbra Modpack File]
-";
-        }
-
-        return content;
-    }
-
-    private string GenerateAddToStartupRegContent(string appName, string appPath)
-    {
-        var escapedAppPath = appPath.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
-        return $@"Windows Registry Editor Version 5.00
-
-[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
-""{appName}""=""{escapedAppPath}""
-";
-    }
-
-    private string GenerateRemoveFromStartupRegContent(string appName)
-    {
-        return $@"Windows Registry Editor Version 5.00
-
-[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
-""{appName}""=-
-";
     }
     
     private bool IsApplicationInStartup(string appName)
     {
         try
         {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
+            using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
             var value = key?.GetValue(appName);
             return value != null;
         }
@@ -238,15 +132,28 @@ public class RegistryHelper : IRegistryHelper
             return false;
         }
     }
-
+    
     private bool IsFileAssociationSetCorrectly(string applicationPath)
     {
         try
         {
-            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(HKLMOpenCommandPath);
-            var currentValue = key?.GetValue("")?.ToString();
+            using var key = Registry.LocalMachine.OpenSubKey(HKLMOpenCommandPath);
+            if (key == null)
+            {
+                _logger.LogWarning($"Registry key not found: {HKLMOpenCommandPath}");
+                return false;
+            }
+
+            var currentValue = key.GetValue("")?.ToString();
+            if (currentValue == null)
+            {
+                _logger.LogWarning($"Registry value not found at path: {HKLMOpenCommandPath}");
+                return false;
+            }
+
+            currentValue = Environment.ExpandEnvironmentVariables(currentValue);
             var expectedValue = $"\"{applicationPath}\" \"%1\"";
-            return currentValue == expectedValue;
+            return string.Equals(currentValue, expectedValue, StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception e)
         {
