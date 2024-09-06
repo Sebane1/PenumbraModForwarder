@@ -9,26 +9,24 @@ namespace PenumbraModForwarder.Common.Services
     public class PenumbraApi : IPenumbraApi
     {
         private const string BaseUrl = "http://localhost:42069/api";
-        private const int TimeoutMs = 5000;
-        private static readonly HttpClient HttpClient;
+        private HttpClient HttpClient;
         private static bool _warningShown;
         private readonly IErrorWindowService _errorWindowService;
         private readonly ILogger<PenumbraApi> _logger;
         private readonly ISystemTrayManager _systemTrayManager;
+        private readonly IConfigurationService _configurationService;
 
-        static PenumbraApi()
-        {
-            HttpClient = new HttpClient
-            {
-                Timeout = TimeSpan.FromMilliseconds(TimeoutMs)
-            };
-        }
-
-        public PenumbraApi(ILogger<PenumbraApi> logger, IErrorWindowService errorWindowService, ISystemTrayManager systemTrayManager)
+        public PenumbraApi(ILogger<PenumbraApi> logger, IErrorWindowService errorWindowService, ISystemTrayManager systemTrayManager, IConfigurationService configurationService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _errorWindowService = errorWindowService;
             _systemTrayManager = systemTrayManager;
+            _configurationService = configurationService;
+            
+            HttpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(_configurationService.GetConfigValue(o => o.AdvancedOptions.PenumbraTimeOut))
+            };
         }
 
         public async Task<bool> InstallAsync(string modPath)
