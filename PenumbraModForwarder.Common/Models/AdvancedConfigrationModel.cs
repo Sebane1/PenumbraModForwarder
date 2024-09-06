@@ -3,7 +3,7 @@
     public class AdvancedConfigurationModel
     {
         public bool HideWindowOnStartup { get; set; } = true;
-        public int PenumbraTimeOut { get; set; } = 60; // This is in Seconds
+        public int PenumbraTimeOutInSeconds { get; set; } = 60; // This is in Seconds
     }
 }
 

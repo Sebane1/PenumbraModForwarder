@@ -156,31 +156,44 @@ namespace PenumbraModForwarder.Common.Services
             lock (_lock)
             {
                 var rawJson = File.ReadAllText(_configPath);
-                
+
                 _config = JsonConvert.DeserializeObject<ConfigurationModel>(rawJson);
-                
-                if (!rawJson.Contains("\"AdvancedOptions\""))
+
+                if (_config == null)
                 {
-                    _logger.LogInformation("AdvancedOptions is missing in the configuration file, adding default values.");
-                    
-                    if (_config.AdvancedOptions == null)
-                    {
-                        _config.AdvancedOptions = new AdvancedConfigurationModel();
-                    }
-                    
-                    SaveConfig();
+                    _logger.LogWarning("Configuration deserialization failed. Creating a new configuration with default values.");
+                    _config = new ConfigurationModel();
                 }
 
-                if (_config != null) return;
-                _logger.LogWarning("Configuration deserialization failed. Creating a new configuration with default values.");
-                _config = new ConfigurationModel
+                if (_config.AdvancedOptions == null)
                 {
-                    AdvancedOptions = new AdvancedConfigurationModel()
-                };
+                    _logger.LogInformation("AdvancedOptions is missing in the configuration file, adding default values.");
+                    _config.AdvancedOptions = new AdvancedConfigurationModel();
+                }
+
+                PopulateDefaultValues(_config.AdvancedOptions);
                 SaveConfig();
             }
         }
 
+        private void PopulateDefaultValues<T>(T obj) where T : class, new()
+        {
+            var defaultInstance = new T();
+
+            var properties = typeof(T).GetProperties();
+    
+            foreach (var property in properties)
+            {
+                var currentValue = property.GetValue(obj);
+                var defaultValue = property.GetValue(defaultInstance);
+
+                // If current value is null or default (like 0 for int), replace it with the default value.
+                if (currentValue == null || (property.PropertyType.IsValueType && currentValue.Equals(Activator.CreateInstance(property.PropertyType))))
+                {
+                    property.SetValue(obj, defaultValue);
+                }
+            }
+        }
 
         private void OnConfigChanged()
         {

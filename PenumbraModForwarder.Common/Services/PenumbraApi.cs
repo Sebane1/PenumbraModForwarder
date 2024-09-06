@@ -25,7 +25,7 @@ namespace PenumbraModForwarder.Common.Services
             
             HttpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(_configurationService.GetConfigValue(o => o.AdvancedOptions.PenumbraTimeOut))
+                Timeout = TimeSpan.FromSeconds(_configurationService.GetConfigValue(o => o.AdvancedOptions.PenumbraTimeOutInSeconds))
             };
         }
 
