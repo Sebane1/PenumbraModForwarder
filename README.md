@@ -13,7 +13,7 @@ Forwards `.pmp`, `.ttmp`, and `.ttmp2` files to be automatically opened by Penum
 - **Automatic Opening in Penumbra:** Mods you download can be set to automatically open in Penumbra. This option can be disabled if preferred.
 - **Double-Click to Open Mods:** Set Penumbra Mod Forwarder as your default program to allow double-clicking or multi-selecting mods, which will then automatically open in Penumbra.
 
-Penumbra Mod Forwarder, as the name suggests, will notify Penumbra to extract new mods that are downloaded to a specified folder. Additionally, it allows Penumbra to extract mods that you double-click or multi-select, provided you've set Penumbra Mod Forwarder as the default program for opening supported mod files in Windows.
+Penumbra Mod Forwarder, as the name suggests, will notify Penumbra to install new mods that are downloaded to a specified folder. Additionally, it allows Penumbra to install mods that you double-click or multi-select, provided you've set Penumbra Mod Forwarder as the default program for opening supported mod files in Windows.
 
 ---
 
