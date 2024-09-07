@@ -13,18 +13,20 @@ public class SystemTrayManager : ISystemTrayManager
     private readonly IConfigurationService _configurationService;
     private readonly IProcessHelperService _processHelperService;
     private readonly IResourceManager _resourceManager;
+    private readonly IUpdateService _updateService;
     
     private Icon _icon;
 
     public event Action OnExitRequested;
 
-    public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService, IResourceManager resourceManager)
+    public SystemTrayManager(ILogger<SystemTrayManager> logger, IErrorWindowService errorWindowService, IConfigurationService configurationService, IProcessHelperService processHelperService, IResourceManager resourceManager, IUpdateService updateService)
     {
         _logger = logger;
         _errorWindowService = errorWindowService;
         _configurationService = configurationService;
         _processHelperService = processHelperService;
         _resourceManager = resourceManager;
+        _updateService = updateService;
         _icon = _resourceManager.LoadIcon("PenumbraModForwarder.UI.Resources.PMFI.ico");
         _notifyIcon = new NotifyIcon
         {
@@ -60,6 +62,12 @@ public class SystemTrayManager : ISystemTrayManager
             }
                 
             mainWindow.Activate();
+        });
+
+        contextMenu.Items.Add("Check For Updates", null, (sender, args) =>
+        {
+            _logger.LogInformation("Checking for updates...");
+            _updateService.CheckForUpdates();
         });
         
         contextMenu.Items.Add(new ToolStripSeparator());
