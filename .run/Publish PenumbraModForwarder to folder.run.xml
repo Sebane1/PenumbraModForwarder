@@ -1,0 +1,6 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Publish PenumbraModForwarder to folder" type="DotNetFolderPublish" factoryName="Publish to folder">
+    <riderPublish configuration="Release" delete_existing_files="true" platform="Any CPU" produce_single_file="true" runtime="win-x64" target_folder="$PROJECT_DIR$/.publish" target_framework="net8.0-windows" uuid_high="7006182103143696426" uuid_low="-9080324542635863026" />
+    <method v="2" />
+  </configuration>
+</component>
