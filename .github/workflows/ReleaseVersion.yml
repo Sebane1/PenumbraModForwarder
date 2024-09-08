@@ -34,20 +34,28 @@ jobs:
         needs: validate-tag
         environment: Release
         outputs:
-            tag_name: ${{ steps.get_tag.outputs.tag_name }}
+            tag_name: ${{ steps.set_tag.outputs.tag_name }}
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
 
             - name: Set Tag Name for PR Merge
-              id: get_tag_pr
+              id: set_tag_pr
               if: github.event_name == 'pull_request'
-              run: echo "::set-output name=tag_name::${{ github.event.pull_request.head.ref }}"
+              run: echo "tag_name=${{ github.event.pull_request.head.ref }}"
+              shell: bash
+              continue-on-error: false
+              outputs:
+                  tag_name: ${{ github.event.pull_request.head.ref }}
 
             - name: Set Tag Name for Workflow Dispatch
-              id: get_tag_dispatch
+              id: set_tag_dispatch
               if: github.event_name == 'workflow_dispatch'
-              run: echo "::set-output name=tag_name::${{ github.event.inputs.tagName }}"
+              run: echo "tag_name=${{ github.event.inputs.tagName }}"
+              shell: bash
+              continue-on-error: false
+              outputs:
+                  tag_name: ${{ github.event.inputs.tagName }}
 
             - name: Build and Publish
               uses: ./.github/templates/ReleaseAndPublish
@@ -62,7 +70,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ steps.get_tag_pr.outputs.tag_name || steps.get_tag_dispatch.outputs.tag_name }}
+                  tag_name: ${{ steps.set_tag_pr.outputs.tag_name || steps.set_tag_dispatch.outputs.tag_name }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
