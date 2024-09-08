@@ -4,15 +4,34 @@ on:
     pull_request:
         types:
             - closed
+    
+    workflow_dispatch:
+        inputs:
+            tagName:
+                description: "Tag Name"
+                required: true
+                default: "vX.X.X.X"
 
 permissions:
     contents: write
     packages: write
 
 jobs:
+    validate-tag:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Validate Tag Name
+              run: |
+                  if [[ ! "${{ github.event.inputs.tagName }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                    echo "Invalid tag name format. Please use the format vX.X.X.X"
+                    exit 1
+                  fi
+              if: github.event_name == 'workflow_dispatch'  # Run this validation only for manual dispatches
+    
     release:
-        if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
+        if: (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')) || (github.event.inputs.tagName != 'vX.X.X.X')
         runs-on: windows-latest
+        needs: validate-tag
         environment: Release
         steps:
             - name: Checkout Repository
@@ -31,7 +50,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ github.event.pull_request.head.ref }}
+                  tag_name: ${{ github.event.inputs.tagName || github.event.pull_request.head.ref }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
