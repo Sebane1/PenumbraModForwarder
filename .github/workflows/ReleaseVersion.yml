@@ -33,17 +33,21 @@ jobs:
         runs-on: windows-latest
         needs: validate-tag
         environment: Release
+        outputs:
+            tag_name: ${{ steps.set_tag.outputs.tag_name }}
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
 
             - name: Set Tag Name for PR Merge
+              id: set_tag
               if: github.event_name == 'pull_request'
-              run: echo "TAG_NAME=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+              run: echo "::set-output name=tag_name::${{ github.event.pull_request.head.ref }}"
 
             - name: Set Tag Name for Workflow Dispatch
+              id: set_tag
               if: github.event_name == 'workflow_dispatch'
-              run: echo "TAG_NAME=${{ github.event.inputs.tagName }}" >> $GITHUB_ENV
+              run: echo "::set-output name=tag_name::${{ github.event.inputs.tagName }}"
 
             - name: Build and Publish
               uses: ./.github/templates/ReleaseAndPublish
@@ -58,7 +62,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ env.TAG_NAME }}
+                  tag_name: ${{ needs.release.outputs.tag_name }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
