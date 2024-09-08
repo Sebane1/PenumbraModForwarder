@@ -18,6 +18,7 @@ permissions:
 
 jobs:
     validate-tag:
+        if: github.event_name == 'workflow_dispatch'
         runs-on: ubuntu-latest
         steps:
             - name: Validate Tag Name
@@ -26,16 +27,23 @@ jobs:
                     echo "Invalid tag name format. Please use the format vX.X.X.X"
                     exit 1
                   fi
-              if: github.event_name == 'workflow_dispatch'  # Run this validation only for manual dispatches
     
     release:
-        if: (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')) || (github.event.inputs.tagName != 'vX.X.X.X')
+        if: (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')) || (github.event_name == 'workflow_dispatch')
         runs-on: windows-latest
         needs: validate-tag
         environment: Release
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
+
+            - name: Set Tag Name for PR Merge
+              if: github.event_name == 'pull_request'
+              run: echo "TAG_NAME=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+
+            - name: Set Tag Name for Workflow Dispatch
+              if: github.event_name == 'workflow_dispatch'
+              run: echo "TAG_NAME=${{ github.event.inputs.tagName }}" >> $GITHUB_ENV
 
             - name: Build and Publish
               uses: ./.github/templates/ReleaseAndPublish
@@ -50,7 +58,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ github.event.inputs.tagName || github.event.pull_request.head.ref }}
+                  tag_name: ${{ env.TAG_NAME }}
                   files: ./publish/PenumbraModForwarder.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
