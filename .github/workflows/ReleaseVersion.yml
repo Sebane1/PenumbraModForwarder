@@ -38,6 +38,8 @@ jobs:
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
+              with:
+                  submodules: 'true'
 
             - name: Set Tag Name for PR Merge
               id: set_tag_pr
