@@ -74,12 +74,18 @@ Right now all they do is make it so the Main Window will show even if you have S
 
 To build Penumbra Mod Forwarder from source, follow these steps:
 
-1. **Clone the Repository:**  
-   Clone the repository to your local machine using the following command:
+1. **Clone the Repository with Submodules:**  
+   Clone the repository and its submodules to your local machine using the following commands:
 
    ```bash
-   git clone https://github.com/Sebane1/PenumbraModForwarder.git
+   git clone --recurse-submodules https://github.com/Sebane1/PenumbraModForwarder.git
     ```
+
+   If you have already cloned the repository without submodules, you can initialize and update the submodules with:
+   ```bash
+   git submodule update --init --recursive
+   ```
+
 
 2. **Install .NET 8.0 SDK:**  
    Ensure that you have the .NET 8.0 SDK installed on your machine. You can download it from the official .NET website:
