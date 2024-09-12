@@ -26,4 +26,8 @@
     <PackageReference Include="WindowsShortcutFactory" Version="1.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj" />
+  </ItemGroup>
+
 </Project>

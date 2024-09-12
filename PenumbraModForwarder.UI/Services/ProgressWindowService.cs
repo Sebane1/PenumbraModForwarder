@@ -66,6 +66,7 @@ namespace PenumbraModForwarder.UI.Services
 
         private void ShowProgressWindowInternal()
         {
+            _logger.LogDebug("ShowProgressWindowInternal");
             if (Application.OpenForms.Count > 0)
             {
                 Application.OpenForms[0].Invoke(CreateAndShowProgressWindow);
@@ -84,6 +85,7 @@ namespace PenumbraModForwarder.UI.Services
 
         private void UpdateProgressInternal(string fileName, string operation, int progress)
         {
+            _logger.LogDebug($"Updating progress for {fileName}: {operation} ({progress})");
             try
             {
                 if (_progressWindow.InvokeRequired)
