@@ -87,13 +87,13 @@ jobs:
                   echo "sha256=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.sha256)" >> $GITHUB_ENV
                   echo "md5=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.md5)" >> $GITHUB_ENV
 
-            - name: Get latest commit message from main branch
+            - name: Get latest commit message from default branch
               if: steps.set_vars.outputs.should_release == 'true'
               id: get_commit_message
               shell: bash
               run: |
-                  git fetch origin main
-                  latest_commit=$(git log origin/main -1 --pretty=%B)
+                  git fetch origin ${{ github.event.repository.default_branch }}
+                  latest_commit=$(git log origin/${{ github.event.repository.default_branch }} -1 --pretty=%B)
                   echo "commit_message=$latest_commit" >> $GITHUB_ENV
 
             - name: Upload Artifact
