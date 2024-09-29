@@ -33,31 +33,22 @@ jobs:
         runs-on: windows-latest
         needs: validate-tag
         environment: Release
-        outputs:
-            tag_name: ${{ steps.set_tag.outputs.tag_name }}
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v3
               with:
                   submodules: 'true'
 
-            - name: Set Tag Name for PR Merge
-              id: set_tag_pr
-              if: github.event_name == 'pull_request'
-              run: echo "tag_name=${{ github.event.pull_request.head.ref }}"
-              shell: bash
-              continue-on-error: false
-              outputs:
-                  tag_name: ${{ github.event.pull_request.head.ref }}
-
-            - name: Set Tag Name for Workflow Dispatch
-              id: set_tag_dispatch
-              if: github.event_name == 'workflow_dispatch'
-              run: echo "tag_name=${{ github.event.inputs.tagName }}"
-              shell: bash
-              continue-on-error: false
-              outputs:
-                  tag_name: ${{ github.event.inputs.tagName }}
+            - name: Set Tag Name
+              id: set_tag
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                    echo "tag_name=${{ github.event.inputs.tagName }}" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.event_name }}" == "pull_request" ]; then
+                    echo "tag_name=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+                  else
+                    echo "tag_name=unknown" >> $GITHUB_OUTPUT
+                  fi
 
             - name: Build and Publish
               uses: ./.github/templates/ReleaseAndPublish
@@ -90,7 +81,7 @@ jobs:
             - name: Create Release
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ steps.set_tag_pr.outputs.tag_name || steps.set_tag_dispatch.outputs.tag_name }}
+                  tag_name: ${{ steps.set_tag.outputs.tag_name }}
                   body: |
                       ## Release Notes
                       
