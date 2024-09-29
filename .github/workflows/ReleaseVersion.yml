@@ -130,7 +130,12 @@ jobs:
                   
                   # Get the latest commit message from 'origin/master'
                   latest_commit=$(git log origin/master -1 --pretty=%B)
-                  echo "commit_message=$latest_commit" >> "$GITHUB_ENV"
+                  
+                  # Set the commit_message as an output
+                  echo "commit_message<<EOF" >> "$GITHUB_OUTPUT"
+                  echo "$latest_commit" >> "$GITHUB_OUTPUT"
+                  echo "EOF" >> "$GITHUB_OUTPUT"
+
 
             - name: Upload Artifact
               if: ${{ steps.set_vars.outputs.should_release == 'true' && steps.set_vars.outputs.upload_artifact == 'true' }}
