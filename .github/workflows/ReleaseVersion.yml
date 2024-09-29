@@ -85,9 +85,14 @@ jobs:
                     exit 1
                   fi
                   
+                  # Append '-b' to tag name if beta release
+                  if [ "$IS_BETA" == "true" ]; then
+                    TAG_NAME="${TAG_NAME}-b"
+                  fi
+                  
                   # Validate Tag Name
-                  if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                    echo "Branch name does not match version pattern. Skipping release."
+                  if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(-b)?$ ]]; then
+                    echo "Tag name does not match version pattern. Skipping release."
                     echo "should_release=false" >> "$GITHUB_OUTPUT"
                   else
                     echo "should_release=true" >> "$GITHUB_OUTPUT"
@@ -139,17 +144,17 @@ jobs:
               run: |
                   BODY="## Release Notes
     
-                    ${{ env.commit_message }}
-                    
-                    ## Hashes:
-                    - **SHA256 Hash**: \`${{ env.sha256 }}\`
-                    - **MD5 Hash**: \`${{ env.md5 }}\`
-                
-                    ## Download Link
+                  ${{ env.commit_message }}
+
+                  ## Hashes:
+                  - **SHA256 Hash**: \`${{ env.sha256 }}\`
+                  - **MD5 Hash**: \`${{ env.md5 }}\`
+
+                  ## Download Link
                   [Download the zip](./PenumbraModForwarder.zip)
                     "
-                    
-                    FILES="./publish/PenumbraModForwarder.zip
+                
+                          FILES="./publish/PenumbraModForwarder.zip
                     ./publish/PenumbraModForwarder.zip.sha256
                     ./publish/PenumbraModForwarder.zip.md5"
                     
