@@ -14,7 +14,8 @@ on:
             createArtifact:
                 description: "Create Artifact"
                 required: false
-                default: "false"
+                default: false
+                type: boolean
 
 permissions:
     contents: write
@@ -26,6 +27,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Validate Tag Name
+              shell: bash
               run: |
                   if [[ ! "${{ github.event.inputs.tagName }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                     echo "Invalid tag name format. Please use the format vX.X.X.X"
@@ -45,6 +47,7 @@ jobs:
 
             - name: Set Release Variables
               id: set_vars
+              shell: bash
               run: |
                   # Determine Tag Name
                   if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -71,6 +74,7 @@ jobs:
 
             - name: Generate SHA256 and MD5 hashes for .zip
               if: steps.set_vars.outputs.should_release == 'true'
+              shell: bash
               run: |
                   sha256sum ./publish/PenumbraModForwarder.zip > ./publish/PenumbraModForwarder.zip.sha256
                   md5sum ./publish/PenumbraModForwarder.zip > ./publish/PenumbraModForwarder.zip.md5
@@ -78,6 +82,7 @@ jobs:
             - name: Read SHA256 and MD5 hashes
               if: steps.set_vars.outputs.should_release == 'true'
               id: read_hashes
+              shell: bash
               run: |
                   echo "sha256=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.sha256)" >> $GITHUB_ENV
                   echo "md5=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.md5)" >> $GITHUB_ENV
@@ -85,13 +90,17 @@ jobs:
             - name: Get latest commit message from main branch
               if: steps.set_vars.outputs.should_release == 'true'
               id: get_commit_message
+              shell: bash
               run: |
                   git fetch origin main
                   latest_commit=$(git log origin/main -1 --pretty=%B)
                   echo "commit_message=$latest_commit" >> $GITHUB_ENV
 
             - name: Upload Artifact
-              if: steps.set_vars.outputs.should_release == 'true' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.createArtifact == 'true') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'create-artifact')))
+              if: steps.set_vars.outputs.should_release == 'true' && (
+                  (github.event_name == 'workflow_dispatch' && github.event.inputs.createArtifact == true) ||
+                  (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'create-artifact'))
+                  )
               uses: actions/upload-artifact@v4
               with:
                   path: ./publish/PenumbraModForwarder.zip
@@ -101,6 +110,7 @@ jobs:
             - name: Prepare Release Assets
               if: steps.set_vars.outputs.should_release == 'true'
               id: prepare_assets
+              shell: bash
               run: |
                   BODY="## Release Notes
                   
