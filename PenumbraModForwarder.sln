@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Common
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Test", "PenumbraModForwarder.Test\PenumbraModForwarder.Test.csproj", "{ABBCAE7A-8213-4A54-B5D3-782CB63354EF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{ABBCAE7A-8213-4A54-B5D3-782CB63354EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABBCAE7A-8213-4A54-B5D3-782CB63354EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABBCAE7A-8213-4A54-B5D3-782CB63354EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Debug|Any CPU.Build.0 = Debug|x64
+		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.ActiveCfg = Release|x64
+		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

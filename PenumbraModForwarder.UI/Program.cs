@@ -22,16 +22,9 @@ static class Program
         
         if (args.Length > 0)
         {
-            // If the argument is --admin, continue with the normal flow
-            if (args[0] == "--admin")
-            {
-                Log.Information("Running application with admin privileges");
-            }
-            else
-            {
-                var filePath = args[0];
-                HandleFileArgs(serviceProvider, filePath);
-            }
+            var filePath = args[0];
+            HandleFileArgs(serviceProvider, filePath);
+            return;
         }
         
         IsProgramAlreadyRunning(serviceProvider);

@@ -1,15 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
-using PenumbraModForwarder.Common.Interfaces;
 using Microsoft.Extensions.Logging;
-using PenumbraModForwarder.Common.Helpers;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using SharpCompress.Archives;
-using SharpCompress.Archives.Rar;
-using SharpCompress.Archives.SevenZip;
-using SharpCompress.Archives.Zip;
-using SharpCompress.Common;
+using SevenZipExtractor;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace PenumbraModForwarder.Common.Services
 {
@@ -23,9 +18,7 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IArkService _arkService;
         private readonly IProgressWindowService _progressWindowService;
 
-        private readonly string _extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                                                  @"\PenumbraModForwarder\Extraction";
-
+        private readonly string _extractionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"PenumbraModForwarder\Extraction");
         private readonly ConcurrentQueue<ExtractionOperation> _operationQueue = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private bool _isFileSelectionWindowOpen = false;
@@ -97,6 +90,7 @@ namespace PenumbraModForwarder.Common.Services
 
             try
             {
+                // Use asynchronous I/O with batching to process file extraction
                 await Task.Run(() => ExtractFiles(operation.FilePath, selectedFiles));
             }
             finally
@@ -108,16 +102,15 @@ namespace PenumbraModForwarder.Common.Services
         private string[] GetSelectedFiles(string[] files, string filePath)
         {
             if (files.Length <= 1 || _configurationService.GetConfigValue(o => o.ExtractAll)) return files;
-            
+
             var selectedFiles = HandleFileSelection(filePath, files);
             if (selectedFiles == null || selectedFiles.Length == 0)
             {
                 return null;
             }
             return selectedFiles;
-
         }
-        
+
         private string[] HandleFileSelection(string filePath, string[] files)
         {
             _logger.LogInformation("Multiple files found in archive. Showing file selection dialog.");
@@ -141,28 +134,61 @@ namespace PenumbraModForwarder.Common.Services
             }
         }
 
-        private void ExtractFiles(string filePath, string[] selectedFiles)
+        private async Task ExtractFiles(string filePath, string[] selectedFiles)
         {
-            var allFilesExtractedSuccessfully = false;
-            var count = 0;
-            var totalFiles = selectedFiles.Length;
+            using var archiveFile = new ArchiveFile(filePath);
+            var currentFileName = Path.GetFileName(filePath);
+            _logger.LogDebug($"Extracting {selectedFiles.Length} files.");
 
-            foreach (var file in selectedFiles)
+            // Subscribe to the progress event to update the progress bar
+            archiveFile.ExtractProgress += (sender, progress) =>
             {
-                _logger.LogInformation("Extracting file {0}/{1}: {2}", count + 1, totalFiles, file);
-                count++;
-                var report = ExtractAndInstallFile(filePath, file);
-                if (report)
+                _logger.LogDebug($"Progress: {progress.PercentProgress:0.00}%");
+                _progressWindowService.UpdateProgress(currentFileName, $"Extracting {progress.PercentProgress:00}%", (int)progress.PercentProgress);
+            };
+
+            var token = new CancellationToken();
+
+            try
+            {
+                archiveFile.Extract(entry =>
                 {
-                    allFilesExtractedSuccessfully = true;
+                    if (!selectedFiles.Contains(entry?.FileName)) return null;
+
+                    var sanitizedFilePath = SanitizePath(entry?.FileName);
+                    var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
+                    var directoryPath = Path.GetDirectoryName(destinationPath);
+
+                    if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                    {
+                        Directory.CreateDirectory(directoryPath);
+                    }
+
+                    return destinationPath;
+                }, token);
+
+                // Process the extracted files
+                foreach (var entry in selectedFiles)
+                {
+                    var destinationPath = Path.Combine(_extractionPath, entry);
+                    InstallMod(destinationPath);
                 }
             }
-
-            if (allFilesExtractedSuccessfully)
+            finally
             {
-                _logger.LogInformation("All files extracted successfully. Deleting archive.");
-                DeleteArchiveIfNeeded(filePath);
+                // Explicitly dispose of the archive file to release any locks on the archive
+                archiveFile.Dispose();
             }
+
+            // Optionally delete the archive after extraction if configured
+            DeleteArchiveIfNeeded(filePath);
+        }
+
+        
+        private void InstallMod(string extractedFile)
+        {
+            _penumbraInstallerService.InstallMod(extractedFile);
+            _logger.LogInformation($"Installed mod from: {extractedFile}");
         }
 
         private bool HandleRolePlayVoiceFile(string filePath, string[] files)
@@ -178,75 +204,41 @@ namespace PenumbraModForwarder.Common.Services
 
         private void DeleteArchiveIfNeeded(string filePath)
         {
-            if (_configurationService.GetConfigValue(option => option.AutoDelete))
+            if (!_configurationService.GetConfigValue(option => option.AutoDelete)) return;
+            _logger.LogDebug("Deleting archive: {0}", filePath);
+
+            var maxWaitTime = 10000;  
+            var waitInterval = 500;   
+            var stopWatch = System.Diagnostics.Stopwatch.StartNew();
+
+            while (stopWatch.ElapsedMilliseconds < maxWaitTime)
             {
-                _logger.LogDebug("Deleting archive: {0}", filePath);
-                File.Delete(filePath);
+                try
+                {
+                    using var stream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                    stream.Close();
+                    File.Delete(filePath);
+                    _logger.LogInformation("Successfully deleted archive: {0}", filePath);
+                    return;
+                }
+                catch (IOException)
+                {
+                    _logger.LogDebug("File is still locked. Waiting...");
+                    Task.Delay(waitInterval).Wait();
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    _logger.LogError("Permission error when trying to delete archive: {0}. Error: {1}", filePath, ex.Message);
+                    return;
+                }
             }
+
+            _logger.LogError("Failed to delete archive after waiting {0} seconds: {1}", maxWaitTime / 1000, filePath);
         }
 
         private bool ContainsRolePlayVoiceFile(string[] files)
         {
             return files.Any(file => file.EndsWith(".rpvsp", StringComparison.OrdinalIgnoreCase));
-        }
-
-        private bool ExtractAndInstallFile(string archivePath, string filePath)
-        {
-            var extractedFile = ExtractFileFromArchive(archivePath, filePath);
-            if (string.IsNullOrEmpty(extractedFile))
-            {
-                return false;
-            }
-            _penumbraInstallerService.InstallMod(extractedFile);
-            return true;
-        }
-
-        private string ExtractFileFromArchive(string archivePath, string filePath)
-        {
-            using var archive = OpenArchive(archivePath);
-            if (archive == null) throw new InvalidOperationException("Archive could not be opened.");
-
-            var entry = archive.Entries.FirstOrDefault(e => e.Key == filePath);
-            if (entry == null) throw new InvalidOperationException("File not found in archive.");
-
-            _logger.LogDebug("Extracting file: {0}", entry.Key);
-
-            var sanitizedFilePath = SanitizePath(entry.Key);
-            var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
-
-            var directoryPath = Path.GetDirectoryName(destinationPath);
-            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
-            {
-                _logger.LogDebug("Creating directory: {0}", directoryPath);
-                Directory.CreateDirectory(directoryPath);
-            }
-
-            var totalSize = entry.Size;
-            var fileName = Path.GetFileName(sanitizedFilePath);
-            try
-            {
-                using (var destinationStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
-                {
-                    using (var progressStream = new ProgressStream(destinationStream, totalSize, new Progress<double>(percentage =>
-                           {
-                               _progressWindowService.UpdateProgress(fileName, "Extracting", (int)percentage);
-                           })))
-                    {
-                        entry.WriteTo(progressStream);
-                    }
-                }
-
-                _logger.LogInformation($"File: {sanitizedFilePath} extracted to: {_extractionPath}");
-                _progressWindowService.CloseProgressWindow();
-
-                return destinationPath;
-            }
-            catch (CryptographicException ex)
-            {
-                _logger.LogError(ex, "Failed to extract file: {0}", entry.Key);
-                _errorWindowService.ShowError($"{fileName} is encrypted.\nPenumbra Mod Forwarder doesn't support password protected.\nPlease close this window and extract the file manually.");
-                return null;
-            }
         }
 
         private string SanitizePath(string path)
@@ -262,62 +254,24 @@ namespace PenumbraModForwarder.Common.Services
                 throw new ArgumentNullException(nameof(filePath));
             }
 
-            var allowedExtensions = new[] {".pmp", ".ttmp2", ".ttmp", ".rpvsp"};
+            var allowedExtensions = new[] { ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
             var fileEntries = new HashSet<string>();
 
             _logger.LogDebug("Opening archive: {0}", filePath);
 
-            using (var archive = OpenArchive(filePath))
+            using (var archiveFile = new ArchiveFile(filePath))
             {
-                if (archive == null)
+                foreach (var entry in archiveFile.Entries)
                 {
-                    _errorWindowService.ShowError("Failed to open archive.");
-                    throw new InvalidOperationException("Archive could not be opened.");
-                }
-
-                foreach (var entry in archive.Entries.Where(e => !e.IsDirectory))
-                {
-                    var extension = Path.GetExtension(entry.Key).ToLower();
+                    var extension = Path.GetExtension(entry.FileName).ToLower();
                     if (allowedExtensions.Contains(extension))
                     {
-                        fileEntries.Add(entry.Key);
+                        fileEntries.Add(entry.FileName);
                     }
                 }
             }
 
             return fileEntries.ToArray();
-        }
-
-        private IArchive OpenArchive(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-            {
-                _logger.LogError("File path is null or empty.");
-                _errorWindowService.ShowError("File path is null or empty.");
-                throw new ArgumentNullException(nameof(filePath));
-            }
-
-            _logger.LogDebug($"Attempting to open archive: {filePath}");
-
-            try
-            {
-                var extension = Path.GetExtension(filePath).ToLower();
-                _logger.LogInformation($"Archive extension: {extension}");
-
-                return extension switch
-                {
-                    ".7z" => SevenZipArchive.Open(filePath),
-                    ".zip" => ZipArchive.Open(filePath),
-                    ".rar" => RarArchive.Open(filePath),
-                    _ => throw new NotSupportedException($"The file format {extension} is not supported.")
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Failed to open archive: {filePath}");
-                _errorWindowService.ShowError($"Failed to open archive: {filePath}");
-                throw;
-            }
         }
     }
 }
