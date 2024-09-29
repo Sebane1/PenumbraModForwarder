@@ -14,8 +14,8 @@ public partial class FileSelectViewModel : ReactiveObject
 
     private string[] _selectedFiles = Array.Empty<string>();
     private string _archiveFileName = string.Empty;
-    private bool _showAllSelectedVisible;
-    private bool _showAllSelectedEnabled;
+    private bool _showAllSelectedVisible = true;
+    private bool _showAllSelectedEnabled = true;
     private bool _showDtTextVisible;
 
     public bool ShowDtTextVisible
@@ -108,17 +108,14 @@ public partial class FileSelectViewModel : ReactiveObject
                 ShowDtTextVisible = true;
             }
 
-            var fileItem = new FileItem
+			var fileItem = new FileItem
             {
                 FullPath = file,
                 FileName = displayName
             };
 
             Files.Add(fileItem);
-        }
-
-        ShowAllSelectedVisible = Files.Count > 3;
-        ShowAllSelectedEnabled = Files.Count > 3;
+        }  
     }
 
     private void SelectAll()
