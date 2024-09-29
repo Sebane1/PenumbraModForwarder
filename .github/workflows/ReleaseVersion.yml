@@ -149,30 +149,35 @@ jobs:
               if: ${{ steps.set_vars.outputs.should_release == 'true' }}
               id: prepare_assets
               shell: bash
+              env:
+                  REPO_OWNER: ${{ github.repository_owner }}
+                  REPO_NAME: ${{ github.event.repository.name }}
+                  TAG_NAME: ${{ steps.set_vars.outputs.tag_name }}
               run: |
                   BODY="## Release Notes
-    
-                  ${{ env.commit_message }}
-
-                  ## Hashes:
-                  - **SHA256 Hash**: \`${{ env.sha256 }}\`
-                  - **MD5 Hash**: \`${{ env.md5 }}\`
-
-                  ## Download Link
-                  [Download the zip](./PenumbraModForwarder.zip)
+            
+                    ${{ steps.get_commit_message.outputs.commit_message }}
+                
+                ## Hashes:
+                - **SHA256 Hash**: \`${{ env.sha256 }}\`
+                - **MD5 Hash**: \`${{ env.md5 }}\`
+                
+                ## Download Link
+                  [Download the zip](https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG_NAME}/PenumbraModForwarder.zip)
                     "
                 
-                          FILES="./publish/PenumbraModForwarder.zip
+                    FILES="./publish/PenumbraModForwarder.zip
                     ./publish/PenumbraModForwarder.zip.sha256
                     ./publish/PenumbraModForwarder.zip.md5"
-                    
+                
                     echo "body<<EOF" >> "$GITHUB_OUTPUT"
                     echo "$BODY" >> "$GITHUB_OUTPUT"
                     echo "EOF" >> "$GITHUB_OUTPUT"
-                    
+                
                     echo "files<<EOF" >> "$GITHUB_OUTPUT"
                     echo "$FILES" >> "$GITHUB_OUTPUT"
                     echo "EOF" >> "$GITHUB_OUTPUT"
+
 
             - name: Create Release
               if: ${{ steps.set_vars.outputs.should_release == 'true' }}
