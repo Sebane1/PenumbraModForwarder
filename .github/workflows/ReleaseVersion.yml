@@ -11,6 +11,10 @@ on:
                 description: "Tag Name"
                 required: true
                 default: "vX.X.X.X"
+            createArtifact:
+                description: "Create Artifact"
+                required: false
+                default: "false"
 
 permissions:
     contents: write
@@ -29,7 +33,7 @@ jobs:
                   fi
     
     release:
-        if: (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')) || (github.event_name == 'workflow_dispatch')
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
         runs-on: windows-latest
         needs: validate-tag
         environment: Release
@@ -39,32 +43,47 @@ jobs:
               with:
                   submodules: 'true'
 
-            - name: Set Tag Name
-              id: set_tag
+            - name: Set Release Variables
+              id: set_vars
               run: |
+                  # Determine Tag Name
                   if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-                    echo "tag_name=${{ github.event.inputs.tagName }}" >> $GITHUB_OUTPUT
+                    TAG_NAME="${{ github.event.inputs.tagName }}"
                   elif [ "${{ github.event_name }}" == "pull_request" ]; then
-                    echo "tag_name=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+                    TAG_NAME="${{ github.event.pull_request.head.ref }}"
                   else
-                    echo "tag_name=unknown" >> $GITHUB_OUTPUT
+                    echo "Unsupported event type: ${{ github.event_name }}"
+                    exit 1
+                  fi
+                  
+                  # Validate Tag Name
+                  if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                    echo "Branch name does not match version pattern. Skipping release."
+                    echo "should_release=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "should_release=true" >> $GITHUB_OUTPUT
+                    echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
                   fi
 
             - name: Build and Publish
+              if: steps.set_vars.outputs.should_release == 'true'
               uses: ./.github/templates/ReleaseAndPublish
 
             - name: Generate SHA256 and MD5 hashes for .zip
+              if: steps.set_vars.outputs.should_release == 'true'
               run: |
                   sha256sum ./publish/PenumbraModForwarder.zip > ./publish/PenumbraModForwarder.zip.sha256
                   md5sum ./publish/PenumbraModForwarder.zip > ./publish/PenumbraModForwarder.zip.md5
 
             - name: Read SHA256 and MD5 hashes
+              if: steps.set_vars.outputs.should_release == 'true'
               id: read_hashes
               run: |
-                  echo "sha256=$(cat ./publish/PenumbraModForwarder.zip.sha256)" >> $GITHUB_ENV
-                  echo "md5=$(cat ./publish/PenumbraModForwarder.zip.md5)" >> $GITHUB_ENV
+                  echo "sha256=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.sha256)" >> $GITHUB_ENV
+                  echo "md5=$(cut -d ' ' -f1 ./publish/PenumbraModForwarder.zip.md5)" >> $GITHUB_ENV
 
             - name: Get latest commit message from main branch
+              if: steps.set_vars.outputs.should_release == 'true'
               id: get_commit_message
               run: |
                   git fetch origin main
@@ -72,30 +91,44 @@ jobs:
                   echo "commit_message=$latest_commit" >> $GITHUB_ENV
 
             - name: Upload Artifact
+              if: steps.set_vars.outputs.should_release == 'true' && ((github.event_name == 'workflow_dispatch' && github.event.inputs.createArtifact == 'true') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'create-artifact')))
               uses: actions/upload-artifact@v4
               with:
                   path: ./publish/PenumbraModForwarder.zip
                   retention-days: 3
                   name: "artifact"
 
+            - name: Prepare Release Assets
+              if: steps.set_vars.outputs.should_release == 'true'
+              id: prepare_assets
+              run: |
+                  BODY="## Release Notes
+                  
+                  ${{ env.commit_message }}
+                  
+                  ## Hashes:
+                  - **SHA256 Hash**: \`${{ env.sha256 }}\`
+                  - **MD5 Hash**: \`${{ env.md5 }}\`
+                  
+                  ## Download Link
+                  [Download the zip](./PenumbraModForwarder.zip)
+                  "
+                  
+                  FILES="./publish/PenumbraModForwarder.zip
+                  ./publish/PenumbraModForwarder.zip.sha256
+                  ./publish/PenumbraModForwarder.zip.md5"
+                  
+                  echo "body<<EOF" >> $GITHUB_OUTPUT
+                  echo "$BODY" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+                  echo "files=$FILES" >> $GITHUB_OUTPUT
+
             - name: Create Release
+              if: steps.set_vars.outputs.should_release == 'true'
               uses: softprops/action-gh-release@v2.0.8
               with:
-                  tag_name: ${{ steps.set_tag.outputs.tag_name }}
-                  body: |
-                      ## Release Notes
-                      
-                      ${{ env.commit_message }}
-                      
-                      ## Hashes:
-                      - **SHA256 Hash**: `${{ env.sha256 }}`
-                      - **MD5 Hash**: `${{ env.md5 }}`
-                      
-                      ## Download Link
-                      [Download the zip](./PenumbraModForwarder.zip)
-                  files: |
-                      ./publish/PenumbraModForwarder.zip
-                      ./publish/PenumbraModForwarder.zip.sha256
-                      ./publish/PenumbraModForwarder.zip.md5
+                  tag_name: ${{ steps.set_vars.outputs.tag_name }}
+                  body: ${{ steps.prepare_assets.outputs.body }}
+                  files: ${{ steps.prepare_assets.outputs.files }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
