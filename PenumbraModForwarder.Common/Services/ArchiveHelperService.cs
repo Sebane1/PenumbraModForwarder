@@ -186,7 +186,8 @@ namespace PenumbraModForwarder.Common.Services
             var currentFileName = Path.GetFileName(filePath);
             _logger.LogDebug($"Starting extraction of {selectedFiles.Length} files from {currentFileName}");
 
-            using var archiveFile = new ArchiveFile(filePath);
+            await using var archiveStream = File.OpenRead(filePath);
+            using var archiveFile = new ArchiveFile(archiveStream);
             var extractedFiles = new List<string>();
 
             archiveFile.ExtractProgress += (sender, progress) =>
@@ -200,7 +201,7 @@ namespace PenumbraModForwarder.Common.Services
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-                
+        
                 archiveFile.Extract(entry =>
                 {
                     if (!selectedFiles.Contains(entry?.FileName)) return null;
@@ -218,7 +219,6 @@ namespace PenumbraModForwarder.Common.Services
                     return destinationPath;
                 }, cts.Token);
 
-                // Process extracted files only after successful extraction
                 foreach (var extractedFile in extractedFiles)
                 {
                     await Task.Run(() => InstallMod(extractedFile));
@@ -231,9 +231,12 @@ namespace PenumbraModForwarder.Common.Services
             }
             finally
             {
+                archiveStream.Close();
                 DeleteArchiveIfNeeded(filePath);
             }
         }
+
+
         
         private void CleanupExtractionDirectory()
         {
@@ -326,8 +329,9 @@ namespace PenumbraModForwarder.Common.Services
 
             _logger.LogDebug("Opening archive: {0}", filePath);
 
-            using (var archiveFile = new ArchiveFile(filePath))
+            using (var archiveStream = File.OpenRead(filePath))
             {
+                var archiveFile = new ArchiveFile(archiveStream);
                 foreach (var entry in archiveFile.Entries)
                 {
                     var extension = Path.GetExtension(entry.FileName).ToLower();
@@ -340,5 +344,6 @@ namespace PenumbraModForwarder.Common.Services
 
             return fileEntries.ToArray();
         }
+
     }
 }
