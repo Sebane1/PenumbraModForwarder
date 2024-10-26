@@ -102,6 +102,9 @@ public class PenumbraInstallerService : IPenumbraInstallerService
                 }
 
                 process.WaitForExit();
+                
+                // The process doesn't exit correctly because of reasons, so let's have a 1-second wait
+                Thread.Sleep(1);
 
                 if (process.ExitCode != 0 || !File.Exists(dtPath))
                 {

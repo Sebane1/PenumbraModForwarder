@@ -48,20 +48,47 @@ namespace PenumbraModForwarder.Common.Services
 
         public async Task QueueExtractionAsync(string filePath)
         {
-            var operation = new ExtractionOperation(filePath);
-            _operationQueue.Enqueue(operation);
-            await ProcessQueueAsync();
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    _logger.LogError($"File does not exist: {filePath}");
+                    _errorWindowService.ShowError($"File not found: {filePath}");
+                    return;
+                }
+
+                var operation = new ExtractionOperation(filePath);
+                _operationQueue.Enqueue(operation);
+                await ProcessQueueAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error queueing extraction for {filePath}");
+                _errorWindowService.ShowError($"Error processing file: {ex.Message}");
+            }
         }
 
         private async Task ProcessQueueAsync()
         {
-            await _semaphore.WaitAsync();
+            if (!await _semaphore.WaitAsync(TimeSpan.FromSeconds(1)))
+            {
+                _logger.LogInformation("Another extraction is in progress. Skipping.");
+                return;
+            }
 
             try
             {
                 while (_operationQueue.TryDequeue(out var operation))
                 {
-                    await ProcessExtractionAsync(operation);
+                    try
+                    {
+                        await ProcessExtractionAsync(operation);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing extraction for {operation.FilePath}");
+                        _errorWindowService.ShowError($"Error extracting file: {ex.Message}");
+                    }
                 }
             }
             finally
@@ -72,30 +99,50 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ProcessExtractionAsync(ExtractionOperation operation)
         {
-            var files = GetFilesInArchive(operation.FilePath);
+            string[] files;
+            try
+            {
+                files = GetFilesInArchive(operation.FilePath);
+                if (files.Length == 0)
+                {
+                    _logger.LogWarning($"No valid files found in archive: {operation.FilePath}");
+                    _errorWindowService.ShowError("No valid mod files found in archive.");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error reading archive: {operation.FilePath}");
+                _errorWindowService.ShowError($"Error reading archive: {ex.Message}");
+                return;
+            }
 
             if (HandleRolePlayVoiceFile(operation.FilePath, files))
             {
                 return;
             }
 
-            var selectedFiles = GetSelectedFiles(files, operation.FilePath);
+            var selectedFiles = await Task.Run(() => GetSelectedFiles(files, operation.FilePath));
             if (selectedFiles == null || selectedFiles.Length == 0)
             {
                 _logger.LogWarning("No files selected. Aborting extraction.");
                 return;
             }
 
-            _progressWindowService.ShowProgressWindow();
-
             try
             {
-                // Use asynchronous I/O with batching to process file extraction
+                _progressWindowService.ShowProgressWindow();
                 await Task.Run(() => ExtractFiles(operation.FilePath, selectedFiles));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error during extraction: {operation.FilePath}");
+                _errorWindowService.ShowError($"Extraction failed: {ex.Message}");
             }
             finally
             {
                 _progressWindowService.CloseProgressWindow();
+                CleanupExtractionDirectory();
             }
         }
 
@@ -136,52 +183,72 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ExtractFiles(string filePath, string[] selectedFiles)
         {
-            using var archiveFile = new ArchiveFile(filePath);
             var currentFileName = Path.GetFileName(filePath);
-            _logger.LogDebug($"Extracting {selectedFiles.Length} files.");
+            _logger.LogDebug($"Starting extraction of {selectedFiles.Length} files from {currentFileName}");
 
-            // Subscribe to the progress event to update the progress bar
+            using var archiveFile = new ArchiveFile(filePath);
+            var extractedFiles = new List<string>();
+
             archiveFile.ExtractProgress += (sender, progress) =>
             {
-                _logger.LogDebug($"Progress: {progress.PercentProgress:0.00}%");
-                _progressWindowService.UpdateProgress(currentFileName, $"Extracting {progress.PercentProgress:00}%", (int)progress.PercentProgress);
+                _progressWindowService.UpdateProgress(
+                    currentFileName,
+                    $"Extracting {progress.PercentProgress:0.00}%",
+                    (int)progress.PercentProgress);
             };
-
-            var token = new CancellationToken();
 
             try
             {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                
                 archiveFile.Extract(entry =>
                 {
                     if (!selectedFiles.Contains(entry?.FileName)) return null;
 
-                    var sanitizedFilePath = SanitizePath(entry?.FileName);
+                    var sanitizedFilePath = SanitizePath(entry.FileName);
                     var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
                     var directoryPath = Path.GetDirectoryName(destinationPath);
 
-                    if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                    if (!string.IsNullOrEmpty(directoryPath))
                     {
                         Directory.CreateDirectory(directoryPath);
                     }
 
+                    extractedFiles.Add(destinationPath);
                     return destinationPath;
-                }, token);
+                }, cts.Token);
 
-                // Process the extracted files
-                foreach (var entry in selectedFiles)
+                // Process extracted files only after successful extraction
+                foreach (var extractedFile in extractedFiles)
                 {
-                    var destinationPath = Path.Combine(_extractionPath, entry);
-                    InstallMod(destinationPath);
+                    await Task.Run(() => InstallMod(extractedFile));
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Extraction timed out");
+                _errorWindowService.ShowError("Extraction timed out after 5 minutes");
             }
             finally
             {
-                // Explicitly dispose of the archive file to release any locks on the archive
-                archiveFile.Dispose();
+                DeleteArchiveIfNeeded(filePath);
             }
-
-            // Optionally delete the archive after extraction if configured
-            DeleteArchiveIfNeeded(filePath);
+        }
+        
+        private void CleanupExtractionDirectory()
+        {
+            try
+            {
+                if (Directory.Exists(_extractionPath))
+                {
+                    Directory.Delete(_extractionPath, true);
+                    Directory.CreateDirectory(_extractionPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up extraction directory");
+            }
         }
 
         
