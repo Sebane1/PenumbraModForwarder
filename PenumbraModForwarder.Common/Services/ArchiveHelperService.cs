@@ -142,7 +142,6 @@ namespace PenumbraModForwarder.Common.Services
             finally
             {
                 _progressWindowService.CloseProgressWindow();
-                CleanupExtractionDirectory();
             }
         }
 
@@ -235,25 +234,6 @@ namespace PenumbraModForwarder.Common.Services
                 DeleteArchiveIfNeeded(filePath);
             }
         }
-
-
-        
-        private void CleanupExtractionDirectory()
-        {
-            try
-            {
-                if (Directory.Exists(_extractionPath))
-                {
-                    Directory.Delete(_extractionPath, true);
-                    Directory.CreateDirectory(_extractionPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cleaning up extraction directory");
-            }
-        }
-
         
         private void InstallMod(string extractedFile)
         {
