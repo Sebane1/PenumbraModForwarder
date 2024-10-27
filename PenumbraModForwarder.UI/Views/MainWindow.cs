@@ -1,10 +1,12 @@
-﻿using System.Reactive.Disposables;
+﻿using System.ComponentModel;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace PenumbraModForwarder.UI.Views;
 
@@ -15,7 +17,7 @@ public partial class MainWindow : Form, IViewFor<MainWindowViewModel>
     private readonly IResourceManager _resourceManager;
     private readonly IConfigurationService _configurationService;
     private bool _isExiting = false;
-    public MainWindowViewModel ViewModel { get; set; }
+    [DefaultValue(null)] public MainWindowViewModel ViewModel { get; set; }
     
     object IViewFor.ViewModel
     {

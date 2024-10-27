@@ -1,12 +1,14 @@
-﻿using System.Reactive.Disposables;
+﻿using System.ComponentModel;
+using System.Reactive.Disposables;
 using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace PenumbraModForwarder.UI.Views;
 
 public partial class ErrorWindow : Form, IViewFor<ErrorWindowViewModel>
 {
-    public ErrorWindowViewModel ViewModel { get; set; }
+    [DefaultValue(null)] public ErrorWindowViewModel ViewModel { get; set; }
     
     object IViewFor.ViewModel
     {

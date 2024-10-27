@@ -163,6 +163,8 @@ public partial class FileSelectViewModel : ReactiveObject
         }
     }
 
-    [GeneratedRegex(@"\[?(?i)pre[\s\-]?dt\]?")]
-    private static partial Regex PreDtRegex();
+    private static Regex PreDtRegex()
+    {
+        return new Regex(@"\[?(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
+    }
 }

@@ -1,5 +1,5 @@
 name: "Build and Publish"
-description: "Build and publish on .NET 7"
+description: "Build and publish on .NET 9"
 
 runs:
     using: "composite"
@@ -10,7 +10,7 @@ runs:
         - name: Setup .NET
           uses: actions/setup-dotnet@v1
           with:
-              dotnet-version: '8.x.x'
+              dotnet-version: '9.x.x'
               
         - name: Restore Dependencies
           run: dotnet restore
