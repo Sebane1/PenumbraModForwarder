@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
@@ -66,7 +67,6 @@ public class SystemTrayManager : ISystemTrayManager
 
         contextMenu.Items.Add("Check For Updates", null, (sender, args) =>
         {
-            _logger.LogInformation("Checking for updates...");
             _updateService.CheckForUpdates();
         });
         
@@ -110,6 +110,13 @@ public class SystemTrayManager : ISystemTrayManager
     {
         var debugging = new ToolStripMenuItem("Debugging");
         debugging.DropDownItems.Add("Open Log Folder", null, (sender, args) => _processHelperService.OpenLogFolder());
+        debugging.DropDownItems.Add("Cleanup Temp Files", null, (sender, args) =>
+        {
+            // Save us from having to deal with circular dependencies 
+            var serviceProvider = Extensions.ServiceExtensions.Configuration();
+            var fileHandlerService = serviceProvider.GetRequiredService<IFileHandlerService>();
+            fileHandlerService.CleanUpTempFiles();
+        });
         return debugging;
     }
 
