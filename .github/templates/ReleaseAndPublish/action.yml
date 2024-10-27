@@ -17,7 +17,7 @@ runs:
           shell: bash
           
         - name: Publish
-          run: dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained true -r win-x64 -o ./publish -f net8.0-windows
+          run: dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained true -r win-x64 -o ./publish -f net9.0-windows
           shell: bash
 
         - name: Archive
