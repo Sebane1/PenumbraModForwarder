@@ -84,19 +84,6 @@ namespace PenumbraModForwarder.Common.Services
             _configurationService.ConfigChanged -= OnConfigChange;
         }
 
-        public void ClearQueues()
-        {
-            lock (_lock)
-            {
-                _logger.LogInformation("Clearing all queues and tracked files.");
-                while (_changeQueue.TryDequeue(out _)) { }
-                while (_retryQueue.TryDequeue(out _)) { }
-                _trackedFiles.Clear();
-                _processedFiles.Clear();
-                _processingFiles.Clear();
-            }
-        }
-
         private Timer CreateDebounceTimer()
         {
             var timer = new Timer(_debounceInterval.TotalMilliseconds) { AutoReset = false };
@@ -114,7 +101,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private Timer CreateClearProcessedFilesTimer()
         {
-            var timer = new Timer(TimeSpan.FromMinutes(5).TotalMilliseconds) { AutoReset = true };
+            var timer = new Timer(TimeSpan.FromSeconds(30).TotalMilliseconds) { AutoReset = true };
             timer.Elapsed += (sender, args) => TryClearProcessedFiles();
             timer.Start();
             return timer;
@@ -514,10 +501,11 @@ namespace PenumbraModForwarder.Common.Services
             {
                 if (_ongoingProcessingCount == 0)
                 {
-                    _logger.LogInformation("Clearing processed files collection and tracked files.");
                     _processedFiles.Clear();
                     _trackedFiles.Clear();
-                    _fileHandlerService.CleanUpTempFiles();
+                    // Don't want to delete files for now
+                    // _fileHandlerService.CleanUpTempFiles();
+                    _logger.LogInformation("Clearing processed files collection and tracked files.");
                 }
             }
         }

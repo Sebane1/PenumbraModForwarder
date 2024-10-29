@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using SevenZipExtractor;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace PenumbraModForwarder.Common.Services
 {

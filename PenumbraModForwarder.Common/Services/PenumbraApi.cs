@@ -48,7 +48,7 @@ namespace PenumbraModForwarder.Common.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to install mod at {ModPath}", modPath);
-                throw; // Re-throw to allow higher-level handlers to process it
+                // throw; // Re-throw to allow higher-level handlers to process it
             }
 
             return false;
@@ -118,7 +118,7 @@ namespace PenumbraModForwarder.Common.Services
             if (!_warningShown)
             {
                 _logger.LogWarning(ex, "Error communicating with Penumbra. Please ensure the HTTP API is enabled in Penumbra under 'Settings -> Advanced'.");
-                _errorWindowService.ShowError(ex.ToString());
+                // _errorWindowService.ShowError(ex.ToString());
                 _warningShown = true;
             }
         }
