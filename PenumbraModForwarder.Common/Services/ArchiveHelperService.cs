@@ -183,22 +183,32 @@ namespace PenumbraModForwarder.Common.Services
             var currentFileName = Path.GetFileName(filePath);
             _logger.LogDebug($"Starting extraction of {selectedFiles.Length} files from {currentFileName}");
 
-            await using var archiveStream = File.OpenRead(filePath);
-            using var archiveFile = new ArchiveFile(archiveStream);
-            var extractedFiles = new List<string>();
-
-            archiveFile.ExtractProgress += (sender, progress) =>
-            {
-                _progressWindowService.UpdateProgress(
-                    currentFileName,
-                    $"Extracting {progress.PercentProgress:0.00}%",
-                    (int)progress.PercentProgress);
-            };
+            ArchiveFile archiveFile = null;
+            FileStream archiveStream = null;
+            var archiveOpened = false;
 
             try
             {
+                // Open the stream first
+                archiveStream = File.OpenRead(filePath);
+                
+                // Create and store the archive file instance
+                archiveFile = new ArchiveFile(archiveStream);
+                archiveOpened = true;
+
+                var extractedFiles = new List<string>();
+
+                archiveFile.ExtractProgress += (sender, progress) =>
+                {
+                    _progressWindowService.UpdateProgress(
+                        currentFileName,
+                        $"Extracting {progress.PercentProgress:0.00}%",
+                        (int)progress.PercentProgress);
+                };
+
                 using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        
+            
+                // Extract files
                 archiveFile.Extract(entry =>
                 {
                     if (!selectedFiles.Contains(entry?.FileName)) return null;
@@ -216,6 +226,7 @@ namespace PenumbraModForwarder.Common.Services
                     return destinationPath;
                 }, cts.Token);
 
+                // Process extracted files
                 foreach (var extractedFile in extractedFiles)
                 {
                     await Task.Run(() => InstallMod(extractedFile));
@@ -226,10 +237,54 @@ namespace PenumbraModForwarder.Common.Services
                 _logger.LogError("Extraction timed out");
                 _errorWindowService.ShowError("Extraction timed out after 5 minutes");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during extraction");
+                _errorWindowService.ShowError($"Extraction error: {ex.Message}");
+            }
             finally
             {
-                archiveStream.Close();
-                DeleteArchiveIfNeeded(filePath);
+                if (archiveFile != null && archiveOpened)
+                {
+                    try
+                    {
+                        // Detach event handler first to prevent potential COM callback issues
+                        archiveFile.ExtractProgress -= (sender, progress) => { };
+                        
+                        // Explicitly dispose archive file
+                        archiveFile.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive file");
+                    }
+                }
+
+                if (archiveStream != null)
+                {
+                    try
+                    {
+                        archiveStream.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive stream");
+                    }
+                }
+
+                // Only try to delete the file after all resources are properly disposed
+                if (archiveOpened)
+                {
+                    try
+                    {
+                        await Task.Delay(100);
+                        DeleteArchiveIfNeeded(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during archive cleanup");
+                    }
+                }
             }
         }
         
@@ -304,24 +359,63 @@ namespace PenumbraModForwarder.Common.Services
 
             var allowedExtensions = new[] { ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
             var fileEntries = new HashSet<string>();
+            ArchiveFile archiveFile = null;
+            FileStream archiveStream = null;
+            var archiveOpened = false;
 
-            _logger.LogDebug("Opening archive: {0}", filePath);
-
-            using (var archiveStream = File.OpenRead(filePath))
+            try
             {
-                var archiveFile = new ArchiveFile(archiveStream);
+                _logger.LogDebug("Opening archive: {0}", filePath);
+        
+                archiveStream = File.OpenRead(filePath);
+                archiveFile = new ArchiveFile(archiveStream);
+                archiveOpened = true;
+        
                 foreach (var entry in archiveFile.Entries)
                 {
-                    var extension = Path.GetExtension(entry.FileName).ToLower();
-                    if (allowedExtensions.Contains(extension))
+                    if (entry != null)
                     {
-                        fileEntries.Add(entry.FileName);
+                        var extension = Path.GetExtension(entry.FileName).ToLower();
+                        if (allowedExtensions.Contains(extension))
+                        {
+                            fileEntries.Add(entry.FileName);
+                        }
+                    }
+                }
+
+                return fileEntries.ToArray();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading archive contents");
+                throw;
+            }
+            finally
+            {
+                if (archiveFile != null && archiveOpened)
+                {
+                    try
+                    {
+                        archiveFile.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive file");
+                    }
+                }
+
+                if (archiveStream != null)
+                {
+                    try
+                    {
+                        archiveStream.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive stream");
                     }
                 }
             }
-
-            return fileEntries.ToArray();
         }
-
     }
 }
