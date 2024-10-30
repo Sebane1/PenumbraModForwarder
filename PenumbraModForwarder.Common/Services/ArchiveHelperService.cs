@@ -104,7 +104,6 @@ namespace PenumbraModForwarder.Common.Services
                 if (files.Length == 0)
                 {
                     _logger.LogWarning($"No valid files found in archive: {operation.FilePath}");
-                    _errorWindowService.ShowError("No valid mod files found in archive.");
                     return;
                 }
             }
