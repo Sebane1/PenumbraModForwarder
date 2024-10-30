@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Extensions;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 
@@ -36,6 +37,8 @@ public class ErrorWindowService : IErrorWindowService
         // We need to manually pass in _processHelperService here, as the constructor of ErrorWindowViewModel won't have access to it.
         using var errorWindow = new ErrorWindow(new ErrorWindowViewModel(_errorWindowLogger, _processHelperService));
         errorWindow.ViewModel.ErrorMessage = message;
+        // Flash the window - it shouldn't really get to this as the window is forced focus
+        errorWindow.FlashNotification();
         errorWindow.ShowDialog();
     }
 }

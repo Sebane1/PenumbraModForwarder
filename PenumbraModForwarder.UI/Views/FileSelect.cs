@@ -1,14 +1,16 @@
 ﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace PenumbraModForwarder.UI.Views
 {
     public partial class FileSelect : Form, IViewFor<FileSelectViewModel>
     {
-        public FileSelectViewModel ViewModel { get; set; }
+        [DefaultValue(null)] public FileSelectViewModel ViewModel { get; set; }
 
         object IViewFor.ViewModel
         {

@@ -1,5 +1,5 @@
 ﻿namespace PenumbraModForwarder.Common.Interfaces;
 
-public interface IFileWatcher 
+public interface IFileWatcher
 {
 }

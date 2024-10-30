@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using SevenZipExtractor;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace PenumbraModForwarder.Common.Services
 {
@@ -48,20 +46,47 @@ namespace PenumbraModForwarder.Common.Services
 
         public async Task QueueExtractionAsync(string filePath)
         {
-            var operation = new ExtractionOperation(filePath);
-            _operationQueue.Enqueue(operation);
-            await ProcessQueueAsync();
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    _logger.LogError($"File does not exist: {filePath}");
+                    _errorWindowService.ShowError($"File not found: {filePath}");
+                    return;
+                }
+
+                var operation = new ExtractionOperation(filePath);
+                _operationQueue.Enqueue(operation);
+                await ProcessQueueAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error queueing extraction for {filePath}");
+                _errorWindowService.ShowError($"Error processing file: {ex.Message}");
+            }
         }
 
         private async Task ProcessQueueAsync()
         {
-            await _semaphore.WaitAsync();
+            if (!await _semaphore.WaitAsync(TimeSpan.FromSeconds(1)))
+            {
+                _logger.LogInformation("Another extraction is in progress. Skipping.");
+                return;
+            }
 
             try
             {
                 while (_operationQueue.TryDequeue(out var operation))
                 {
-                    await ProcessExtractionAsync(operation);
+                    try
+                    {
+                        await ProcessExtractionAsync(operation);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing extraction for {operation.FilePath}");
+                        _errorWindowService.ShowError($"Error extracting file: {ex.Message}");
+                    }
                 }
             }
             finally
@@ -72,26 +97,44 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ProcessExtractionAsync(ExtractionOperation operation)
         {
-            var files = GetFilesInArchive(operation.FilePath);
+            string[] files;
+            try
+            {
+                files = GetFilesInArchive(operation.FilePath);
+                if (files.Length == 0)
+                {
+                    _logger.LogWarning($"No valid files found in archive: {operation.FilePath}");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error reading archive: {operation.FilePath}");
+                _errorWindowService.ShowError($"Error reading archive: {ex.Message}");
+                return;
+            }
 
             if (HandleRolePlayVoiceFile(operation.FilePath, files))
             {
                 return;
             }
 
-            var selectedFiles = GetSelectedFiles(files, operation.FilePath);
+            var selectedFiles = await Task.Run(() => GetSelectedFiles(files, operation.FilePath));
             if (selectedFiles == null || selectedFiles.Length == 0)
             {
                 _logger.LogWarning("No files selected. Aborting extraction.");
                 return;
             }
 
-            _progressWindowService.ShowProgressWindow();
-
             try
             {
-                // Use asynchronous I/O with batching to process file extraction
+                _progressWindowService.ShowProgressWindow();
                 await Task.Run(() => ExtractFiles(operation.FilePath, selectedFiles));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error during extraction: {operation.FilePath}");
+                _errorWindowService.ShowError($"Extraction failed: {ex.Message}");
             }
             finally
             {
@@ -136,54 +179,113 @@ namespace PenumbraModForwarder.Common.Services
 
         private async Task ExtractFiles(string filePath, string[] selectedFiles)
         {
-            using var archiveFile = new ArchiveFile(filePath);
             var currentFileName = Path.GetFileName(filePath);
-            _logger.LogDebug($"Extracting {selectedFiles.Length} files.");
+            _logger.LogDebug($"Starting extraction of {selectedFiles.Length} files from {currentFileName}");
 
-            // Subscribe to the progress event to update the progress bar
-            archiveFile.ExtractProgress += (sender, progress) =>
-            {
-                _logger.LogDebug($"Progress: {progress.PercentProgress:0.00}%");
-                _progressWindowService.UpdateProgress(currentFileName, $"Extracting {progress.PercentProgress:00}%", (int)progress.PercentProgress);
-            };
-
-            var token = new CancellationToken();
+            ArchiveFile archiveFile = null;
+            FileStream archiveStream = null;
+            var archiveOpened = false;
 
             try
             {
+                // Open the stream first
+                archiveStream = File.OpenRead(filePath);
+                
+                // Create and store the archive file instance
+                archiveFile = new ArchiveFile(archiveStream);
+                archiveOpened = true;
+
+                var extractedFiles = new List<string>();
+
+                archiveFile.ExtractProgress += (sender, progress) =>
+                {
+                    _progressWindowService.UpdateProgress(
+                        currentFileName,
+                        $"Extracting {progress.PercentProgress:0.00}%",
+                        (int)progress.PercentProgress);
+                };
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            
+                // Extract files
                 archiveFile.Extract(entry =>
                 {
                     if (!selectedFiles.Contains(entry?.FileName)) return null;
 
-                    var sanitizedFilePath = SanitizePath(entry?.FileName);
+                    var sanitizedFilePath = SanitizePath(entry.FileName);
                     var destinationPath = Path.Combine(_extractionPath, sanitizedFilePath);
                     var directoryPath = Path.GetDirectoryName(destinationPath);
 
-                    if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+                    if (!string.IsNullOrEmpty(directoryPath))
                     {
                         Directory.CreateDirectory(directoryPath);
                     }
 
+                    extractedFiles.Add(destinationPath);
                     return destinationPath;
-                }, token);
+                }, cts.Token);
 
-                // Process the extracted files
-                foreach (var entry in selectedFiles)
+                // Process extracted files
+                foreach (var extractedFile in extractedFiles)
                 {
-                    var destinationPath = Path.Combine(_extractionPath, entry);
-                    InstallMod(destinationPath);
+                    await Task.Run(() => InstallMod(extractedFile));
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Extraction timed out");
+                _errorWindowService.ShowError("Extraction timed out after 5 minutes");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during extraction");
+                _errorWindowService.ShowError($"Extraction error: {ex.Message}");
             }
             finally
             {
-                // Explicitly dispose of the archive file to release any locks on the archive
-                archiveFile.Dispose();
+                if (archiveFile != null && archiveOpened)
+                {
+                    try
+                    {
+                        // Detach event handler first to prevent potential COM callback issues
+                        archiveFile.ExtractProgress -= (sender, progress) => { };
+                        
+                        // Explicitly dispose archive file
+                        archiveFile.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive file");
+                    }
+                }
+
+                if (archiveStream != null)
+                {
+                    try
+                    {
+                        archiveStream.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive stream");
+                    }
+                }
+
+                // Only try to delete the file after all resources are properly disposed
+                if (archiveOpened)
+                {
+                    try
+                    {
+                        await Task.Delay(100);
+                        DeleteArchiveIfNeeded(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during archive cleanup");
+                    }
+                }
             }
-
-            // Optionally delete the archive after extraction if configured
-            DeleteArchiveIfNeeded(filePath);
         }
-
         
         private void InstallMod(string extractedFile)
         {
@@ -256,22 +358,63 @@ namespace PenumbraModForwarder.Common.Services
 
             var allowedExtensions = new[] { ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
             var fileEntries = new HashSet<string>();
+            ArchiveFile archiveFile = null;
+            FileStream archiveStream = null;
+            var archiveOpened = false;
 
-            _logger.LogDebug("Opening archive: {0}", filePath);
-
-            using (var archiveFile = new ArchiveFile(filePath))
+            try
             {
+                _logger.LogDebug("Opening archive: {0}", filePath);
+        
+                archiveStream = File.OpenRead(filePath);
+                archiveFile = new ArchiveFile(archiveStream);
+                archiveOpened = true;
+        
                 foreach (var entry in archiveFile.Entries)
                 {
-                    var extension = Path.GetExtension(entry.FileName).ToLower();
-                    if (allowedExtensions.Contains(extension))
+                    if (entry != null)
                     {
-                        fileEntries.Add(entry.FileName);
+                        var extension = Path.GetExtension(entry.FileName).ToLower();
+                        if (allowedExtensions.Contains(extension))
+                        {
+                            fileEntries.Add(entry.FileName);
+                        }
+                    }
+                }
+
+                return fileEntries.ToArray();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading archive contents");
+                throw;
+            }
+            finally
+            {
+                if (archiveFile != null && archiveOpened)
+                {
+                    try
+                    {
+                        archiveFile.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive file");
+                    }
+                }
+
+                if (archiveStream != null)
+                {
+                    try
+                    {
+                        archiveStream.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error disposing archive stream");
                     }
                 }
             }
-
-            return fileEntries.ToArray();
         }
     }
 }

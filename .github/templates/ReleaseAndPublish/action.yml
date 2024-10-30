@@ -1,5 +1,5 @@
 name: "Build and Publish"
-description: "Build and publish on .NET 7"
+description: "Build and publish on .NET 9"
 
 runs:
     using: "composite"
@@ -8,16 +8,16 @@ runs:
           uses: actions/checkout@v3
         
         - name: Setup .NET
-          uses: actions/setup-dotnet@v1
+          uses: actions/setup-dotnet@v4
           with:
-              dotnet-version: '8.x.x'
+              dotnet-version: '9.x.x'
               
         - name: Restore Dependencies
           run: dotnet restore
           shell: bash
           
         - name: Publish
-          run: dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained true -r win-x64 -o ./publish -f net8.0-windows
+          run: dotnet publish PenumbraModForwarder.UI/ -c Release -p:PublishSingleFile=true --self-contained true -r win-x64 -o ./publish -f net9.0-windows
           shell: bash
 
         - name: Archive

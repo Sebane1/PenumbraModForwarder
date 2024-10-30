@@ -1,4 +1,5 @@
-﻿using System.Reactive.Disposables;
+﻿using System.ComponentModel;
+using System.Reactive.Disposables;
 using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
 
@@ -6,8 +7,8 @@ namespace PenumbraModForwarder.UI.Views
 {
     public partial class ProgressWindow : Form, IViewFor<ProgressWindowViewModel>
     {
-        public ProgressWindowViewModel ViewModel { get; set; }
-        
+        [DefaultValue(null)] public ProgressWindowViewModel ViewModel { get; set; }
+
         object IViewFor.ViewModel
         {
             get => ViewModel;

@@ -1,11 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using Timer = System.Timers.Timer;
 
 namespace PenumbraModForwarder.Common.Services
 {
-    public class FileWatcher : IFileWatcher
+    public class FileWatcher : IFileWatcher, IDisposable
     {
         private readonly ILogger<FileWatcher> _logger;
         private readonly IConfigurationService _configurationService;
@@ -21,12 +22,22 @@ namespace PenumbraModForwarder.Common.Services
         private readonly ConcurrentQueue<string> _retryQueue;
         private readonly ConcurrentDictionary<string, bool> _processingFiles;
         private readonly ConcurrentDictionary<string, DateTime> _trackedFiles;
+        private readonly ConcurrentDictionary<string, FileDownloadInfo> _downloadProgress;
         private readonly HashSet<string> _processedFiles;
-
-        private readonly TimeSpan _debounceInterval = TimeSpan.FromSeconds(1);
+        
+        private readonly TimeSpan _initialDelay = TimeSpan.FromMilliseconds(500);
+        private readonly TimeSpan _stabilityCheckInterval = TimeSpan.FromMilliseconds(500);
+        private readonly TimeSpan _archiveStabilityDelay = TimeSpan.FromSeconds(2);
+        private readonly TimeSpan _debounceInterval = TimeSpan.FromMilliseconds(500);
         private readonly TimeSpan _retryInterval = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan _eventCooldown = TimeSpan.FromSeconds(5);
-        private readonly string[] _allowedExtensions = { ".zip", ".rar", ".7z", ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
+        private readonly TimeSpan _eventCooldown = TimeSpan.FromSeconds(2);
+        private readonly TimeSpan _maxWaitTime = TimeSpan.FromMinutes(30);
+        private readonly TimeSpan _progressTimeout = TimeSpan.FromMinutes(5);
+        private readonly int _requiredStabilityChecks = 2;
+        private readonly long _minSizeProgress = 1024;
+
+        private readonly string[] _archiveExtensions = { ".zip", ".rar", ".7z" };
+        private readonly string[] _modExtensions = { ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
 
         private int _ongoingProcessingCount;
         private readonly object _lock = new object();
@@ -45,6 +56,7 @@ namespace PenumbraModForwarder.Common.Services
             _retryQueue = new ConcurrentQueue<string>();
             _processingFiles = new ConcurrentDictionary<string, bool>();
             _trackedFiles = new ConcurrentDictionary<string, DateTime>();
+            _downloadProgress = new ConcurrentDictionary<string, FileDownloadInfo>();
             _processedFiles = new HashSet<string>();
 
             _debounceTimer = CreateDebounceTimer();
@@ -61,15 +73,15 @@ namespace PenumbraModForwarder.Common.Services
             _configurationService.ConfigChanged += OnConfigChange;
         }
 
-        public void ClearQueues()
+        public void Dispose()
         {
-            lock (_lock)
-            {
-                _logger.LogInformation("Clearing all queues and tracked files.");
-                while (_changeQueue.TryDequeue(out _)) { }
-                while (_retryQueue.TryDequeue(out _)) { }
-                _trackedFiles.Clear();
-            }
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _debounceTimer?.Dispose();
+            _retryTimer?.Dispose();
+            _clearProcessedFilesTimer?.Dispose();
+            _watcher?.Dispose();
+            _configurationService.ConfigChanged -= OnConfigChange;
         }
 
         private Timer CreateDebounceTimer()
@@ -89,7 +101,7 @@ namespace PenumbraModForwarder.Common.Services
 
         private Timer CreateClearProcessedFilesTimer()
         {
-            var timer = new Timer(TimeSpan.FromMinutes(5).TotalMilliseconds) { AutoReset = true };
+            var timer = new Timer(TimeSpan.FromSeconds(30).TotalMilliseconds) { AutoReset = true };
             timer.Elapsed += (sender, args) => TryClearProcessedFiles();
             timer.Start();
             return timer;
@@ -123,7 +135,8 @@ namespace PenumbraModForwarder.Common.Services
             _watcher = new FileSystemWatcher
             {
                 Path = directory,
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                IncludeSubdirectories = false
             };
 
             _watcher.Created += OnFileCreated;
@@ -136,35 +149,67 @@ namespace PenumbraModForwarder.Common.Services
         private void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             _logger.LogInformation($"File renamed: {e.FullPath}");
-            if (_configurationService.GetConfigValue(o => o.AutoLoad))
+            if (!_configurationService.GetConfigValue(o => o.AutoLoad)) return;
+            // Check if this file is already being tracked before enqueueing
+            if (!_trackedFiles.ContainsKey(e.FullPath) && !_processingFiles.ContainsKey(e.FullPath))
             {
                 EnqueueFileEvent(e.FullPath);
+            }
+            else
+            {
+                _logger.LogDebug($"Skipping renamed event for already tracked file: {e.FullPath}");
             }
         }
 
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
             _logger.LogInformation($"File created: {e.FullPath}");
-            if (_configurationService.GetConfigValue(o => o.AutoLoad))
+            if (!_configurationService.GetConfigValue(o => o.AutoLoad)) return;
+            // Check if this file is already being tracked before enqueueing
+            if (!_trackedFiles.ContainsKey(e.FullPath) && !_processingFiles.ContainsKey(e.FullPath))
             {
                 EnqueueFileEvent(e.FullPath);
+            }
+            else
+            {
+                _logger.LogDebug($"Skipping created event for already tracked file: {e.FullPath}");
             }
         }
 
         private async void EnqueueFileEvent(string filePath)
         {
             var fileExtension = Path.GetExtension(filePath).ToLower();
-            if (!_allowedExtensions.Contains(fileExtension))
+            // Combine both extension arrays for initial check
+            var validExtensions = _archiveExtensions.Concat(_modExtensions);
+            if (!validExtensions.Contains(fileExtension))
             {
                 _logger.LogInformation($"Ignored file: {filePath}, unsupported extension.");
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            // Initial delay - slightly longer for archives
+            if (_archiveExtensions.Contains(fileExtension))
+            {
+                _logger.LogDebug($"Archive file detected, using extended initial delay: {filePath}");
+                await Task.Delay(_archiveStabilityDelay);
+            }
+            else
+            {
+                await Task.Delay(_initialDelay);
+            }
 
             lock (_lock)
             {
                 var now = DateTime.UtcNow;
+
+                // Early return if file is already being tracked or processed
+                if (_trackedFiles.ContainsKey(filePath) || 
+                    _processingFiles.ContainsKey(filePath) || 
+                    _processedFiles.Contains(filePath))
+                {
+                    _logger.LogDebug($"File '{filePath}' is already being tracked or processed.");
+                    return;
+                }
 
                 if (_trackedFiles.TryGetValue(filePath, out var lastProcessed))
                 {
@@ -175,23 +220,157 @@ namespace PenumbraModForwarder.Common.Services
                     }
                 }
 
-                if (_processingFiles.ContainsKey(filePath) || _processedFiles.Contains(filePath))
+                // Initialize download tracking only if not already tracked
+                if (!_downloadProgress.ContainsKey(filePath))
                 {
-                    _logger.LogInformation($"File '{filePath}' is already being processed or has been processed.");
-                    return;
-                }
+                    _downloadProgress[filePath] = new FileDownloadInfo
+                    {
+                        LastSize = 0,
+                        LastProgressTime = now,
+                        StartTime = now,
+                        StabilityCount = 0
+                    };
 
-                if (IsFileReady(filePath))
-                {
-                    _trackedFiles[filePath] = now;
-                    _processingFiles.TryAdd(filePath, true);
-                    _changeQueue.Enqueue(filePath);
-                    RestartDebounceTimer();
-                }
-                else
-                {
                     _retryQueue.Enqueue(filePath);
+                    _logger.LogInformation($"Queued {(_archiveExtensions.Contains(fileExtension) ? "archive" : "mod")} file for stability check: {filePath}");
                 }
+            }
+        }
+        
+        private async Task<bool> WaitForFileStability(string filePath, CancellationToken cancellationToken)
+        {
+            if (!_downloadProgress.TryGetValue(filePath, out var downloadInfo))
+            {
+                _logger.LogWarning($"No download info found for file: {filePath}");
+                return false;
+            }
+
+            try
+            {
+                var lastSize = 0L;
+                var stableCount = 0;
+                var fileInfo = new FileInfo(filePath);
+                var isArchive = _archiveExtensions.Contains(Path.GetExtension(filePath).ToLower());
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var now = DateTime.UtcNow;
+                    
+                    if (now - downloadInfo.StartTime > _maxWaitTime)
+                    {
+                        _logger.LogWarning($"Download exceeded maximum wait time for file: {filePath}");
+                        return false;
+                    }
+
+                    if (!fileInfo.Exists)
+                    {
+                        _logger.LogWarning($"File no longer exists: {filePath}");
+                        return false;
+                    }
+
+                    // Refresh FileInfo to get current size
+                    fileInfo.Refresh();
+                    var currentSize = fileInfo.Length;
+
+                    if (currentSize > 0)
+                    {
+                        if (currentSize > downloadInfo.LastSize + _minSizeProgress)
+                        {
+                            // Progress detected
+                            downloadInfo.LastSize = currentSize;
+                            downloadInfo.LastProgressTime = now;
+                            stableCount = 0;
+                            _logger.LogDebug($"Download progress detected for {filePath}: {currentSize} bytes");
+                        }
+                        else if (now - downloadInfo.LastProgressTime > _progressTimeout)
+                        {
+                            _logger.LogWarning($"Download progress timeout for file: {filePath}");
+                            return false;
+                        }
+
+                        // Check if file size is stable
+                        if (currentSize == lastSize)
+                        {
+                            if (isArchive)
+                            {
+                                // For archives, we need additional checks
+                                if (await IsArchiveAccessible(filePath))
+                                {
+                                    stableCount++;
+                                    _logger.LogDebug($"Archive stability check {stableCount}/{_requiredStabilityChecks} for {filePath}");
+                                }
+                                else
+                                {
+                                    stableCount = 0;
+                                }
+                            }
+                            else if (IsFileReady(filePath))
+                            {
+                                stableCount++;
+                                _logger.LogDebug($"Stability check {stableCount}/{_requiredStabilityChecks} for {filePath}");
+                            }
+                            
+                            if (stableCount >= _requiredStabilityChecks)
+                            {
+                                // For archives, add an additional delay after stability is confirmed
+                                if (isArchive)
+                                {
+                                    _logger.LogDebug($"Adding additional stability delay for archive: {filePath}");
+                                    await Task.Delay(_archiveStabilityDelay, cancellationToken);
+                                    
+                                    // One final check after the delay
+                                    if (!await IsArchiveAccessible(filePath))
+                                    {
+                                        _logger.LogWarning($"Archive failed final accessibility check: {filePath}");
+                                        return false;
+                                    }
+                                }
+
+                                _logger.LogInformation($"File {filePath} has stabilized at {currentSize} bytes");
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            stableCount = 0;
+                        }
+
+                        lastSize = currentSize;
+                    }
+
+                    await Task.Delay(_stabilityCheckInterval, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error checking file stability: {filePath}");
+                return false;
+            }
+            finally
+            {
+                _downloadProgress.TryRemove(filePath, out _);
+            }
+
+            return false;
+        }
+        
+        private async Task<bool> IsArchiveAccessible(string filePath)
+        {
+            try
+            {
+                // First check if we can open the file
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    // Read the first few bytes to verify file access
+                    var buffer = new byte[4096];
+                    await stream.ReadAsync(buffer, 0, buffer.Length);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Archive {filePath} not yet accessible: {ex.Message}");
+                return false;
             }
         }
 
@@ -258,15 +437,36 @@ namespace PenumbraModForwarder.Common.Services
 
             foreach (var filePath in retryQueueCopy)
             {
-                if (IsFileReady(filePath))
+                var task = Task.Run(async () =>
                 {
-                    _changeQueue.Enqueue(filePath);
-                    RestartDebounceTimer();
-                }
-                else
-                {
-                    _retryQueue.Enqueue(filePath);
-                }
+                    try
+                    {
+                        if (await WaitForFileStability(filePath, _cancellationTokenSource.Token))
+                        {
+                            lock (_lock)
+                            {
+                                if (!_processingFiles.ContainsKey(filePath) && !_processedFiles.Contains(filePath))
+                                {
+                                    _trackedFiles[filePath] = DateTime.UtcNow;
+                                    _processingFiles.TryAdd(filePath, true);
+                                    _changeQueue.Enqueue(filePath);
+                                    RestartDebounceTimer();
+                                    _logger.LogInformation($"File {filePath} is stable and queued for processing");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _retryQueue.Enqueue(filePath);
+                            _logger.LogInformation($"File {filePath} is not stable, re-queuing");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing file {filePath}");
+                        _retryQueue.Enqueue(filePath);
+                    }
+                });
             }
         }
 
@@ -274,11 +474,16 @@ namespace PenumbraModForwarder.Common.Services
         {
             try
             {
-                using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+                using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 return true;
             }
             catch (IOException)
             {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Unexpected error checking file readiness: {filePath}");
                 return false;
             }
         }
@@ -296,10 +501,11 @@ namespace PenumbraModForwarder.Common.Services
             {
                 if (_ongoingProcessingCount == 0)
                 {
-                    _logger.LogInformation("Clearing processed files collection and tracked files.");
                     _processedFiles.Clear();
                     _trackedFiles.Clear();
-                    _fileHandlerService.CleanUpTempFiles();
+                    // Don't want to delete files for now
+                    // _fileHandlerService.CleanUpTempFiles();
+                    _logger.LogInformation("Clearing processed files collection and tracked files.");
                 }
             }
         }
