@@ -23,6 +23,7 @@ namespace PenumbraModForwarder.Common.Services
         private readonly ConcurrentDictionary<string, bool> _processingFiles;
         private readonly ConcurrentDictionary<string, DateTime> _trackedFiles;
         private readonly ConcurrentDictionary<string, FileDownloadInfo> _downloadProgress;
+        private readonly ConcurrentDictionary<string, int> _retryAttempts;
         private readonly HashSet<string> _processedFiles;
         
         private readonly TimeSpan _initialDelay = TimeSpan.FromMilliseconds(500);
@@ -35,6 +36,7 @@ namespace PenumbraModForwarder.Common.Services
         private readonly TimeSpan _progressTimeout = TimeSpan.FromMinutes(5);
         private readonly int _requiredStabilityChecks = 2;
         private readonly long _minSizeProgress = 1024;
+        private readonly int _maxRetryAttempts = 5;
 
         private readonly string[] _archiveExtensions = { ".zip", ".rar", ".7z" };
         private readonly string[] _modExtensions = { ".pmp", ".ttmp2", ".ttmp", ".rpvsp" };
@@ -57,6 +59,7 @@ namespace PenumbraModForwarder.Common.Services
             _processingFiles = new ConcurrentDictionary<string, bool>();
             _trackedFiles = new ConcurrentDictionary<string, DateTime>();
             _downloadProgress = new ConcurrentDictionary<string, FileDownloadInfo>();
+            _retryAttempts = new ConcurrentDictionary<string, int>();
             _processedFiles = new HashSet<string>();
 
             _debounceTimer = CreateDebounceTimer();
@@ -150,7 +153,6 @@ namespace PenumbraModForwarder.Common.Services
         {
             _logger.LogInformation($"File renamed: {e.FullPath}");
             if (!_configurationService.GetConfigValue(o => o.AutoLoad)) return;
-            // Check if this file is already being tracked before enqueueing
             if (!_trackedFiles.ContainsKey(e.FullPath) && !_processingFiles.ContainsKey(e.FullPath))
             {
                 EnqueueFileEvent(e.FullPath);
@@ -165,7 +167,6 @@ namespace PenumbraModForwarder.Common.Services
         {
             _logger.LogInformation($"File created: {e.FullPath}");
             if (!_configurationService.GetConfigValue(o => o.AutoLoad)) return;
-            // Check if this file is already being tracked before enqueueing
             if (!_trackedFiles.ContainsKey(e.FullPath) && !_processingFiles.ContainsKey(e.FullPath))
             {
                 EnqueueFileEvent(e.FullPath);
@@ -179,7 +180,6 @@ namespace PenumbraModForwarder.Common.Services
         private async void EnqueueFileEvent(string filePath)
         {
             var fileExtension = Path.GetExtension(filePath).ToLower();
-            // Combine both extension arrays for initial check
             var validExtensions = _archiveExtensions.Concat(_modExtensions);
             if (!validExtensions.Contains(fileExtension))
             {
@@ -187,7 +187,6 @@ namespace PenumbraModForwarder.Common.Services
                 return;
             }
 
-            // Initial delay - slightly longer for archives
             if (_archiveExtensions.Contains(fileExtension))
             {
                 _logger.LogDebug($"Archive file detected, using extended initial delay: {filePath}");
@@ -202,7 +201,6 @@ namespace PenumbraModForwarder.Common.Services
             {
                 var now = DateTime.UtcNow;
 
-                // Early return if file is already being tracked or processed
                 if (_trackedFiles.ContainsKey(filePath) || 
                     _processingFiles.ContainsKey(filePath) || 
                     _processedFiles.Contains(filePath))
@@ -220,7 +218,6 @@ namespace PenumbraModForwarder.Common.Services
                     }
                 }
 
-                // Initialize download tracking only if not already tracked
                 if (!_downloadProgress.ContainsKey(filePath))
                 {
                     _downloadProgress[filePath] = new FileDownloadInfo
@@ -242,6 +239,12 @@ namespace PenumbraModForwarder.Common.Services
             if (!_downloadProgress.TryGetValue(filePath, out var downloadInfo))
             {
                 _logger.LogWarning($"No download info found for file: {filePath}");
+                if (!File.Exists(filePath))
+                {
+                    _logger.LogInformation($"File no longer exists, removing from tracking: {filePath}");
+                    CleanupFile(filePath);
+                    return false;
+                }
                 return false;
             }
 
@@ -265,10 +268,10 @@ namespace PenumbraModForwarder.Common.Services
                     if (!fileInfo.Exists)
                     {
                         _logger.LogWarning($"File no longer exists: {filePath}");
+                        CleanupFile(filePath);
                         return false;
                     }
 
-                    // Refresh FileInfo to get current size
                     fileInfo.Refresh();
                     var currentSize = fileInfo.Length;
 
@@ -276,7 +279,6 @@ namespace PenumbraModForwarder.Common.Services
                     {
                         if (currentSize > downloadInfo.LastSize + _minSizeProgress)
                         {
-                            // Progress detected
                             downloadInfo.LastSize = currentSize;
                             downloadInfo.LastProgressTime = now;
                             stableCount = 0;
@@ -288,12 +290,10 @@ namespace PenumbraModForwarder.Common.Services
                             return false;
                         }
 
-                        // Check if file size is stable
                         if (currentSize == lastSize)
                         {
                             if (isArchive)
                             {
-                                // For archives, we need additional checks
                                 if (await IsArchiveAccessible(filePath))
                                 {
                                     stableCount++;
@@ -312,13 +312,11 @@ namespace PenumbraModForwarder.Common.Services
                             
                             if (stableCount >= _requiredStabilityChecks)
                             {
-                                // For archives, add an additional delay after stability is confirmed
                                 if (isArchive)
                                 {
                                     _logger.LogDebug($"Adding additional stability delay for archive: {filePath}");
                                     await Task.Delay(_archiveStabilityDelay, cancellationToken);
                                     
-                                    // One final check after the delay
                                     if (!await IsArchiveAccessible(filePath))
                                     {
                                         _logger.LogWarning($"Archive failed final accessibility check: {filePath}");
@@ -344,6 +342,11 @@ namespace PenumbraModForwarder.Common.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error checking file stability: {filePath}");
+                if (!IncrementRetryAttempt(filePath))
+                {
+                    CleanupFile(filePath);
+                    return false;
+                }
                 return false;
             }
             finally
@@ -358,10 +361,8 @@ namespace PenumbraModForwarder.Common.Services
         {
             try
             {
-                // First check if we can open the file
                 using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    // Read the first few bytes to verify file access
                     var buffer = new byte[4096];
                     await stream.ReadAsync(buffer, 0, buffer.Length);
                 }
@@ -393,7 +394,7 @@ namespace PenumbraModForwarder.Common.Services
                 ProcessFileAsync(file, _cancellationTokenSource.Token);
             }
         }
-
+        
         private async void ProcessFileAsync(string file, CancellationToken cancellationToken)
         {
             try
@@ -430,6 +431,7 @@ namespace PenumbraModForwarder.Common.Services
             _logger.LogDebug("Processing retry queue.");
             var retryQueueCopy = new List<string>();
 
+            // Transfer items from the retry queue to a temporary list
             while (_retryQueue.TryDequeue(out var filePath))
             {
                 retryQueueCopy.Add(filePath);
@@ -441,6 +443,13 @@ namespace PenumbraModForwarder.Common.Services
                 {
                     try
                     {
+                        if (!IncrementRetryAttempt(filePath))
+                        {
+                            // Max retry attempts reached; clean up file and stop retrying
+                            CleanupFile(filePath);
+                            return;
+                        }
+
                         if (await WaitForFileStability(filePath, _cancellationTokenSource.Token))
                         {
                             lock (_lock)
@@ -457,18 +466,26 @@ namespace PenumbraModForwarder.Common.Services
                         }
                         else
                         {
-                            _retryQueue.Enqueue(filePath);
+                            // Re-enqueue the file back into the retry queue
+                            lock (_retryQueue)
+                            {
+                                _retryQueue.Enqueue(filePath);
+                            }
                             _logger.LogInformation($"File {filePath} is not stable, re-queuing");
                         }
                     }
                     catch (Exception ex)
                     {
+                        lock (_retryQueue)
+                        {
+                            _retryQueue.Enqueue(filePath);
+                        }
                         _logger.LogError(ex, $"Error processing file {filePath}");
-                        _retryQueue.Enqueue(filePath);
                     }
                 });
             }
         }
+
 
         private bool IsFileReady(string filePath)
         {
@@ -492,6 +509,49 @@ namespace PenumbraModForwarder.Common.Services
         {
             _debounceTimer.Stop();
             _debounceTimer.Start();
+        }
+        
+        private bool IncrementRetryAttempt(string filePath)
+        {
+            var attempts = _retryAttempts.AddOrUpdate(
+                filePath,
+                1,
+                (_, count) => count + 1
+            );
+
+            if (attempts >= _maxRetryAttempts)
+            {
+                _logger.LogWarning($"Max retry attempts ({_maxRetryAttempts}) reached for file: {filePath}");
+                return false;
+            }
+
+            return true;
+        }
+        
+        private void CleanupFile(string filePath)
+        {
+            _downloadProgress.TryRemove(filePath, out _);
+            _trackedFiles.TryRemove(filePath, out _);
+            _processingFiles.TryRemove(filePath, out _);
+            _retryAttempts.TryRemove(filePath, out _);
+
+            // Clear out the retry queue while preserving other items
+            var tempQueue = new ConcurrentQueue<string>();
+            while (_retryQueue.TryDequeue(out var path))
+            {
+                if (path != filePath)
+                {
+                    tempQueue.Enqueue(path);
+                }
+            }
+
+            // Re-add items back to the original _retryQueue
+            while (tempQueue.TryDequeue(out var path))
+            {
+                _retryQueue.Enqueue(path);
+            }
+
+            _logger.LogInformation($"Cleaned up tracking for file: {filePath}");
         }
 
         private void TryClearProcessedFiles()
