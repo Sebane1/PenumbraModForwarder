@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Test",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "xivModdingFramework", "xivModdingFramework\xivModdingFramework\xivModdingFramework.csproj", "{5682126A-AAA7-4A89-99BB-D50847520C91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Debug|Any CPU.Build.0 = Debug|x64
 		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.ActiveCfg = Release|x64
 		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.Build.0 = Release|x64
+		{5682126A-AAA7-4A89-99BB-D50847520C91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5682126A-AAA7-4A89-99BB-D50847520C91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5682126A-AAA7-4A89-99BB-D50847520C91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5682126A-AAA7-4A89-99BB-D50847520C91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

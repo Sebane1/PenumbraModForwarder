@@ -1,3 +1,6 @@
 [submodule "SevenZipExtractor"]
 	path = SevenZipExtractor
 	url = https://github.com/CollapseLauncher/SevenZipExtractor.git
+[submodule "xivModdingFramework"]
+	path = xivModdingFramework
+	url = https://github.com/TexTools/xivModdingFramework.git
