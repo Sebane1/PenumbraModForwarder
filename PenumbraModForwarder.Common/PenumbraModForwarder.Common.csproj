@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj" />
+    <ProjectReference Include="..\xivModdingFramework\xivModdingFramework\xivModdingFramework.csproj" />
   </ItemGroup>
 
 </Project>

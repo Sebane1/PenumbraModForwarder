@@ -62,7 +62,7 @@ static class Program
             var installService = serviceProvider.GetRequiredService<IPenumbraInstallerService>();
     
             Log.Information("Starting mod installation...");
-            var result = installService.InstallMod(filePath);
+            var result = installService.InstallMod(filePath).GetAwaiter().GetResult();
 
             if (!result)
             {

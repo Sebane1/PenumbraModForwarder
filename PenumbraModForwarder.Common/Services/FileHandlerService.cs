@@ -36,7 +36,7 @@ public class FileHandlerService : IFileHandlerService
             _logger.LogInformation($"File '{filePath}' is a mod file. Installing mod.");
             try
             {
-                _penumbraInstallerService.InstallMod(filePath);
+                _penumbraInstallerService.InstallMod(filePath).GetAwaiter().GetResult();
                 _logger.LogInformation($"Mod file '{filePath}' installed successfully.");
             }
             catch (Exception ex)

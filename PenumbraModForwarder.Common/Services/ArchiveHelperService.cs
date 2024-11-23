@@ -289,7 +289,7 @@ namespace PenumbraModForwarder.Common.Services
         
         private void InstallMod(string extractedFile)
         {
-            _penumbraInstallerService.InstallMod(extractedFile);
+            _penumbraInstallerService.InstallMod(extractedFile).GetAwaiter().GetResult();
             _logger.LogInformation($"Installed mod from: {extractedFile}");
         }
 

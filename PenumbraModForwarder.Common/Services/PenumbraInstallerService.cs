@@ -27,107 +27,94 @@ public class PenumbraInstallerService : IPenumbraInstallerService
         }
     }
     
-    public bool InstallMod(string modPath)
+    public async Task<bool> InstallMod(string modPath)
     {
-        var dtPath = UpdateToDt(modPath);
+        var dtPath = await UpdateToDt(modPath);
         _logger.LogInformation($"Installing mod: {dtPath}");
 
-        var result = Task.Run(async () => await _penumbraApi.InstallAsync(dtPath)).GetAwaiter().GetResult();
-
+        var result = await _penumbraApi.InstallAsync(dtPath);
         return result;
     }
 
     
-    private string UpdateToDt(string modPath)
+    private async Task<string> UpdateToDt(string modPath)
     {
         if (!IsConversionNeeded(modPath))
         {
             _logger.LogInformation($"Converted mod already exists: {modPath}");
             return GetConvertedModPath(modPath);
         }
-        
+
         var textToolPath = _configurationService.GetConfigValue(config => config.TexToolPath);
-        if (!string.IsNullOrEmpty(textToolPath) && File.Exists(textToolPath)) return ConvertToDt(modPath);
+        if (!string.IsNullOrEmpty(textToolPath) && File.Exists(textToolPath))
+        {
+            return await ConvertToDt(modPath);
+        }
+
         _logger.LogWarning("TexTools not found. Aborting Conversion.");
         return modPath;
     }
     
-    private string ConvertToDt(string modPath)
+    private async Task<string> ConvertToDt(string modPath)
     {
-        _logger.LogInformation($"Converting mod to DT: {modPath}");
+        _logger.LogInformation($"Converting mod to DT using xivModdingFramework: {modPath}");
         var dtPath = GetConvertedModPath(modPath);
-        
-        _progressWindowService.ShowProgressWindow();
 
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = _configurationService.GetConfigValue(config => config.TexToolPath),
-                Arguments = $"/upgrade \"{modPath}\" \"{dtPath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
-        };
+        _progressWindowService.ShowProgressWindow();
 
         try
         {
             var fileName = Path.GetFileName(modPath);
-            using (process)
-            {
-                process.Start();
 
-                var progress = 0.0;  // Use double for smoother transitions
+            using var cts = new CancellationTokenSource();
+            var progressTask = Task.Run(async () =>
+            {
+                var progress = 0.0;
                 var maxProgress = 88.0;
 
-                while (!process.HasExited)
+                while (!cts.Token.IsCancellationRequested && progress < maxProgress)
                 {
-                    // Parabolic easing to slow down as we approach maxProgress
-                    // The closer progress gets to maxProgress, the smaller the increments become
-                    var easedIncrement = (1.0 - (progress / maxProgress)) * 1.2; // Slow down as progress increases
-
-                    progress += easedIncrement;
-
-                    // Cap progress at maxProgress to ensure it never reaches 100%
-                    if (progress >= maxProgress)
-                    {
-                        progress = maxProgress;
-                    }
+                    progress += (1.0 - (progress / maxProgress)) * 1.2;
+                    progress = Math.Min(progress, maxProgress);
 
                     _progressWindowService.UpdateProgress(fileName, "Converting to DawnTrail", (int)progress);
-
-                    Thread.Sleep(50); 
+                    await Task.Delay(50, cts.Token);
                 }
+            }, cts.Token);
 
-                process.WaitForExit();
-                
-                // The process doesn't exit correctly because of reasons, so let's have a 1-second wait
-                Thread.Sleep(1);
+            var upgradeResult = await xivModdingFramework.Mods.ModpackUpgrader
+                .UpgradeModpack(modPath, dtPath, includePartials: true, rewriteOnNoChanges: true);
 
-                if (process.ExitCode != 0 || !File.Exists(dtPath))
-                {
-                    _logger.LogWarning($"Error converting mod to DT or conversion isn't needed: {modPath}");
-                    return modPath;
-                }
-                
-                _progressWindowService.UpdateProgress(fileName, "Conversion Complete", 100);
+            cts.Cancel(); // Stop the progress animation
+            await progressTask; // Wait for the progress animation to finish
 
-                _logger.LogInformation($"Mod converted to DT: {dtPath}");
-                _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
-                
-                File.Delete(modPath);
-                _logger.LogInformation($"Deleted original mod: {modPath}");
-
-                return dtPath;
+            if (!upgradeResult)
+            {
+                _logger.LogWarning($"No changes detected or conversion skipped for mod: {modPath}");
+                return modPath;
             }
+
+            _progressWindowService.UpdateProgress(fileName, "Conversion Complete", 100);
+
+            _logger.LogInformation($"Mod successfully converted to DT: {dtPath}");
+            _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {fileName}");
+
+            File.Delete(modPath);
+            _logger.LogInformation($"Deleted original mod: {modPath}");
+
+            return dtPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"An error occurred during mod conversion: {modPath}");
+            throw;
         }
         finally
         {
             _progressWindowService.CloseProgressWindow();
         }
     }
+
     
     private bool IsConversionNeeded(string modPath)
     {
