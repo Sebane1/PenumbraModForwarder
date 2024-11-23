@@ -57,14 +57,29 @@ public class PenumbraInstallerService : IPenumbraInstallerService
     
     private async Task<string> ConvertToDt(string modPath)
     {
-        _logger.LogInformation($"Converting mod to DT using xivModdingFramework: {modPath}");
+        var fileName = Path.GetFileName(modPath);
         var dtPath = GetConvertedModPath(modPath);
+        
+        _logger.LogInformation($"Starting DT conversion for mod: {fileName}");
+        _logger.LogDebug($"Source path: {modPath}");
+        _logger.LogDebug($"Target path: {dtPath}");
 
         _progressWindowService.ShowProgressWindow();
 
         try
         {
-            var fileName = Path.GetFileName(modPath);
+            // Validate input path
+            if (!File.Exists(modPath))
+            {
+                throw new FileNotFoundException($"Source mod file not found: {modPath}");
+            }
+
+            // Create output directory if needed
+            var outputDir = Path.GetDirectoryName(dtPath);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
 
             using var cts = new CancellationTokenSource();
             var progressTask = Task.Run(async () =>
@@ -82,32 +97,58 @@ public class PenumbraInstallerService : IPenumbraInstallerService
                 }
             }, cts.Token);
 
+            // Get mod info before upgrade
+            var modInfo = await xivModdingFramework.Mods.FileTypes.TTMP.GetModpackInfo(modPath);
+            _logger.LogInformation($"Processing mod: {modInfo.ModPack.Name}");
+
+            // Perform the upgrade
             var upgradeResult = await xivModdingFramework.Mods.ModpackUpgrader
                 .UpgradeModpack(modPath, dtPath, includePartials: true, rewriteOnNoChanges: true);
 
-            cts.Cancel(); // Stop the progress animation
-            await progressTask; // Wait for the progress animation to finish
+            cts.Cancel();
+            await progressTask;
 
             if (!upgradeResult)
             {
-                _logger.LogWarning($"No changes detected or conversion skipped for mod: {modPath}");
+                _logger.LogWarning($"No changes detected for mod: {fileName}");
+                _progressWindowService.UpdateProgress(fileName, "No Changes Required", 100);
                 return modPath;
             }
 
             _progressWindowService.UpdateProgress(fileName, "Conversion Complete", 100);
-
             _logger.LogInformation($"Mod successfully converted to DT: {dtPath}");
+            
+            try
+            {
+                File.Delete(modPath);
+                _logger.LogInformation($"Deleted original mod: {modPath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Failed to delete original mod file: {modPath}");
+                // Continue execution since this is not a critical failure
+            }
+
             _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {fileName}");
-
-            File.Delete(modPath);
-            _logger.LogInformation($"Deleted original mod: {modPath}");
-
             return dtPath;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"An error occurred during mod conversion: {modPath}");
-            throw;
+            var errorMessage = ex.Message;
+            if (ex.Message.Contains("An error occurred while updating Group"))
+            {
+                // Extract the group name from the error message for better logging
+                var groupMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"updating Group: (.*?) -");
+                if (groupMatch.Success)
+                {
+                    var groupName = groupMatch.Groups[1].Value;
+                    _logger.LogError(ex, $"Failed to convert group '{groupName}' in mod: {fileName}");
+                }
+            }
+            
+            _logger.LogError(ex, $"Failed to convert mod: {fileName}");
+            _progressWindowService.UpdateProgress(fileName, "Conversion Failed", 0);
+            throw new Exception($"Failed to convert mod {fileName}: {errorMessage}", ex);
         }
         finally
         {
