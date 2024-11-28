@@ -457,8 +457,15 @@ namespace PenumbraModForwarder.Common.Services
                         }
                         else
                         {
-                            _retryQueue.Enqueue(filePath);
-                            _logger.LogInformation($"File {filePath} is not stable, re-queuing");
+                            if (File.Exists(filePath))
+                            {
+                                _retryQueue.Enqueue(filePath);
+                                _logger.LogInformation($"File {filePath} is not stable, re-queuing");
+                            }
+                            else
+                            {
+                                _logger.LogError($"File {filePath} not found removing from queue");
+                            }
                         }
                     }
                     catch (Exception ex)
