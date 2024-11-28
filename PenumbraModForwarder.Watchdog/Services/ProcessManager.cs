@@ -11,14 +11,21 @@ public class ProcessManager : IDisposable
     private Process _backgroundServiceProcess;
     private bool _isShuttingDown = false;
 
-    public ProcessManager(bool isDevMode)
+    public ProcessManager()
     {
-        _isDevMode = isDevMode;
+        _isDevMode = Environment.GetEnvironmentVariable("DEV_MODE") == "true";;
         _solutionDirectory = GetSolutionDirectory();
         Console.WriteLine($"Solution Directory: {_solutionDirectory}");
         Console.WriteLine($"Running in {(_isDevMode ? "DEV" : "PROD")} mode.");
-        
         SetupShutdownHandlers();
+    }
+
+    public void Run()
+    {
+        _uiProcess = StartProcess("PenumbraModForwarder.UI");
+        _backgroundServiceProcess = StartProcess("PenumbraModForwarder.BackgroundWorker");
+        
+        MonitorProcesses(_uiProcess, _backgroundServiceProcess);
     }
     
     private void SetupShutdownHandlers()
@@ -148,6 +155,7 @@ public class ProcessManager : IDisposable
     private Process StartProdProcess(string executableName)
     {
         string executablePath = Path.Combine(AppContext.BaseDirectory, "apps", executableName);
+        Console.WriteLine($"Executing executable: {executablePath}");
         if (!File.Exists(executablePath))
         {
             Console.WriteLine($"Error: {executablePath} not found.");
@@ -192,9 +200,8 @@ public class ProcessManager : IDisposable
         {
             if (uiProcess.HasExited)
             {
-                Console.WriteLine($"Monitoring for {uiProcess.ProcessName} exited.");
-                backgroundServiceProcess.Kill();
-                Environment.Exit(0);
+                Console.WriteLine($"Monitoring for {uiProcess.Id} exited.");
+                ShutdownChildProcesses();
             }
 
             if (backgroundServiceProcess.HasExited)
