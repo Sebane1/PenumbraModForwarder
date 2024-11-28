@@ -94,6 +94,7 @@ public class ProcessManager : IDisposable
         }
         finally
         {
+            Log.Information("Shutting down Penumbra Mod Forwarder");
             Environment.Exit(0);
         }
     }
@@ -122,33 +123,13 @@ public class ProcessManager : IDisposable
             {
                 FileName = "dotnet",
                 Arguments = $"run --project \"{projectFilePath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WorkingDirectory = projectDirectory
             }
         };
 
-        process.OutputDataReceived += (sender, args) =>
-        {
-            if (!string.IsNullOrEmpty(args.Data))
-            {
-                Log.Information($"[{projectName} OUTPUT] {args.Data}");
-            }
-        };
-
-        process.ErrorDataReceived += (sender, args) =>
-        {
-            if (!string.IsNullOrEmpty(args.Data))
-            {
-                Log.Information($"[{projectName} ERROR] {args.Data}");
-            }
-        };
-
         process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
 
         Log.Information($"Started {projectName} (PID: {process.Id})");
         return process;
@@ -172,33 +153,13 @@ public class ProcessManager : IDisposable
             StartInfo = new ProcessStartInfo
             {
                 FileName = executablePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WorkingDirectory = executableDir
             }
         };
 
-        process.OutputDataReceived += (sender, args) =>
-        {
-            if (!string.IsNullOrEmpty(args.Data))
-            {
-                Log.Information($"[{executableName} OUTPUT] {args.Data}");
-            }
-        };
-
-        process.ErrorDataReceived += (sender, args) =>
-        {
-            if (!string.IsNullOrEmpty(args.Data))
-            {
-                Log.Information($"[{executableName} ERROR] {args.Data}");
-            }
-        };
-
         process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
 
         Log.Information($"Started {executableName} (PID: {process.Id})");
 

@@ -1,4 +1,8 @@
 ﻿using System.Runtime.InteropServices;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Watchdog.Extensions;
 using PenumbraModForwarder.Watchdog.Imports;
 using PenumbraModForwarder.Watchdog.Services;
 using Serilog;
@@ -9,10 +13,8 @@ class Program
 {
     static void Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/Watchdog.txt", rollingInterval: RollingInterval.Day)
-            .CreateLogger();
+        var services = new ServiceCollection();
+        services.AddApplicationServices();
         
         
         // Hide the console window on Windows
