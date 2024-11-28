@@ -1,11 +1,15 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace PenumbraModForwarder.Watchdog.Services;
 
-public class ProcessManager
+public class ProcessManager : IDisposable
 {
     private readonly bool _isDevMode;
     private readonly string _solutionDirectory;
+    private Process _uiProcess;
+    private Process _backgroundServiceProcess;
+    private bool _isShuttingDown = false;
 
     public ProcessManager(bool isDevMode)
     {
@@ -13,6 +17,71 @@ public class ProcessManager
         _solutionDirectory = GetSolutionDirectory();
         Console.WriteLine($"Solution Directory: {_solutionDirectory}");
         Console.WriteLine($"Running in {(_isDevMode ? "DEV" : "PROD")} mode.");
+        
+        SetupShutdownHandlers();
+    }
+    
+    private void SetupShutdownHandlers()
+    {
+        // Handle console cancel events (Ctrl+C, Ctrl+Break)
+        Console.CancelKeyPress += (sender, e) => 
+        {
+            e.Cancel = true; // Prevent immediate termination
+            ShutdownChildProcesses();
+        };
+
+        // For Windows-specific signal handling
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Imports.DllImports.SetConsoleCtrlHandler(ConsoleCtrlCheck, true);
+        }
+
+        // Handle normal process exit
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) => 
+        {
+            ShutdownChildProcesses();
+        };
+    }
+    
+    // Console control handler implementation
+    private bool ConsoleCtrlCheck(int sig)
+    {
+        ShutdownChildProcesses();
+        return true;
+    }
+    
+    public void ShutdownChildProcesses()
+    {
+        // Prevent multiple simultaneous shutdown attempts
+        if (_isShuttingDown) return;
+        _isShuttingDown = true;
+
+        Console.WriteLine("Initiating graceful shutdown of child processes...");
+
+        try 
+        {
+            // Attempt to close UI process
+            if (_uiProcess != null && !_uiProcess.HasExited)
+            {
+                Console.WriteLine($"Closing UI Process (PID: {_uiProcess.Id})");
+                _uiProcess.Kill(true);
+            }
+
+            // Attempt to close Background Worker process
+            if (_backgroundServiceProcess != null && !_backgroundServiceProcess.HasExited)
+            {
+                Console.WriteLine($"Closing Background Worker Process (PID: {_backgroundServiceProcess.Id})");
+                _backgroundServiceProcess.Kill(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during shutdown: {ex.Message}");
+        }
+        finally
+        {
+            Environment.Exit(0);
+        }
     }
 
     public Process StartProcess(string projectName)
@@ -136,5 +205,10 @@ public class ProcessManager
 
             Thread.Sleep(1000);
         }
+    }
+    
+    public void Dispose()
+    {
+        ShutdownChildProcesses();
     }
 }
