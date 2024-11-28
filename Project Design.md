@@ -121,7 +121,7 @@ Define a standard WebSocket message format:
   "progress": 75,
   "message": "Extracting files..."
 }
-
+```
 ---
 
 ## **Next Steps**
