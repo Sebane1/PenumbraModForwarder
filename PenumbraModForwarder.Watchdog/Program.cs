@@ -1,9 +1,8 @@
 ﻿using System.Runtime.InteropServices;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Watchdog.Extensions;
 using PenumbraModForwarder.Watchdog.Imports;
+using PenumbraModForwarder.Watchdog.Interfaces;
 using PenumbraModForwarder.Watchdog.Services;
 using Serilog;
 
@@ -16,6 +15,11 @@ class Program
         var services = new ServiceCollection();
         services.AddApplicationServices();
         
+        var serviceProvider = services.BuildServiceProvider();
+
+        var configService = serviceProvider.GetService<IConfigurationSetup>();
+        
+        configService.CreateFiles();
         
         // Hide the console window on Windows
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

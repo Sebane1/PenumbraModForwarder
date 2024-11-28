@@ -12,7 +12,7 @@ public static class ConfigurationConsts
     /// Example:
     ///     Download Path - Where downloads will be found
     /// </summary>
-    public static readonly string ConfigurationFilePath = ConfigurationPath + @"config.json";
+    public static readonly string ConfigurationFilePath = ConfigurationPath + @"\config.json";
     
     /// <summary>
     /// The folder location for where extracted mods will go
