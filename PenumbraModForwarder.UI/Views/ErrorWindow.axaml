@@ -1,0 +1,15 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PenumbraModForwarder.UI.ViewModels"
+        x:Class="PenumbraModForwarder.UI.Views.ErrorWindow"
+        x:DataType="vm:ErrorWindowViewModel"
+        Width="400" Height="150"
+        WindowStartupLocation="CenterScreen"
+        Title="Startup Error">
+    
+    <TextBlock Text="{Binding ErrorMessage}"
+               TextWrapping="Wrap"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center"
+               Margin="20"/>
+</Window>

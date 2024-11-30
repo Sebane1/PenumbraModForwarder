@@ -1,9 +1,9 @@
 ﻿using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.Watchdog.Extensions;
 using PenumbraModForwarder.Watchdog.Imports;
 using PenumbraModForwarder.Watchdog.Interfaces;
-using PenumbraModForwarder.Watchdog.Services;
 using Serilog;
 
 namespace PenumbraModForwarder.Watchdog;
@@ -20,6 +20,9 @@ class Program
         var configService = serviceProvider.GetService<IConfigurationSetup>();
         
         configService.CreateFiles();
+        
+        // Set initialization flag before starting processes
+        ApplicationBootstrapper.SetWatchdogInitialization();
         
         // Hide the console window on Windows
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

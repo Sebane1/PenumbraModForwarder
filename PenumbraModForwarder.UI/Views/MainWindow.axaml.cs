@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace PenumbraModForwarder.UI;
+namespace PenumbraModForwarder.UI.Views;
 
 public partial class MainWindow : Window
 {
