@@ -1,10 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.Net.WebSockets;
 using System.Net;
-using PenumbraModForwarder.Common.Models;
+using System.Net.WebSockets;
 using System.Text;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using Serilog;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
 
@@ -27,10 +27,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
 
     public void Start()
     {
-        if (_isStarted)
-        {
-            return;
-        }
+        if (_isStarted) return;
 
         try
         {
@@ -46,25 +43,44 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             throw;
         }
     }
+    
+    public async Task UpdateCurrentTaskStatus(string status)
+    {
+        var message = new WebSocketMessage
+        {
+            Type = "status",
+            Status = WebSocketMessageStatus.InProgress,
+            Message = status
+        };
+
+        await BroadcastToEndpointAsync("/currentTask", message);
+    }
+    
+    // This might not be needed, could cover everything inside UpdateCurrentTaskStatus
+    public async Task UpdateConversionProgress(int progress, string status)
+    {
+        var message = new WebSocketMessage
+        {
+            Type = "progress",
+            Status = WebSocketMessageStatus.InProgress,
+            Progress = progress,
+            Message = status
+        };
+
+        await BroadcastToEndpointAsync("/conversion", message);
+    }
 
     private async Task StartListenerAsync()
     {
-        try
+        while (_isStarted)
         {
-            while (!_cancellationTokenSource.Token.IsCancellationRequested)
+            try
             {
                 var context = await _httpListener.GetContextAsync();
                 if (context.Request.IsWebSocketRequest)
                 {
                     var webSocketContext = await context.AcceptWebSocketAsync(null);
-                    var endpoint = context.Request.Url?.LocalPath ?? "/";
-                    
-                    _ = HandleConnectionAsync(webSocketContext.WebSocket, endpoint)
-                        .ContinueWith(t =>
-                        {
-                            if (t.IsFaulted)
-                                Log.Error(t.Exception, "WebSocket connection handler failed");
-                        });
+                    _ = HandleConnectionAsync(webSocketContext.WebSocket, context.Request.RawUrl);
                 }
                 else
                 {
@@ -72,10 +88,10 @@ public class WebSocketServer : IWebSocketServer, IDisposable
                     context.Response.Close();
                 }
             }
-        }
-        catch (Exception ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
-        {
-            Log.Error(ex, "WebSocket listener failed unexpectedly");
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in WebSocket listener");
+            }
         }
     }
 
@@ -101,43 +117,33 @@ public class WebSocketServer : IWebSocketServer, IDisposable
 
     private async Task MaintainConnectionAsync(WebSocket webSocket, string endpoint)
     {
-        var buffer = new byte[1024 * 4];
-        
-        while (webSocket.State == WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested)
+        var buffer = new byte[1024];
+        while (webSocket.State == WebSocketState.Open)
         {
-            try
-            {
-                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+            var result = await webSocket.ReceiveAsync(
+                new ArraySegment<byte>(buffer),
+                _cancellationTokenSource.Token
+            );
 
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", _cancellationTokenSource.Token);
-                    break;
-                }
-
-                if (_endpoints.TryGetValue(endpoint, out var connections) && 
-                    connections.TryGetValue(webSocket, out var connectionInfo))
-                {
-                    connectionInfo.LastPing = DateTime.UtcNow;
-                }
-            }
-            catch (OperationCanceledException)
+            if (result.MessageType == WebSocketMessageType.Close)
             {
-                break;
+                await webSocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    string.Empty,
+                    _cancellationTokenSource.Token
+                );
             }
         }
     }
 
     public async Task BroadcastToEndpointAsync(string endpoint, WebSocketMessage message)
     {
-        if (!_endpoints.TryGetValue(endpoint, out var connections))
-        {
-            return;
-        }
+        if (!_endpoints.TryGetValue(endpoint, out var connections)) return;
 
-        var deadConnections = new List<WebSocket>();
-        var messageBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
-        var buffer = new ArraySegment<byte>(messageBytes);
+        var json = JsonConvert.SerializeObject(message);
+        var bytes = Encoding.UTF8.GetBytes(json);
+
+        var deadSockets = new List<WebSocket>();
 
         foreach (var (socket, _) in connections)
         {
@@ -145,56 +151,52 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             {
                 if (socket.State == WebSocketState.Open)
                 {
-                    await socket.SendAsync(buffer, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+                    await socket.SendAsync(
+                        new ArraySegment<byte>(bytes),
+                        WebSocketMessageType.Text,
+                        true,
+                        _cancellationTokenSource.Token
+                    );
                 }
                 else
                 {
-                    deadConnections.Add(socket);
+                    deadSockets.Add(socket);
                 }
             }
-            catch (WebSocketException)
+            catch (Exception ex)
             {
-                deadConnections.Add(socket);
+                Log.Error(ex, "Error broadcasting to client");
+                deadSockets.Add(socket);
             }
         }
 
-        foreach (var deadSocket in deadConnections)
+        foreach (var socket in deadSockets)
         {
-            await RemoveConnectionAsync(deadSocket, endpoint);
+            await RemoveConnectionAsync(socket, endpoint);
         }
     }
 
-    private async Task RemoveConnectionAsync(WebSocket webSocket, string endpoint)
+    private async Task RemoveConnectionAsync(WebSocket socket, string endpoint)
     {
         if (_endpoints.TryGetValue(endpoint, out var connections))
         {
-            connections.TryRemove(webSocket, out _);
-            
-            if (connections.IsEmpty)
+            connections.TryRemove(socket, out _);
+            if (socket.State == WebSocketState.Open)
             {
-                _endpoints.TryRemove(endpoint, out _);
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cancellationTokenSource.Token);
             }
-        }
-
-        if (webSocket.State == WebSocketState.Open)
-        {
-            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", _cancellationTokenSource.Token);
         }
     }
 
     public void Dispose()
     {
         _cancellationTokenSource.Cancel();
-        if (_isStarted)
-        {
-            _httpListener.Stop();
-            _httpListener.Close();
-        }
-        _cancellationTokenSource.Dispose();
+        _httpListener.Stop();
+        _isStarted = false;
     }
+}
 
-    private class ConnectionInfo
-    {
-        public DateTime LastPing { get; set; }
-    }
+public class ConnectionInfo
+{
+    public DateTime LastPing { get; set; }
 }
