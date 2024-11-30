@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PenumbraModForwarder.Watchdog.Interfaces;
 using Serilog;
 
 namespace PenumbraModForwarder.Watchdog.Services;
 
-public class ProcessManager : IDisposable
+public class ProcessManager : IProcessManager
 {
     private readonly bool _isDevMode;
     private readonly string _solutionDirectory;
@@ -99,7 +100,7 @@ public class ProcessManager : IDisposable
         }
     }
 
-    public Process StartProcess(string projectName)
+    private Process StartProcess(string projectName)
     {
         return _isDevMode
             ? StartDevProcess(projectName)
@@ -183,7 +184,7 @@ public class ProcessManager : IDisposable
         throw new Exception("Could not find solution directory");
     }
 
-    public void MonitorProcesses(Process uiProcess, Process backgroundServiceProcess)
+    private void MonitorProcesses(Process uiProcess, Process backgroundServiceProcess)
     {
         // Monitor the processes indefinitely until the UI process exits
         while (!_isShuttingDown)

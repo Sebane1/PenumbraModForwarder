@@ -7,28 +7,61 @@ namespace PenumbraModForwarder.Common.Services;
 
 public class ConfigurationService : IConfigurationService
 {
+    private readonly IFileStorage _fileStorage;
+    private ConfigurationModel _config;
+    
     /// <summary>
     /// Notify anything listening that the configuration has been updated
     /// </summary>
     public event EventHandler ConfigurationChanged;
+
+    public ConfigurationService(IFileStorage fileStorage)
+    {
+        _fileStorage = fileStorage;
+        LoadConfiguration();
+    }
+
+    /// <summary>
+    /// Load the in memory file system
+    /// </summary>
+    private void LoadConfiguration()
+    {
+        if (_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
+        {
+            var configContent = _fileStorage.Read(ConfigurationConsts.ConfigurationFilePath);
+            _config = JsonConvert.DeserializeObject<ConfigurationModel>(configContent)
+                      ?? new ConfigurationModel();
+        }
+        else
+        {
+            _config = new ConfigurationModel();
+        }
+    }
     
     /// <summary>
     /// Create a config file with the default values
     /// </summary>
     public void CreateConfiguration()
     {
-        if (!Directory.Exists(ConfigurationConsts.ConfigurationPath)) Directory.CreateDirectory(ConfigurationConsts.ConfigurationPath);
-        
-        if (!Directory.Exists(ConfigurationConsts.ConversionPath)) Directory.CreateDirectory(ConfigurationConsts.ConversionPath);
-        
-        if (!Directory.Exists(ConfigurationConsts.ExtractionPath)) Directory.CreateDirectory(ConfigurationConsts.ExtractionPath);
-        
-        if (!Directory.Exists(ConfigurationConsts.ModsPath)) Directory.CreateDirectory(ConfigurationConsts.ModsPath);
+        _fileStorage.CreateDirectory(ConfigurationConsts.ConfigurationPath);
+        _fileStorage.CreateDirectory(ConfigurationConsts.ConversionPath);
+        _fileStorage.CreateDirectory(ConfigurationConsts.ExtractionPath);
+        _fileStorage.CreateDirectory(ConfigurationConsts.ModsPath);
 
-        if (!File.Exists(ConfigurationConsts.ConfigurationFilePath))
+        if (!_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
-            File.WriteAllText(ConfigurationConsts.ConfigurationFilePath, JsonConvert.SerializeObject(new ConfigurationModel(), Formatting.Indented));
+            SaveConfiguration();
         }
+    }
+    
+    /// <summary>
+    /// Reset the config file to default
+    /// </summary>
+    public void ResetToDefaultConfiguration()
+    {
+        _config = new ConfigurationModel();
+        SaveConfiguration();
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -40,23 +73,10 @@ public class ConfigurationService : IConfigurationService
     {
         if (propertySelector == null)
         {
-            throw new ArgumentNullException(nameof(propertySelector), "Property selector cannot be null.");
+            throw new ArgumentNullException(nameof(propertySelector));
         }
 
-        if (!File.Exists(ConfigurationConsts.ConfigurationFilePath))
-        {
-            throw new FileNotFoundException("Configuration file not found.", ConfigurationConsts.ConfigurationFilePath);
-        }
-
-        var configContent = File.ReadAllText(ConfigurationConsts.ConfigurationFilePath);
-        var configModel = JsonConvert.DeserializeObject<ConfigurationModel>(configContent);
-
-        if (configModel == null)
-        {
-            throw new InvalidOperationException("Failed to deserialize the configuration file.");
-        }
-
-        return propertySelector(configModel);
+        return propertySelector(_config);
     }
     
     /// <summary>
@@ -70,25 +90,19 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
         }
 
-        if (!File.Exists(ConfigurationConsts.ConfigurationFilePath))
-        {
-            throw new FileNotFoundException("Configuration file not found.", ConfigurationConsts.ConfigurationFilePath);
-        }
-
-        var configContent = File.ReadAllText(ConfigurationConsts.ConfigurationFilePath);
-        var configModel = JsonConvert.DeserializeObject<ConfigurationModel>(configContent);
-
-        if (configModel == null)
-        {
-            throw new InvalidOperationException("Failed to deserialize the configuration file.");
-        }
-
-        propertyUpdater(configModel);
-
-        var updatedConfigContent = JsonConvert.SerializeObject(configModel, Formatting.Indented);
-        File.WriteAllText(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
+        propertyUpdater(_config);
+        SaveConfiguration();
 
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+    }
+    
+    /// <summary>
+    /// Save the configuration to a file
+    /// </summary>
+    private void SaveConfiguration()
+    {
+        var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
+        _fileStorage.Write(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
     }
     
     /// <summary>

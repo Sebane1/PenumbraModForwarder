@@ -13,7 +13,8 @@ public static class DependencyInjection
     {
         services.AddTransient<IConfigurationService, ConfigurationService>();
         services.AddTransient<IConfigurationSetup, ConfigurationSetup>();
-        
+        services.AddSingleton<IProcessManager, ProcessManager>();
+        services.AddSingleton<IFileStorage, FileStorage>();
         
         services.SetupLogging();
         

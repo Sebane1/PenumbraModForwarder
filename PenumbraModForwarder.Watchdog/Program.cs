@@ -26,8 +26,8 @@ class Program
         {
             HideConsoleWindow();
         }
-
-        var processManager = new ProcessManager();
+        
+        var processManager = serviceProvider.GetService<IProcessManager>();
         processManager.Run();
     }
 
