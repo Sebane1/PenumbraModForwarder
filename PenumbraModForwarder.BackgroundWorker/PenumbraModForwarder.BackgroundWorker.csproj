@@ -21,4 +21,8 @@
     <ItemGroup>
       <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Interfaces\" />
+    </ItemGroup>
 </Project>

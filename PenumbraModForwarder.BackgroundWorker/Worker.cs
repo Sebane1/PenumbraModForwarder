@@ -1,30 +1,47 @@
+using PenumbraModForwarder.Common.Interfaces;
+using Serilog;
+
 namespace PenumbraModForwarder.BackgroundWorker;
 
 public class Worker : BackgroundService
 {
-    private readonly ILogger<Worker> _logger;
+    private readonly IWebSocketServer _webSocketServer;
 
-    public Worker(ILogger<Worker> logger)
+    public Worker(IWebSocketServer webSocketServer)
     {
-        _logger = logger;
+        _webSocketServer = webSocketServer;
+    }
+
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        Log.Information("Starting WebSocket Server...");
+        _webSocketServer.Start();
+        return base.StartAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            if (_logger.IsEnabled(LogLevel.Information))
+            while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                await Task.Delay(1000, stoppingToken);
             }
-
-            await Task.Delay(1000, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Information("Worker stopping...");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error occurred in worker");
+            throw;
         }
     }
-    
-    public override async Task StopAsync(CancellationToken stoppingToken)
+
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping Worker...");
-        await base.StopAsync(stoppingToken);
+        Log.Information("Stopping WebSocket Server...");
+        return base.StopAsync(cancellationToken);
     }
 }
