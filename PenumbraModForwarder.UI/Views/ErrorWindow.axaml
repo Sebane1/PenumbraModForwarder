@@ -7,6 +7,10 @@
         WindowStartupLocation="CenterScreen"
         Title="Startup Error">
     
+    <Design.DataContext>
+        <vm:ErrorWindowViewModel/>
+    </Design.DataContext>
+    
     <TextBlock Text="{Binding ErrorMessage}"
                TextWrapping="Wrap"
                VerticalAlignment="Center"

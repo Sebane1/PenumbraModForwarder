@@ -1,0 +1,36 @@
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Colors -->
+    <Color x:Key="TextColor">#eaede7</Color>
+    <Color x:Key="BackgroundColor">#050604</Color>
+    <Color x:Key="PrimaryColor">#b5c4a1</Color>
+    <Color x:Key="SecondaryColor">#5c7140</Color>
+    <Color x:Key="AccentColor">#8eaf62</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+
+    <!-- Acrylic Brushes -->
+    <ExperimentalAcrylicMaterial x:Key="TopBarAcrylicBrush"
+                                 BackgroundSource="Digger"
+                                 TintColor="{StaticResource SecondaryColor}"
+                                 TintOpacity="0.8"
+                                 MaterialOpacity="0.2"/>
+
+    <ExperimentalAcrylicMaterial x:Key="ContentAcrylicBrush"
+                                 BackgroundSource="Digger"
+                                 TintColor="{StaticResource SecondaryColor}"
+                                 TintOpacity="0.3"
+                                 MaterialOpacity="0.1"/>
+                                
+    <ExperimentalAcrylicMaterial x:Key="StatusBarAcrylicBrush"
+                                 BackgroundSource="Digger"
+                                 TintColor="{StaticResource SecondaryColor}"
+                                 TintOpacity="0.6"
+                                 MaterialOpacity="0.2"/>
+</ResourceDictionary>
