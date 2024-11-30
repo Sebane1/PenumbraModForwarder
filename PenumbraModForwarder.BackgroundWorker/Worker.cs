@@ -21,4 +21,10 @@ public class Worker : BackgroundService
             await Task.Delay(1000, stoppingToken);
         }
     }
+    
+    public override async Task StopAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Stopping Worker...");
+        await base.StopAsync(stoppingToken);
+    }
 }
