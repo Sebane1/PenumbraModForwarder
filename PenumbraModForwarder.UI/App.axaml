@@ -10,15 +10,15 @@
   
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="/Styles/Button.axaml"/>
     </Application.Styles>
              
      <Application.Resources>
          <ResourceDictionary>
              <ResourceDictionary.MergedDictionaries>
                  <ResourceInclude Source="/Styles/ColourResources.axaml"/>
-                 <ResourceInclude Source="/Styles/Icons.axaml"></ResourceInclude>
+                 <ResourceInclude Source="/Styles/Icons.axaml"/>
              </ResourceDictionary.MergedDictionaries>
          </ResourceDictionary>
      </Application.Resources>
-             
 </Application>

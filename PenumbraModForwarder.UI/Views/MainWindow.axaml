@@ -1,17 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PenumbraModForwarder.UI.ViewModels"
+        xmlns:models="using:PenumbraModForwarder.UI.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        d:DesignWidth="800"
-        d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:Class="PenumbraModForwarder.UI.Views.MainWindow"
         x:CompileBindings="True"
         x:DataType="vm:MainWindowViewModel"
         Title="Penumbra Mod Forwarder"
-        MinWidth="800"
-        MinHeight="600"
+        MinWidth="800" MinHeight="600"
         TransparencyLevelHint="AcrylicBlur"
         Background="{DynamicResource BackgroundBrush}"
         ExtendClientAreaToDecorationsHint="True"
@@ -22,137 +20,140 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid x:Name="Root" ColumnDefinitions="Auto,*">
-        <!-- Left Menu Bar -->
-        <ExperimentalAcrylicBorder Grid.Column="0" 
-                                  Width="50" 
-                                  Material="{DynamicResource TopBarAcrylicBrush}">
-            <Grid RowDefinitions="Auto,*,Auto">
-                <!-- Top Menu Items -->
-                <StackPanel Grid.Row="0" Margin="0,32,0,0">
-                    <Button Width="50" 
-                            Height="50" 
-                            HorizontalContentAlignment="Center" 
-                            VerticalContentAlignment="Center" 
-                            Background="Transparent" 
-                            BorderThickness="0">
-                        <Path Data="{StaticResource MenuIcon}" 
-                              Fill="{DynamicResource TextBrush}" 
-                              Width="20" 
-                              Height="20"/>
-                    </Button>
-                    <Button Width="50" 
-                            Height="50" 
-                            HorizontalContentAlignment="Center" 
-                            VerticalContentAlignment="Center" 
-                            Background="Transparent" 
-                            BorderThickness="0">
-                        <Path Data="{StaticResource HomeIcon}" 
-                              Fill="{DynamicResource TextBrush}" 
-                              Width="20" 
-                              Height="20"/>
-                    </Button>
-                </StackPanel>
-                
-                <!-- Bottom Menu Items -->
-                <Button Grid.Row="2" 
-                        Width="50" 
-                        Height="50" 
-                        Margin="0,0,0,10" 
-                        HorizontalContentAlignment="Center" 
-                        VerticalContentAlignment="Center" 
-                        Background="Transparent" 
-                        BorderThickness="0">
-                    <Path Data="{StaticResource SettingsIcon}" 
-                          Fill="{DynamicResource TextBrush}" 
-                          Width="20" 
-                          Height="20"/>
-                </Button>
-            </Grid>
-        </ExperimentalAcrylicBorder>
-
-        <!-- Main Content Area -->
-        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
-            <!-- Title Bar -->
-            <Grid Grid.Row="0" 
-                  Height="32" 
-                  Background="Transparent" 
-                  Name="TitleBar">
-                <Grid ColumnDefinitions="*,Auto">
-                    <Grid Grid.Column="0" Background="Transparent"/>
+    <Panel>
+        <Grid RowDefinitions="30,*">
+            <!-- Custom Title Bar -->
+            <ExperimentalAcrylicBorder Grid.Row="0" Height="30">
+                <ExperimentalAcrylicBorder.Material>
+                    <StaticResource ResourceKey="TopBarAcrylicBrush"/>
+                </ExperimentalAcrylicBorder.Material>
+                <Grid x:Name="TitleBar">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Penumbra Mod Forwarder" 
+                             VerticalAlignment="Center"
+                             Margin="10,0"
+                             Foreground="{DynamicResource TextBrush}"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <!-- These are currently broken -->
-                        <Button Width="46" 
-                                Height="32" 
-                                HorizontalContentAlignment="Center" 
-                                VerticalContentAlignment="Center" 
-                                Background="Transparent" 
-                                BorderThickness="0" 
-                                Command="{Binding MinimizeWindowCommand, Mode=OneWay}">
-                            <Path Data="{StaticResource MinimizeIcon}" 
-                                  Stroke="{DynamicResource TextBrush}" 
-                                  StrokeThickness="1"/>
+                        <Button Classes="windowControl">
+                            <Button.Command>
+                                <Binding Path="MinimizeWindowCommand"/>
+                            </Button.Command>
+                            <Path Data="M 0,0 L 10,0"
+                                  Stroke="{DynamicResource TextBrush}"
+                                  StrokeThickness="1"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Center"/>
                         </Button>
-
-                        <Button Width="46" 
-                                Height="32" 
-                                HorizontalContentAlignment="Center" 
-                                VerticalContentAlignment="Center" 
-                                Background="Transparent" 
-                                BorderThickness="0" 
-                                Command="{Binding CloseWindowCommand, Mode=OneWay}">
-                            <Path Data="{StaticResource CloseIcon}" 
-                                  Stroke="{DynamicResource TextBrush}" 
-                                  StrokeThickness="1"/>
+                        <Button Classes="windowControl">
+                            <Button.Command>
+                                <Binding Path="CloseWindowCommand"/>
+                            </Button.Command>
+                            <Canvas Width="10" Height="10">
+                                <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"
+                                      Stroke="{DynamicResource TextBrush}"
+                                      StrokeThickness="1"/>
+                            </Canvas>
                         </Button>
-                    </StackPanel>
-                </Grid>
-            </Grid>
-
-            <!-- Content Area -->
-            <ContentControl Grid.Row="1" 
-                          Margin="20,10,20,20" 
-                          Content="{Binding CurrentPage}"/>
-
-            <!-- Status Bar -->
-            <ExperimentalAcrylicBorder Grid.Row="2" 
-                                      Height="60" 
-                                      Material="{DynamicResource StatusBarAcrylicBrush}">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" 
-                              Orientation="Horizontal" 
-                              Margin="10,0" 
-                              VerticalAlignment="Center">
-                        <Path Data="{StaticResource InfoIcon}" 
-                              Fill="{DynamicResource TextBrush}" 
-                              Width="16" 
-                              Height="16"/>
-                        <TextBlock Text="Ready" 
-                                 Margin="10,0" 
-                                 Foreground="{DynamicResource TextBrush}"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" 
-                              Orientation="Vertical" 
-                              Margin="10,8" 
-                              Width="300">
-                        <TextBlock Text="Installing Penumbra Mod..." 
-                                 Foreground="{DynamicResource TextBrush}" 
-                                 HorizontalAlignment="Left" 
-                                 Margin="0,0,0,4"/>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <ProgressBar Grid.Column="0" 
-                                       Height="4" 
-                                       Margin="0,0,10,0" 
-                                       Background="{DynamicResource PrimaryBrush}" 
-                                       Foreground="{DynamicResource AccentBrush}"/>
-                            <TextBlock Grid.Column="1" 
-                                     Text="0%" 
-                                     Foreground="{DynamicResource TextBrush}" 
-                                     Width="40"/>
-                        </Grid>
                     </StackPanel>
                 </Grid>
             </ExperimentalAcrylicBorder>
+
+            <!-- Main Content -->
+            <Grid Grid.Row="1" ColumnDefinitions="250,*">
+                <!-- Navigation Panel -->
+                <ExperimentalAcrylicBorder Grid.Column="0">
+                    <ExperimentalAcrylicBorder.Material>
+                        <ExperimentalAcrylicMaterial
+                            BackgroundSource="Digger"
+                            TintColor="{StaticResource SecondaryColor}"
+                            TintOpacity="0.8"
+                            MaterialOpacity="0.2"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <Grid RowDefinitions="Auto,*,Auto" Margin="0,20,0,0">
+                        <!-- App Logo/Title -->
+                        <StackPanel Grid.Row="0" Margin="20">
+                            <PathIcon Data="{StaticResource HomeIcon}" 
+                                    Width="32" Height="32" 
+                                    Foreground="{DynamicResource PrimaryBrush}"/>
+                            <TextBlock Text="Penumbra Mod&#x0a;Forwarder" 
+                                     TextWrapping="Wrap"
+                                     TextAlignment="Center"
+                                     FontSize="18" 
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+
+                        <!-- Navigation Items -->
+                        <ListBox Grid.Row="1" 
+                                Margin="10"
+                                Background="Transparent"
+                                ItemsSource="{Binding MenuItems}"
+                                SelectedItem="{Binding SelectedMenuItem}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:MenuItem">
+                                    <StackPanel Orientation="Horizontal" Spacing="15">
+                                        <PathIcon Data="{Binding Icon}" 
+                                                Width="16" Height="16"
+                                                Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="{Binding Label}" 
+                                                 VerticalAlignment="Center"
+                                                 Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Settings Button -->
+                        <Button Grid.Row="2"
+                                Margin="10,0,10,20"
+                                Command="{Binding NavigateToSettingsCommand}"
+                                Classes="transparent">
+                            <StackPanel Orientation="Horizontal" Spacing="15">
+                                <PathIcon Data="{StaticResource SettingsIcon}"/>
+                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </ExperimentalAcrylicBorder>
+
+                <!-- Content Area -->
+                <ExperimentalAcrylicBorder Grid.Column="1">
+                    <ExperimentalAcrylicBorder.Material>
+                        <StaticResource ResourceKey="ContentAcrylicBrush"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <ContentControl Content="{Binding CurrentPage}" Margin="20"/>
+                </ExperimentalAcrylicBorder>
+            </Grid>
         </Grid>
-    </Grid>
+
+        <!-- Notification Overlay -->
+        <Panel IsVisible="{Binding IsNotificationVisible}">
+            <ExperimentalAcrylicBorder 
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Right"
+                Margin="0,0,20,20"
+                CornerRadius="4"
+                ZIndex="1000">
+                <ExperimentalAcrylicBorder.Material>
+                    <StaticResource ResourceKey="StatusBarAcrylicBrush"/>
+                </ExperimentalAcrylicBorder.Material>
+        
+                <Border BoxShadow="0 4 8 0 #40000000">
+                    <StackPanel Margin="16,12" MaxWidth="300">
+                        <TextBlock Text="{Binding NotificationText}" 
+                                 Foreground="{DynamicResource TextBrush}"
+                                 TextWrapping="Wrap"
+                                 Margin="0,0,0,8"/>
+                        <ProgressBar Value="{Binding Progress}" 
+                                   Maximum="100"
+                                   Height="2"
+                                   Foreground="{DynamicResource AccentBrush}"/>
+                    </StackPanel>
+                </Border>
+            </ExperimentalAcrylicBorder>
+        </Panel>
+    </Panel>
 </Window>
