@@ -69,6 +69,7 @@ public class MainWindowViewModel : ViewModelBase
         _currentPage = _selectedMenuItem.ViewModel;
 
         _ = ShowWelcomeSequence();
+        _ = ShowMultipleProgressExample();
     }
 
     private async Task ShowWelcomeSequence()
@@ -88,5 +89,20 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         await _notificationService.ShowNotification("Welcome to Penumbra Mod Forwarder!");
+    }
+    
+    private async Task ShowMultipleProgressExample()
+    {
+        _notificationService.UpdateProgress("Task 1", "Starting first task...", 0);
+        _notificationService.UpdateProgress("Task 2", "Starting second task...", 0);
+
+        for (int i = 0; i <= 100; i += 30)
+        {
+            _notificationService.UpdateProgress("Task 1", $"Processing task 1... {i}%", i);
+            _notificationService.UpdateProgress("Task 2", $"Processing task 2... {i}%", i);
+            await Task.Delay(200);
+        }
+
+        await _notificationService.ShowNotification("All tasks completed!");
     }
 }

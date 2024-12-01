@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using PenumbraModForwarder.UI.Interfaces;
@@ -8,7 +9,7 @@ using ReactiveUI;
 namespace PenumbraModForwarder.UI.Services;
 public class NotificationService : ReactiveObject, INotificationService
 {
-    private Notification _currentProgressNotification;
+    private Dictionary<string, Notification> _progressNotifications = new();
     public ObservableCollection<Notification> Notifications { get; } = new();
 
     public async Task ShowNotification(string message)
@@ -21,7 +22,7 @@ public class NotificationService : ReactiveObject, INotificationService
 
         var notification = new Notification(message)
         {
-            Progress = -1 // Don't show progress bar
+            Progress = -1
         };
         Notifications.Add(notification);
 
@@ -33,20 +34,28 @@ public class NotificationService : ReactiveObject, INotificationService
 
     public void UpdateProgress(string title, string status, int progress)
     {
-        if (_currentProgressNotification == null)
+        if (!_progressNotifications.ContainsKey(title))
         {
-            _currentProgressNotification = new Notification(title);
-            Notifications.Add(_currentProgressNotification);
+            if (Notifications.Count >= 3)
+            {
+                var oldestNotification = Notifications[0];
+                Notifications.RemoveAt(0);
+            }
+
+            var notification = new Notification(title);
+            _progressNotifications[title] = notification;
+            Notifications.Add(notification);
         }
 
-        _currentProgressNotification.Progress = progress;
-        _currentProgressNotification.ProgressText = status;
+        var currentNotification = _progressNotifications[title];
+        currentNotification.Progress = progress;
+        currentNotification.ProgressText = status;
 
         if (progress >= 100)
         {
-            _currentProgressNotification.IsVisible = false;
-            Notifications.Remove(_currentProgressNotification);
-            _currentProgressNotification = null;
+            currentNotification.IsVisible = false;
+            Notifications.Remove(currentNotification);
+            _progressNotifications.Remove(title);
         }
     }
 }
