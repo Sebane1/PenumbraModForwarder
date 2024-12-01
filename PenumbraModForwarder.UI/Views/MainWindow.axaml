@@ -134,50 +134,58 @@
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Notification">
-                    <ExperimentalAcrylicBorder IsVisible="{Binding IsVisible}" 
-                                              CornerRadius="4">
-                        <ExperimentalAcrylicBorder.Material>
-                            <StaticResource ResourceKey="StatusBarAcrylicBrush"/>
-                        </ExperimentalAcrylicBorder.Material>
-                        <ExperimentalAcrylicBorder.Styles>
-                            <Style Selector="ExperimentalAcrylicBorder">
-                                <Style.Animations>
-                                    <Animation Duration="0:0:0.3" 
-                                             FillMode="Forward" 
-                                             Easing="CubicEaseOut">
-                                        <KeyFrame Cue="0%">
-                                            <Setter Property="TranslateTransform.X" Value="400"/>
-                                        </KeyFrame>
-                                        <KeyFrame Cue="100%">
-                                            <Setter Property="TranslateTransform.X" Value="0"/>
-                                        </KeyFrame>
-                                    </Animation>
-                                </Style.Animations>
-                            </Style>
-                        </ExperimentalAcrylicBorder.Styles>
-
-                        <Border BoxShadow="0 4 8 0 #40000000">
+               <DataTemplate x:DataType="models:Notification">
+                <ExperimentalAcrylicBorder IsVisible="{Binding IsVisible}" CornerRadius="4">
+                    <ExperimentalAcrylicBorder.Material>
+                        <StaticResource ResourceKey="StatusBarAcrylicBrush"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <ExperimentalAcrylicBorder.Styles>
+                        <Style Selector="ExperimentalAcrylicBorder">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.3" FillMode="Forward" Easing="CubicEaseOut">
+                                    <KeyFrame Cue="0%">
+                                        <Setter Property="TranslateTransform.X" Value="400"/>
+                                    </KeyFrame>
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="TranslateTransform.X" Value="0"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </ExperimentalAcrylicBorder.Styles>
+                    <Border BoxShadow="0 4 8 0 #40000000">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             <StackPanel Margin="16,12" MaxWidth="300">
-                                <TextBlock Text="{Binding Text}" 
-                                          Foreground="{DynamicResource TextBrush}"
-                                          TextWrapping="Wrap"
-                                          Margin="0,0,0,8"/>
-                                <StackPanel IsVisible="{Binding Progress, 
-                                           Converter={StaticResource ProgressVisibilityConverter}}">
-                                    <TextBlock Text="{Binding ProgressText}"
-                                             Foreground="{DynamicResource TextBrush}"
-                                             TextWrapping="Wrap"
-                                             Margin="0,0,0,8"/>
-                                    <ProgressBar Value="{Binding Progress}"
-                                               Maximum="100"
-                                               Height="2"
-                                               Foreground="{DynamicResource AccentBrush}"/>
+                                <StackPanel IsVisible="{Binding ShowProgress}">
+                                    <TextBlock Margin="0,0,0,8" Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="{Binding Text}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding Progress}"/>
+                                        <Run Text="%"/>
+                                    </TextBlock>
+                                    <ProgressBar Value="{Binding Progress}" 
+                                                 Maximum="100" 
+                                                 Height="2" 
+                                                 Foreground="{DynamicResource AccentBrush}"/>
                                 </StackPanel>
                             </StackPanel>
-                        </Border>
-                    </ExperimentalAcrylicBorder>
-                </DataTemplate>
+                            <Button Grid.Column="1"
+                                    Command="{Binding CloseCommand}"
+                                    Classes="transparent"
+                                    Margin="0,8,8,0"
+                                    VerticalAlignment="Top">
+                                <Path Data="{StaticResource CloseIcon}"
+                                      Stroke="{DynamicResource TextBrush}"
+                                      StrokeThickness="1"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ExperimentalAcrylicBorder>
+            </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
     </Panel>

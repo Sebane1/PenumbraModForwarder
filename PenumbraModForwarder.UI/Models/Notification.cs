@@ -1,24 +1,32 @@
-﻿using ReactiveUI;
+﻿using System.Reactive;
+using PenumbraModForwarder.UI.Interfaces;
+using ReactiveUI;
 
 namespace PenumbraModForwarder.UI.Models;
 
 public class Notification : ReactiveObject
 {
-    private double _progress;
-    private bool _isVisible = true;
-    private string _progressText = string.Empty;
+    private bool _isVisible;
+    private int _progress;
+    private string _progressText;
+    private bool _showProgress;
+    private readonly INotificationService _notificationService;
 
     public string Text { get; }
-    public string ProgressText
+    public ReactiveCommand<Unit, Unit> CloseCommand { get; }
+
+    public Notification(string text, INotificationService notificationService, bool showProgress = true)
     {
-        get => _progressText;
-        set => this.RaiseAndSetIfChanged(ref _progressText, value);
+        Text = text;
+        _notificationService = notificationService;
+        _showProgress = showProgress;
+        CloseCommand = ReactiveCommand.Create(Close);
     }
-    
-    public double Progress
+
+    public bool ShowProgress
     {
-        get => _progress;
-        set => this.RaiseAndSetIfChanged(ref _progress, value);
+        get => _showProgress;
+        set => this.RaiseAndSetIfChanged(ref _showProgress, value);
     }
 
     public bool IsVisible
@@ -27,8 +35,20 @@ public class Notification : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _isVisible, value);
     }
 
-    public Notification(string text)
+    public int Progress
     {
-        Text = text;
+        get => _progress;
+        set => this.RaiseAndSetIfChanged(ref _progress, value);
+    }
+
+    public string ProgressText
+    {
+        get => _progressText;
+        set => this.RaiseAndSetIfChanged(ref _progressText, value);
+    }
+
+    private void Close()
+    {
+        _ = _notificationService.RemoveNotification(this);
     }
 }

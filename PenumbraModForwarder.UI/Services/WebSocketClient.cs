@@ -56,13 +56,15 @@ public class WebSocketClient : IWebSocketClient
                 if (!_isReconnecting)
                 {
                     Log.Error(ex, "WebSocket connection failed. Attempting to reconnect...");
-                    await _notificationService.ShowNotification("Connection to background service lost. Reconnecting...");
+                    await _notificationService.ShowNotification("Connection to background service lost. Reconnecting...", 5);
                     _isReconnecting = true;
                 }
                 await Task.Delay(5000, _cts.Token);
             }
         }
     }
+
+    private readonly Dictionary<string, bool> _activeTaskIds = new();
 
     private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
     {
@@ -76,12 +78,24 @@ public class WebSocketClient : IWebSocketClient
                 {
                     var message = JsonConvert.DeserializeObject<WebSocketMessage>(
                         Encoding.UTF8.GetString(buffer, 0, result.Count));
-                    
+                
                     Log.Information("Received message from {Endpoint}: {Message}", endpoint, message);
-
-                    if (message.Type == CustomWebSocketMessageType.Status)
+                
+                    if (message.Type == CustomWebSocketMessageType.Status || 
+                        message.Type == CustomWebSocketMessageType.Progress)
                     {
-                        await _notificationService.ShowNotification(message.Message);
+                        if (message.Progress > 0)
+                        {
+                            _notificationService.UpdateProgress(
+                                message.TaskId,
+                                message.Message,
+                                message.Progress 
+                            );
+                        }
+                        else
+                        {
+                            await _notificationService.ShowNotification(message.Message);
+                        }
                     }
                 }
             }
