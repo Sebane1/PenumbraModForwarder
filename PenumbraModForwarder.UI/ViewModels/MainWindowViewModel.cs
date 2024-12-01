@@ -96,7 +96,7 @@ public class MainWindowViewModel : ViewModelBase
         _notificationService.UpdateProgress("Task 1", "Starting first task...", 0);
         _notificationService.UpdateProgress("Task 2", "Starting second task...", 0);
 
-        for (int i = 0; i <= 100; i += 30)
+        for (int i = 0; i <= 100; i += 20)
         {
             _notificationService.UpdateProgress("Task 1", $"Processing task 1... {i}%", i);
             _notificationService.UpdateProgress("Task 2", $"Processing task 2... {i}%", i);

@@ -1,50 +1,86 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using ReactiveUI;
 
 namespace PenumbraModForwarder.UI.Services;
+
 public class NotificationService : ReactiveObject, INotificationService
 {
-    private Dictionary<string, Notification> _progressNotifications = new();
+    private readonly object _lock = new();
+    private readonly Dictionary<string, Notification> _progressNotifications = new();
     public ObservableCollection<Notification> Notifications { get; } = new();
 
     public async Task ShowNotification(string message)
     {
-        if (Notifications.Count >= 3)
-        {
-            var oldestNotification = Notifications[0];
-            Notifications.RemoveAt(0);
-        }
-
-        var notification = new Notification(message)
-        {
-            Progress = -1
-        };
-        Notifications.Add(notification);
-
-        await Task.Delay(3000);
-        notification.IsVisible = false;
-        await Task.Delay(300);
-        Notifications.Remove(notification);
-    }
-
-    public void UpdateProgress(string title, string status, int progress)
-    {
-        if (!_progressNotifications.ContainsKey(title))
+        Notification notification;
+        lock (_lock)
         {
             if (Notifications.Count >= 3)
             {
                 var oldestNotification = Notifications[0];
-                Notifications.RemoveAt(0);
+                oldestNotification.IsVisible = false;
+                Task.Delay(500).ContinueWith(_ =>
+                {
+                    lock (_lock)
+                    {
+                        if (Notifications.Count > 0)
+                        {
+                            Notifications.RemoveAt(0);
+                        }
+                    }
+                });
             }
 
-            var notification = new Notification(title);
-            _progressNotifications[title] = notification;
+            notification = new Notification(message)
+            {
+                IsVisible = true,
+                Progress = -1 // Don't show progress bar
+            };
             Notifications.Add(notification);
+        }
+
+        await Task.Delay(4000);
+        notification.IsVisible = false;
+        await Task.Delay(500);
+
+        lock (_lock)
+        {
+            Notifications.Remove(notification);
+        }
+    }
+
+    public void UpdateProgress(string title, string status, int progress)
+    {
+        lock (_lock)
+        {
+            if (!_progressNotifications.ContainsKey(title))
+            {
+                if (Notifications.Count >= 3)
+                {
+                    var oldestNotification = Notifications[0];
+                    oldestNotification.IsVisible = false;
+                    Task.Delay(500).ContinueWith(_ =>
+                    {
+                        lock (_lock)
+                        {
+                            if (Notifications.Count > 0)
+                            {
+                                Notifications.RemoveAt(0);
+                            }
+                        }
+                    });
+                }
+
+                var notification = new Notification(title)
+                {
+                    IsVisible = true
+                };
+                _progressNotifications[title] = notification;
+                Notifications.Add(notification);
+            }
         }
 
         var currentNotification = _progressNotifications[title];
@@ -54,8 +90,14 @@ public class NotificationService : ReactiveObject, INotificationService
         if (progress >= 100)
         {
             currentNotification.IsVisible = false;
-            Notifications.Remove(currentNotification);
-            _progressNotifications.Remove(title);
+            Task.Delay(500).ContinueWith(_ =>
+            {
+                lock (_lock)
+                {
+                    Notifications.Remove(currentNotification);
+                    _progressNotifications.Remove(title);
+                }
+            });
         }
     }
 }
