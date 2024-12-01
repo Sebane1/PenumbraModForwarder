@@ -1,14 +1,14 @@
 ﻿using System;
 using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.UI.Models;
+using PenumbraModForwarder.UI.Interfaces;
 using ReactiveUI;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PenumbraModForwarder.UI.Services;
 using MenuItem = PenumbraModForwarder.UI.Models.MenuItem;
 
 namespace PenumbraModForwarder.UI.ViewModels;
@@ -16,13 +16,13 @@ namespace PenumbraModForwarder.UI.ViewModels;
 public class MainWindowViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly INotificationService _notificationService;
     private ViewModelBase _currentPage = null!;
-    private bool _isNotificationVisible;
-    private string _notificationText = string.Empty;
-    private double _progress;
     private MenuItem _selectedMenuItem = null!;
 
     public ObservableCollection<MenuItem> MenuItems { get; }
+    public ObservableCollection<Notification> Notifications => 
+        (_notificationService as NotificationService)?.Notifications ?? new();
 
     public MenuItem SelectedMenuItem
     {
@@ -41,29 +41,12 @@ public class MainWindowViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _currentPage, value);
     }
 
-    public bool IsNotificationVisible
-    {
-        get => _isNotificationVisible;
-        set => this.RaiseAndSetIfChanged(ref _isNotificationVisible, value);
-    }
-
-    public string NotificationText
-    {
-        get => _notificationText;
-        set => this.RaiseAndSetIfChanged(ref _notificationText, value);
-    }
-
-    public double Progress
-    {
-        get => _progress;
-        set => this.RaiseAndSetIfChanged(ref _progress, value);
-    }
-
     public ICommand NavigateToSettingsCommand { get; }
 
-    public MainWindowViewModel(IServiceProvider serviceProvider)
+    public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService)
     {
         _serviceProvider = serviceProvider;
+        _notificationService = notificationService;
         var app = Application.Current;
 
         MenuItems = new ObservableCollection<MenuItem>
@@ -78,27 +61,32 @@ public class MainWindowViewModel : ViewModelBase
 
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
         {
+            SelectedMenuItem = null;
             CurrentPage = ActivatorUtilities.CreateInstance<SettingsViewModel>(_serviceProvider);
         });
 
         _selectedMenuItem = MenuItems[0];
         _currentPage = _selectedMenuItem.ViewModel;
-        ShowStartupNotification();
+
+        _ = ShowWelcomeSequence();
     }
 
-    private async void ShowStartupNotification()
+    private async Task ShowWelcomeSequence()
     {
-        NotificationText = "Welcome to Penumbra Mod Forwarder";
-        Progress = 0;
-        IsNotificationVisible = true;
+        _notificationService.UpdateProgress(
+            "Welcome",
+            "Loading application...",
+            0);
 
-        for (int i = 0; i <= 100; i += 2)
+        for (int i = 0; i <= 100; i += 10)
         {
-            Progress = i;
-            await Task.Delay(20);
+            _notificationService.UpdateProgress(
+                "Welcome",
+                $"Loading application... {i}%",
+                i);
+            await Task.Delay(200);
         }
 
-        await Task.Delay(1000);
-        IsNotificationVisible = false;
+        await _notificationService.ShowNotification("Welcome to Penumbra Mod Forwarder!");
     }
 }

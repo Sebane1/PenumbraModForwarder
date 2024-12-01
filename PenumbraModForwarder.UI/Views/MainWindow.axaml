@@ -123,30 +123,44 @@
         </Grid>
 
         <!-- Notification Overlay -->
-        <Panel IsVisible="{Binding IsNotificationVisible}">
-            <ExperimentalAcrylicBorder 
-                VerticalAlignment="Bottom"
-                HorizontalAlignment="Right"
-                Margin="0,0,20,20"
-                CornerRadius="4"
-                ZIndex="1000">
-                <ExperimentalAcrylicBorder.Material>
-                    <StaticResource ResourceKey="StatusBarAcrylicBrush"/>
-                </ExperimentalAcrylicBorder.Material>
-        
-                <Border BoxShadow="0 4 8 0 #40000000">
-                    <StackPanel Margin="16,12" MaxWidth="300">
-                        <TextBlock Text="{Binding NotificationText}" 
-                                 Foreground="{DynamicResource TextBrush}"
-                                 TextWrapping="Wrap"
-                                 Margin="0,0,0,8"/>
-                        <ProgressBar Value="{Binding Progress}" 
-                                   Maximum="100"
-                                   Height="2"
-                                   Foreground="{DynamicResource AccentBrush}"/>
-                    </StackPanel>
-                </Border>
-            </ExperimentalAcrylicBorder>
-        </Panel>
+        <ItemsControl ItemsSource="{Binding Notifications}"
+                      VerticalAlignment="Bottom"
+                      HorizontalAlignment="Right"
+                      Margin="0,0,20,20"
+                      ZIndex="1000">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="10"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Notification">
+                    <ExperimentalAcrylicBorder IsVisible="{Binding IsVisible}" CornerRadius="4">
+                        <ExperimentalAcrylicBorder.Material>
+                            <StaticResource ResourceKey="StatusBarAcrylicBrush"/>
+                        </ExperimentalAcrylicBorder.Material>
+                        <Border BoxShadow="0 4 8 0 #40000000">
+                            <StackPanel Margin="16,12" MaxWidth="300">
+                                <TextBlock Text="{Binding Text}" 
+                                           Foreground="{DynamicResource TextBrush}"
+                                           TextWrapping="Wrap" 
+                                           Margin="0,0,0,8"/>
+                                <StackPanel IsVisible="{Binding Progress, 
+                               Converter={StaticResource ProgressVisibilityConverter}}">
+                                    <TextBlock Text="{Binding ProgressText}"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,8"/>
+                                    <ProgressBar Value="{Binding Progress}"
+                                                 Maximum="100"
+                                                 Height="2"
+                                                 Foreground="{DynamicResource AccentBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </ExperimentalAcrylicBorder>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Panel>
 </Window>

@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Extensions;
+using PenumbraModForwarder.UI.Interfaces;
+using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
 
 namespace PenumbraModForwarder.UI.Extensions;
@@ -10,6 +12,9 @@ public static class DependencyInjection
     {
         // Add your UI services here
         services.SetupLogging();
+        
+        // Services
+        services.AddSingleton<INotificationService, NotificationService>();
         
         // ViewModels
         services.AddTransient<MainWindowViewModel>();
