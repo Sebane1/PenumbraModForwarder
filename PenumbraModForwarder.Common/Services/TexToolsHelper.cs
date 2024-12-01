@@ -15,6 +15,20 @@ public class TexToolsHelper : ITexToolsHelper
         _configurationService = configurationService;
     }
 
+    /// <summary>
+    /// Sets or retrieves the TexTools console path in the configuration
+    /// </summary>
+    /// <returns>
+    /// TexToolsStatus indicating the result:
+    /// - AlreadyConfigured: Path already exists in configuration
+    /// - Found: Successfully found and configured new path
+    /// - NotFound: ConsoleTools.exe not found at expected location
+    /// - NotInstalled: TexTools installation not found in registry
+    /// </returns>
+    /// <remarks>
+    /// Checks configuration first, then registry for TexTools installation.
+    /// If found, validates ConsoleTools.exe exists and updates configuration.
+    /// </remarks>
     public TexToolsStatus SetTexToolConsolePath()
     {
         if ((string)_configurationService.ReturnConfigValue(model => model.TexToolPath) != string.Empty)
