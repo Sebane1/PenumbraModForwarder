@@ -5,9 +5,14 @@
       <map>
         <entry key="PenumbraModForwarder.UI/App.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/MainWindow.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/AcrylicMaterials.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Button.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/ColourResources.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Icons.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/Navigation.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/Notification.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/NotificationStyles.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/TitleBar.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/ViewModels/ViewModelBase.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/ErrorWindow.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/HomeView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />

@@ -1,0 +1,81 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:PenumbraModForwarder.UI.Models">
+    
+    <Style Selector="ItemsControl.notifications">
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,0,20,20"/>
+        <Setter Property="ZIndex" Value="1000"/>
+        <Setter Property="ItemsPanel">
+            <ItemsPanelTemplate>
+                <StackPanel Spacing="10"/>
+            </ItemsPanelTemplate>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <DataTemplate x:DataType="models:Notification">
+                <ExperimentalAcrylicBorder IsVisible="{Binding IsVisible}" 
+                                          CornerRadius="4"
+                                          MinWidth="200">
+                    <ExperimentalAcrylicBorder.Material>
+                        <ExperimentalAcrylicMaterial
+                            BackgroundSource="Digger"
+                            TintColor="Black"
+                            TintOpacity="0.6"
+                            MaterialOpacity="0.5"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <ExperimentalAcrylicBorder.Styles>
+                        <Style Selector="ExperimentalAcrylicBorder">
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.3"
+                                         FillMode="Forward"
+                                         Easing="CubicEaseOut">
+                                    <KeyFrame Cue="0%">
+                                        <Setter Property="TranslateTransform.X" Value="400"/>
+                                    </KeyFrame>
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="TranslateTransform.X" Value="0"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </ExperimentalAcrylicBorder.Styles>
+                    <Border BoxShadow="0 4 8 0 #40000000">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="16,12" MaxWidth="400">
+                                <StackPanel IsVisible="{Binding ShowProgress}">
+                                    <TextBlock Text="{Binding Text}"
+                                             Margin="0,0,0,4"
+                                             Foreground="{DynamicResource TextBrush}"
+                                             TextWrapping="Wrap"/>
+                                    <TextBlock Margin="0,0,0,8"
+                                             Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="{Binding Progress}"/>
+                                        <Run Text="%"/>
+                                    </TextBlock>
+                                    <ProgressBar Value="{Binding Progress}"
+                                               Maximum="100"
+                                               Height="2"
+                                               Foreground="{DynamicResource AccentBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Command="{Binding CloseCommand}"
+                                    Classes="transparent"
+                                    Margin="0,8,8,0"
+                                    VerticalAlignment="Top">
+                                <Path Data="{StaticResource CloseIcon}"
+                                      Stroke="{DynamicResource TextBrush}"
+                                      StrokeThickness="1"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ExperimentalAcrylicBorder>
+            </DataTemplate>
+        </Setter>
+    </Style>
+</Styles>

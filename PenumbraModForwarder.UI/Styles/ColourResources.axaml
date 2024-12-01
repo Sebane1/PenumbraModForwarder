@@ -14,23 +14,4 @@
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
-
-    <!-- Acrylic Brushes -->
-    <ExperimentalAcrylicMaterial x:Key="TopBarAcrylicBrush"
-                                 BackgroundSource="Digger"
-                                 TintColor="{StaticResource SecondaryColor}"
-                                 TintOpacity="0.8"
-                                 MaterialOpacity="0.2"/>
-
-    <ExperimentalAcrylicMaterial x:Key="ContentAcrylicBrush"
-                                 BackgroundSource="Digger"
-                                 TintColor="{StaticResource SecondaryColor}"
-                                 TintOpacity="0.3"
-                                 MaterialOpacity="0.1"/>
-                                
-    <ExperimentalAcrylicMaterial x:Key="StatusBarAcrylicBrush"
-                                 BackgroundSource="Digger"
-                                 TintColor="{StaticResource SecondaryColor}"
-                                 TintOpacity="0.6"
-                                 MaterialOpacity="0.2"/>
 </ResourceDictionary>
