@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PenumbraModForwarder.Watchdog.Interfaces;
 using Serilog;
@@ -126,11 +127,37 @@ public class ProcessManager : IProcessManager
                 Arguments = $"run --project \"{projectFilePath}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                WorkingDirectory = projectDirectory
+                WorkingDirectory = projectDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             }
         };
 
+        // Copy current environment variables
+        foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
+        {
+            process.StartInfo.EnvironmentVariables[entry.Key.ToString()] = entry.Value?.ToString();
+        }
+
+        // Ensure watchdog initialization variable is set
+        process.StartInfo.EnvironmentVariables["WATCHDOG_INITIALIZED"] = "true";
+        process.StartInfo.EnvironmentVariables["DEV_MODE"] = "true";
+
+        process.OutputDataReceived += (sender, args) =>
+        {
+            if (!string.IsNullOrEmpty(args.Data))
+                Log.Information($"{projectName} Output: {args.Data}");
+        };
+
+        process.ErrorDataReceived += (sender, args) =>
+        {
+            if (!string.IsNullOrEmpty(args.Data))
+                Log.Error($"{projectName} Error: {args.Data}");
+        };
+
         process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         Log.Information($"Started {projectName} (PID: {process.Id})");
         return process;

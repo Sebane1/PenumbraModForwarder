@@ -1,26 +1,29 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
 using System.Threading.Tasks;
-using PenumbraModForwarder.UI.Models;
+using System.Windows.Input;
 using MenuItem = PenumbraModForwarder.UI.Models.MenuItem;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
-    private ViewModelBase _currentPage;
+    private readonly IServiceProvider _serviceProvider;
+    private ViewModelBase _currentPage = null!;
     private bool _isNotificationVisible;
-    private string _notificationText;
+    private string _notificationText = string.Empty;
     private double _progress;
-    private MenuItem _selectedMenuItem;
-    
+    private MenuItem _selectedMenuItem = null!;
+
     public ObservableCollection<MenuItem> MenuItems { get; }
-    
+
     public MenuItem SelectedMenuItem
     {
         get => _selectedMenuItem;
@@ -58,25 +61,26 @@ public class MainWindowViewModel : ViewModelBase
 
     public ICommand MinimizeWindowCommand { get; }
     public ICommand CloseWindowCommand { get; }
-    
     public ICommand NavigateToSettingsCommand { get; }
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         var app = Application.Current;
+
         MenuItems = new ObservableCollection<MenuItem>
         {
-            new MenuItem("Home", 
-                app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""), 
-                new HomeViewModel()),
-            new MenuItem("Mods", 
-                app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""), 
-                new ModsViewModel())
+            new MenuItem("Home",
+                app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
+                ActivatorUtilities.CreateInstance<HomeViewModel>(_serviceProvider)),
+            new MenuItem("Mods",
+                app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
+                ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider))
         };
-        
+
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
         {
-            CurrentPage = new SettingsViewModel();
+            CurrentPage = ActivatorUtilities.CreateInstance<SettingsViewModel>(_serviceProvider);
         });
 
         MinimizeWindowCommand = ReactiveCommand.Create(() =>
@@ -95,9 +99,8 @@ public class MainWindowViewModel : ViewModelBase
             }
         });
 
-        SelectedMenuItem = MenuItems[0];
-        CurrentPage = SelectedMenuItem.ViewModel;
-
+        _selectedMenuItem = MenuItems[0];
+        _currentPage = _selectedMenuItem.ViewModel;
         ShowStartupNotification();
     }
 

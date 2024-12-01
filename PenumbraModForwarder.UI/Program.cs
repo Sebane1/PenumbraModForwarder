@@ -1,19 +1,35 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.ReactiveUI;
-using System;
+using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.UI.Extensions;
+using PenumbraModForwarder.Common.Services;
+using Serilog;
 
 namespace PenumbraModForwarder.UI;
 
-sealed class Program
+public static class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
-    [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
-    // Avalonia configuration, don't remove; also used by visual designer.
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddApplicationServices();
+            
+            ServiceProvider = services.BuildServiceProvider();
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Application failed to start");
+            Environment.Exit(1);
+        }
+    }
+
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()

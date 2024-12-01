@@ -1,35 +1,54 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
+using Serilog;
 
 namespace PenumbraModForwarder.UI;
 
 public partial class App : Application
 {
-    public override void Initialize()
+    private readonly IServiceProvider _serviceProvider;
+
+    public App()
     {
-        AvaloniaXamlLoader.Load(this);
+        try 
+        {
+            _serviceProvider = Program.ServiceProvider;
+            AvaloniaXamlLoader.Load(this);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Failed to initialize ServiceProvider");
+            Environment.Exit(1);
+        }
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            if (!ApplicationBootstrapper.IsInitializedByWatchdog())
+            var isInitialized = ApplicationBootstrapper.IsInitializedByWatchdog();
+            Log.Information($"Application initialized by watchdog: {isInitialized}");
+
+            if (!isInitialized)
             {
+                Log.Warning("Application not initialized by watchdog, showing error window");
                 desktop.MainWindow = new ErrorWindow
                 {
-                    DataContext = new ErrorWindowViewModel()
+                    DataContext = ActivatorUtilities.CreateInstance<ErrorWindowViewModel>(_serviceProvider)
                 };
             }
             else
             {
+                Log.Information("Showing main window");
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(),
+                    DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider)
                 };
             }
         }
