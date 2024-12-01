@@ -59,8 +59,6 @@ public class MainWindowViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _progress, value);
     }
 
-    public ICommand MinimizeWindowCommand { get; }
-    public ICommand CloseWindowCommand { get; }
     public ICommand NavigateToSettingsCommand { get; }
 
     public MainWindowViewModel(IServiceProvider serviceProvider)
@@ -81,22 +79,6 @@ public class MainWindowViewModel : ViewModelBase
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
         {
             CurrentPage = ActivatorUtilities.CreateInstance<SettingsViewModel>(_serviceProvider);
-        });
-
-        MinimizeWindowCommand = ReactiveCommand.Create(() =>
-        {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.MainWindow!.WindowState = WindowState.Minimized;
-            }
-        });
-
-        CloseWindowCommand = ReactiveCommand.Create(() =>
-        {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.MainWindow?.Close();
-            }
         });
 
         _selectedMenuItem = MenuItems[0];

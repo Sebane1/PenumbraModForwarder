@@ -37,25 +37,18 @@
                              Margin="10,0"
                              Foreground="{DynamicResource TextBrush}"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button Classes="windowControl">
-                            <Button.Command>
-                                <Binding Path="MinimizeWindowCommand"/>
-                            </Button.Command>
-                            <Path Data="M 0,0 L 10,0"
-                                  Stroke="{DynamicResource TextBrush}"
-                                  StrokeThickness="1"
-                                  VerticalAlignment="Center"
-                                  HorizontalAlignment="Center"/>
+                        <Button Name="MinimizeButton" 
+                                Classes="windowControl"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center">
+                            <Path Data="M 0,0 L 10,0"/>
                         </Button>
-                        <Button Classes="windowControl">
-                            <Button.Command>
-                                <Binding Path="CloseWindowCommand"/>
-                            </Button.Command>
-                            <Canvas Width="10" Height="10">
-                                <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"
-                                      Stroke="{DynamicResource TextBrush}"
-                                      StrokeThickness="1"/>
-                            </Canvas>
+    
+                        <Button Name="CloseButton"
+                                Classes="windowControl"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center">
+                            <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"/>
                         </Button>
                     </StackPanel>
                 </Grid>
