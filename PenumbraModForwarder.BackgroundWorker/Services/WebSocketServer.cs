@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using Newtonsoft.Json;
-using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using Serilog;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
@@ -43,7 +43,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             throw;
         }
     }
-    
+
     public async Task UpdateCurrentTaskStatus(string status)
     {
         var message = new WebSocketMessage
@@ -55,8 +55,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
 
         await BroadcastToEndpointAsync("/currentTask", message);
     }
-    
-    // This might not be needed, could cover everything inside UpdateCurrentTaskStatus
+
     public async Task UpdateConversionProgress(int progress, string status)
     {
         var message = new WebSocketMessage
@@ -72,7 +71,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
 
     private async Task StartListenerAsync()
     {
-        while (_isStarted)
+        while (_isStarted && !_cancellationTokenSource.Token.IsCancellationRequested)
         {
             try
             {
@@ -88,7 +87,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
                     context.Response.Close();
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 Log.Error(ex, "Error in WebSocket listener");
             }
@@ -101,13 +100,19 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         var connectionInfo = new ConnectionInfo { LastPing = DateTime.UtcNow };
         connections.TryAdd(webSocket, connectionInfo);
 
+        Log.Information("Client connected to endpoint {Endpoint}", endpoint);
+
         try
         {
             await MaintainConnectionAsync(webSocket, endpoint);
         }
-        catch (WebSocketException ex)
+        catch (WebSocketException ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
         {
             Log.Error(ex, "WebSocket error for endpoint {Endpoint}", endpoint);
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Debug("WebSocket connection closed during shutdown for endpoint {Endpoint}", endpoint);
         }
         finally
         {
@@ -118,31 +123,65 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     private async Task MaintainConnectionAsync(WebSocket webSocket, string endpoint)
     {
         var buffer = new byte[1024];
-        while (webSocket.State == WebSocketState.Open)
+    
+        try
         {
-            var result = await webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer),
-                _cancellationTokenSource.Token
-            );
+            while (webSocket.State == WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                var result = await webSocket.ReceiveAsync(
+                    new ArraySegment<byte>(buffer),
+                    _cancellationTokenSource.Token
+                );
 
-            if (result.MessageType == WebSocketMessageType.Close)
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await CloseWebSocketAsync(webSocket);
+                    break;
+                }
+            }
+        }
+        catch (WebSocketException ex) when (ex.InnerException is HttpListenerException listenerEx && 
+                                            (listenerEx.ErrorCode == 995 || _cancellationTokenSource.Token.IsCancellationRequested))
+        {
+            Log.Debug("WebSocket connection closed during shutdown for endpoint {Endpoint}", endpoint);
+            await CloseWebSocketAsync(webSocket);
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Debug("WebSocket connection cancelled for endpoint {Endpoint}", endpoint);
+            await CloseWebSocketAsync(webSocket);
+        }
+    }
+
+    private async Task CloseWebSocketAsync(WebSocket webSocket)
+    {
+        if (webSocket.State == WebSocketState.Open)
+        {
+            try
             {
                 await webSocket.CloseAsync(
                     WebSocketCloseStatus.NormalClosure,
-                    string.Empty,
-                    _cancellationTokenSource.Token
+                    "Server shutting down",
+                    CancellationToken.None
                 );
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Error during WebSocket closure");
             }
         }
     }
 
     public async Task BroadcastToEndpointAsync(string endpoint, WebSocketMessage message)
     {
-        if (!_endpoints.TryGetValue(endpoint, out var connections)) return;
+        if (!_endpoints.TryGetValue(endpoint, out var connections) || !connections.Any())
+        {
+            Log.Debug("No clients connected to endpoint {Endpoint}, message queued", endpoint);
+            return;
+        }
 
         var json = JsonConvert.SerializeObject(message);
         var bytes = Encoding.UTF8.GetBytes(json);
-
         var deadSockets = new List<WebSocket>();
 
         foreach (var (socket, _) in connections)
@@ -151,6 +190,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             {
                 if (socket.State == WebSocketState.Open)
                 {
+                    Log.Information("Sending message to endpoint {Endpoint}: {Message}", endpoint, json);
                     await socket.SendAsync(
                         new ArraySegment<byte>(bytes),
                         WebSocketMessageType.Text,
@@ -176,23 +216,41 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         }
     }
 
+    public bool HasConnectedClients()
+    {
+        return _endpoints.Any(e => e.Value.Any());
+    }
+
     private async Task RemoveConnectionAsync(WebSocket socket, string endpoint)
     {
         if (_endpoints.TryGetValue(endpoint, out var connections))
         {
             connections.TryRemove(socket, out _);
-            if (socket.State == WebSocketState.Open)
-            {
-                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cancellationTokenSource.Token);
-            }
+            await CloseWebSocketAsync(socket);
         }
     }
 
     public void Dispose()
     {
-        _cancellationTokenSource.Cancel();
-        _httpListener.Stop();
-        _isStarted = false;
+        try
+        {
+            _cancellationTokenSource.Cancel();
+        
+            // Close all active connections first
+            var closeTasks = _endpoints
+                .SelectMany(endpoint => endpoint.Value.Select(async connection => 
+                    await CloseWebSocketAsync(connection.Key)))
+                .ToList();
+        
+            Task.WhenAll(closeTasks).Wait(TimeSpan.FromSeconds(5));
+        
+            _httpListener.Stop();
+            _isStarted = false;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during WebSocket server disposal");
+        }
     }
 }
 

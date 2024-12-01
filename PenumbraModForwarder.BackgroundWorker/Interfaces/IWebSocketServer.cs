@@ -1,7 +1,7 @@
 ﻿using System.Net.WebSockets;
 using PenumbraModForwarder.Common.Models;
 
-namespace PenumbraModForwarder.Common.Interfaces;
+namespace PenumbraModForwarder.BackgroundWorker.Interfaces;
 
 public interface IWebSocketServer
 {
@@ -9,4 +9,5 @@ public interface IWebSocketServer
     Task HandleConnectionAsync(WebSocket webSocket, string endpoint);
     Task BroadcastToEndpointAsync(string endpoint, WebSocketMessage message);
     Task UpdateCurrentTaskStatus(string status);
+    bool HasConnectedClients();
 }

@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using PenumbraModForwarder.UI.Services;
+using Serilog;
 using MenuItem = PenumbraModForwarder.UI.Models.MenuItem;
 
 namespace PenumbraModForwarder.UI.ViewModels;
@@ -17,6 +18,7 @@ public class MainWindowViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationService _notificationService;
+    private readonly IWebSocketClient _webSocketClient;
     private ViewModelBase _currentPage = null!;
     private MenuItem _selectedMenuItem = null!;
 
@@ -43,10 +45,11 @@ public class MainWindowViewModel : ViewModelBase
 
     public ICommand NavigateToSettingsCommand { get; }
 
-    public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService)
+    public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService, IWebSocketClient webSocketClient)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
+        _webSocketClient = webSocketClient;
         var app = Application.Current;
 
         MenuItems = new ObservableCollection<MenuItem>
@@ -67,42 +70,20 @@ public class MainWindowViewModel : ViewModelBase
 
         _selectedMenuItem = MenuItems[0];
         _currentPage = _selectedMenuItem.ViewModel;
-
-        _ = ShowWelcomeSequence();
-        _ = ShowMultipleProgressExample();
+        
+        _ = InitializeWebSocketConnection();
     }
 
-    private async Task ShowWelcomeSequence()
+    private async Task InitializeWebSocketConnection()
     {
-        _notificationService.UpdateProgress(
-            "Welcome",
-            "Loading application...",
-            0);
-
-        for (int i = 0; i <= 100; i += 10)
+        try
         {
-            _notificationService.UpdateProgress(
-                "Welcome",
-                $"Loading application... {i}%",
-                i);
-            await Task.Delay(200);
+            await Task.Run(() => _webSocketClient.ConnectAsync());
         }
-
-        await _notificationService.ShowNotification("Welcome to Penumbra Mod Forwarder!");
-    }
-    
-    private async Task ShowMultipleProgressExample()
-    {
-        _notificationService.UpdateProgress("Task 1", "Starting first task...", 0);
-        _notificationService.UpdateProgress("Task 2", "Starting second task...", 0);
-
-        for (int i = 0; i <= 100; i += 20)
+        catch (Exception ex)
         {
-            _notificationService.UpdateProgress("Task 1", $"Processing task 1... {i}%", i);
-            _notificationService.UpdateProgress("Task 2", $"Processing task 2... {i}%", i);
-            await Task.Delay(200);
+            Log.Error(ex, "Failed to initialize WebSocket connection");
+            await _notificationService.ShowNotification("Failed to connect to background service");
         }
-
-        await _notificationService.ShowNotification("All tasks completed!");
     }
 }

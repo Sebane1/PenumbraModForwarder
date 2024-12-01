@@ -15,6 +15,7 @@ public static class DependencyInjection
         
         // Services
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<IWebSocketClient, WebSocketClient>();
         
         // ViewModels
         services.AddTransient<MainWindowViewModel>();

@@ -1,6 +1,8 @@
-﻿using PenumbraModForwarder.BackgroundWorker.Services;
+﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
+using PenumbraModForwarder.BackgroundWorker.Services;
 using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Services;
 
 namespace PenumbraModForwarder.BackgroundWorker.Extensions;
 
@@ -10,6 +12,11 @@ public static class DependencyInjection
     {
         services.AddHostedService<Worker>();
         services.AddSingleton<IWebSocketServer, WebSocketServer>();
+        services.AddSingleton<IStartupService, StartupService>();
+        services.AddSingleton<ITexToolsHelper, TexToolsHelper>();
+        services.AddSingleton<IRegistryHelper, RegistryHelper>();
+        services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IFileStorage, FileStorage>();
         services.SetupLogging();
         return services;
     }
