@@ -8,51 +8,50 @@ using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 using Serilog;
 
-namespace PenumbraModForwarder.UI;
-
-public partial class App : Application
+namespace PenumbraModForwarder.UI
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    public App()
+    public partial class App : Application
     {
-        try 
-        {
-            _serviceProvider = Program.ServiceProvider;
-            AvaloniaXamlLoader.Load(this);
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Failed to initialize ServiceProvider");
-            Environment.Exit(1);
-        }
-    }
+        private readonly IServiceProvider _serviceProvider;
 
-    public override void OnFrameworkInitializationCompleted()
-    {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        public App()
         {
-            var isInitialized = ApplicationBootstrapper.IsInitializedByWatchdog();
-            Log.Information($"Application initialized by watchdog: {isInitialized}");
-
-            if (!isInitialized)
+            try
             {
-                Log.Warning("Application not initialized by watchdog, showing error window");
-                desktop.MainWindow = new ErrorWindow
-                {
-                    DataContext = ActivatorUtilities.CreateInstance<ErrorWindowViewModel>(_serviceProvider)
-                };
+                _serviceProvider = Program.ServiceProvider;
+                AvaloniaXamlLoader.Load(this);
             }
-            else
+            catch (Exception ex)
             {
-                Log.Information("Showing main window");
-                desktop.MainWindow = new MainWindow
-                {
-                    DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider)
-                };
+                Log.Fatal(ex, "Failed to initialize ServiceProvider");
+                Environment.Exit(1);
             }
         }
 
-        base.OnFrameworkInitializationCompleted();
+        public override void OnFrameworkInitializationCompleted()
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                bool isInitialized = Environment.GetEnvironmentVariable("WATCHDOG_INITIALIZED") == "true";
+                Log.Information($"Application initialized by watchdog: {isInitialized}");
+                if (!isInitialized)
+                {
+                    Log.Warning("Application not initialized by watchdog, showing error window");
+                    desktop.MainWindow = new ErrorWindow
+                    {
+                        DataContext = ActivatorUtilities.CreateInstance<ErrorWindowViewModel>(_serviceProvider)
+                    };
+                }
+                else
+                {
+                    Log.Information("Showing main window");
+                    desktop.MainWindow = new MainWindow
+                    {
+                        DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider)
+                    };
+                }
+            }
+            base.OnFrameworkInitializationCompleted();
+        }
     }
 }

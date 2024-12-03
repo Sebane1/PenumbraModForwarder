@@ -19,6 +19,7 @@
     <ItemGroup>
       <ProjectReference Include="..\PenumbraModForwarder.BackgroundWorker\PenumbraModForwarder.BackgroundWorker.csproj" />
       <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
+      <ProjectReference Include="..\PenumbraModForwarder.UI\PenumbraModForwarder.UI.csproj" />
     </ItemGroup>
 
     <ItemGroup>

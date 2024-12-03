@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.Watchdog.Extensions;
@@ -6,42 +7,45 @@ using PenumbraModForwarder.Watchdog.Imports;
 using PenumbraModForwarder.Watchdog.Interfaces;
 using Serilog;
 
-namespace PenumbraModForwarder.Watchdog;
-
-class Program
+namespace PenumbraModForwarder.Watchdog
 {
-    static void Main(string[] args)
+    class Program
     {
-        var services = new ServiceCollection();
-        services.AddApplicationServices();
-        
-        var serviceProvider = services.BuildServiceProvider();
-
-        var configService = serviceProvider.GetService<IConfigurationSetup>();
-        
-        configService.CreateFiles();
-        
-        // Set initialization flag before starting processes
-        ApplicationBootstrapper.SetWatchdogInitialization();
-        
-        // Hide the console window on Windows
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        static void Main(string[] args)
         {
-            HideConsoleWindow();
+            var services = new ServiceCollection();
+            services.AddApplicationServices();
+            
+            var serviceProvider = services.BuildServiceProvider();
+
+            var configService = serviceProvider.GetService<IConfigurationSetup>();
+            configService.CreateFiles();
+            
+            // Set initialization flag before starting processes
+            ApplicationBootstrapper.SetWatchdogInitialization();
+            
+            // Set the environment variable for child processes
+            Environment.SetEnvironmentVariable("WATCHDOG_INITIALIZED", "true");
+
+            // Hide the console window on Windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                HideConsoleWindow();
+            }
+            
+            var processManager = serviceProvider.GetService<IProcessManager>();
+            processManager.Run();
         }
-        
-        var processManager = serviceProvider.GetService<IProcessManager>();
-        processManager.Run();
-    }
 
-    static void HideConsoleWindow()
-    {
-        var handle = DllImports.GetConsoleWindow();
-        if (handle != IntPtr.Zero)
+        static void HideConsoleWindow()
         {
-            Log.Information("Hiding console window");
-            DllImports.ShowWindow(handle, DllImports.SW_HIDE);
-            Log.Information("Console window should now be hidden.");
+            var handle = DllImports.GetConsoleWindow();
+            if (handle != IntPtr.Zero)
+            {
+                Log.Information("Hiding console window");
+                DllImports.ShowWindow(handle, DllImports.SW_HIDE);
+                Log.Information("Console window should now be hidden.");
+            }
         }
     }
 }

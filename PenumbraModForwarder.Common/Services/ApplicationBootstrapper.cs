@@ -1,25 +1,27 @@
-﻿namespace PenumbraModForwarder.Common.Services;
-public static class ApplicationBootstrapper
+﻿namespace PenumbraModForwarder.Common.Services
 {
-    private static bool _isInitializedByWatchdog;
-    private static readonly bool _isDevMode;
-
-    static ApplicationBootstrapper()
+    public static class ApplicationBootstrapper
     {
-        _isDevMode = Environment.GetEnvironmentVariable("DEV_MODE") == "true";
-    }
+        private static bool _isInitializedByWatchdog;
+        private static readonly bool _isDevMode;
 
-    public static void SetWatchdogInitialization()
-    {
-        _isInitializedByWatchdog = true;
-    }
-
-    public static bool IsInitializedByWatchdog()
-    {
-        if (_isDevMode)
+        static ApplicationBootstrapper()
         {
-            return true;
+            _isDevMode = Environment.GetEnvironmentVariable("DEV_MODE") == "true";
         }
-        return _isInitializedByWatchdog;
+
+        public static void SetWatchdogInitialization()
+        {
+            _isInitializedByWatchdog = true;
+        }
+
+        public static bool IsInitializedByWatchdog()
+        {
+            if (_isDevMode)
+            {
+                return true;
+            }
+            return _isInitializedByWatchdog;
+        }
     }
 }
