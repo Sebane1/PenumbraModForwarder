@@ -56,6 +56,7 @@ namespace PenumbraModForwarder.Watchdog.Services
 
         private Process StartProcess(string projectName, string port)
         {
+            Log.Information($"Starting: {projectName}");
             return _isDevMode
                 ? StartDevProcess(projectName, port)
                 : StartProdProcess($"{projectName}.exe", port);
