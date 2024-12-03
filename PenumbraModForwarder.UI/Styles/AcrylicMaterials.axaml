@@ -1,26 +1,25 @@
-﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ExperimentalAcrylicMaterial x:Key="TopBarAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource SecondaryColor}"
-                                 TintOpacity="0.8"
-                                 MaterialOpacity="0.2"/>
-
+                                 TintOpacity="0.9"
+                                 MaterialOpacity="0.7"/>
+    
     <ExperimentalAcrylicMaterial x:Key="NavigationAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource SecondaryColor}"
-                                 TintOpacity="0.8"
-                                 MaterialOpacity="0.2"/>
-
+                                 TintOpacity="0.9"
+                                 MaterialOpacity="0.7"/>
+    
     <ExperimentalAcrylicMaterial x:Key="ContentAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource BackgroundColor}"
-                                 TintOpacity="0.8"
-                                 MaterialOpacity="0.2"/>
-
+                                 TintOpacity="0.9"
+                                 MaterialOpacity="0.7"/>
+    
     <ExperimentalAcrylicMaterial x:Key="StatusBarAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource BackgroundColor}"
-                                 TintOpacity="0.8"
-                                 MaterialOpacity="0.2"/>
+                                 TintOpacity="0.9"
+                                 MaterialOpacity="0.7"/>
 </ResourceDictionary>

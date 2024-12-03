@@ -1,19 +1,34 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:PenumbraModForwarder.UI.ViewModels"
-        x:Class="PenumbraModForwarder.UI.Views.ErrorWindow"
-        x:DataType="vm:ErrorWindowViewModel"
-        Width="400" Height="150"
-        WindowStartupLocation="CenterScreen"
-        Title="Startup Error">
-    
+﻿<Window 
+    xmlns="https://github.com/avaloniaui" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+    xmlns:vm="using:PenumbraModForwarder.UI.ViewModels" 
+    x:Class="PenumbraModForwarder.UI.Views.ErrorWindow" 
+    x:DataType="vm:ErrorWindowViewModel" 
+    Width="400" Height="150" 
+    Title="Startup Error"
+    TransparencyLevelHint="AcrylicBlur"
+    Background="Transparent"
+    ExtendClientAreaToDecorationsHint="True"
+    ExtendClientAreaChromeHints="NoChrome"
+    WindowStartupLocation="CenterScreen">
     <Design.DataContext>
         <vm:ErrorWindowViewModel/>
     </Design.DataContext>
-    
-    <TextBlock Text="{Binding ErrorMessage}"
-               TextWrapping="Wrap"
-               VerticalAlignment="Center"
-               HorizontalAlignment="Center"
-               Margin="20"/>
+    <Grid RowDefinitions="30,*">
+        <!-- Custom Title Bar -->
+        <ExperimentalAcrylicBorder Grid.Row="0" Height="30" Material="{StaticResource TopBarAcrylicMaterial}">
+            <Grid x:Name="TitleBar" Classes="titleBar" ColumnDefinitions="*,Auto">
+                <TextBlock Text="Startup Error" VerticalAlignment="Center" Margin="10,0" Foreground="{DynamicResource TextBrush}" Classes="titleText"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Name="CloseButton" Classes="windowControl" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+                        <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </ExperimentalAcrylicBorder>
+        <!-- Content Area -->
+        <ExperimentalAcrylicBorder Grid.Row="1" Material="{StaticResource ContentAcrylicMaterial}">
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20"/>
+        </ExperimentalAcrylicBorder>
+    </Grid>
 </Window>
