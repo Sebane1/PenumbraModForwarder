@@ -1,5 +1,9 @@
 ﻿namespace PenumbraModForwarder.Common.Models;
 
+// TODO: We need to split this up into to separate models
+// 1 for UI App settings
+// 1 for Background Worker Settings
+// 1 for General Settings
 public class ConfigurationModel
 {
     public bool AutoLoad { get; set; }

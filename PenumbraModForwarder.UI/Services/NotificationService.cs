@@ -18,6 +18,7 @@ public class NotificationService : ReactiveObject, INotificationService
 
     public ObservableCollection<Notification> Notifications { get; } = new();
 
+    // TODO: Play sound when Notification is shown
     public async Task ShowNotification(string message, int durationSeconds = 4)
     {
         var notification = new Notification(message, this, showProgress: true);
