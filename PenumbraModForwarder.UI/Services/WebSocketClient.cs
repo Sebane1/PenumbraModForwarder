@@ -28,79 +28,79 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         _notificationService = notificationService;
     }
 
-    public async Task ConnectAsync()
-    {
-        while (!_cts.Token.IsCancellationRequested)
+        public async Task ConnectAsync(int port)
         {
-            try
+            while (!_cts.Token.IsCancellationRequested)
             {
-                await ConnectEndpointsAsync();
-                _retryCount = 0;
-                await Task.Delay(1000, _cts.Token); 
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _retryCount++;
-                Log.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
-                await _notificationService.ShowNotification(
-                    $"Connection failed. Retrying in 5 seconds... (Attempt {_retryCount})", 
-                    5
-                );
-                await Task.Delay(5000, _cts.Token);
-            }
-        }
-    }
-
-    private async Task ConnectEndpointsAsync()
-    {
-        foreach (var endpoint in _endpoints)
-        {
-            try
-            {
-                if (!_webSockets.ContainsKey(endpoint) || 
-                    _webSockets[endpoint].State != WebSocketState.Open)
+                try
                 {
-                    if (_webSockets.ContainsKey(endpoint))
-                    {
-                        await DisconnectWebSocketAsync(_webSockets[endpoint]);
-                    }
-
-                    var webSocket = new ClientWebSocket();
-                    _webSockets[endpoint] = webSocket;
-
-                    await webSocket.ConnectAsync(
-                        new Uri($"ws://localhost:5000{endpoint}"), 
-                        _cts.Token
-                    );
-
-                    _ = ReceiveMessagesAsync(webSocket, endpoint);
-
-                    if (_isReconnecting)
-                    {
-                        _isReconnecting = false;
-                        await _notificationService.ShowNotification("Connection restored successfully");
-                    }
+                    await ConnectEndpointsAsync(port);
+                    _retryCount = 0;
+                    await Task.Delay(1000, _cts.Token);
                 }
-            }
-            catch (Exception ex)
-            {
-                if (!_isReconnecting)
+                catch (OperationCanceledException)
                 {
-                    Log.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _retryCount++;
+                    Log.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
                     await _notificationService.ShowNotification(
-                        $"Connection to {endpoint} lost. Attempting to reconnect...",
+                        $"Connection failed. Retrying in 5 seconds... (Attempt {_retryCount})",
                         5
                     );
-                    _isReconnecting = true;
+                    await Task.Delay(5000, _cts.Token);
                 }
-                throw; // Propagate to main loop for retry
             }
         }
-    }
+
+        private async Task ConnectEndpointsAsync(int port)
+        {
+            foreach (var endpoint in _endpoints)
+            {
+                try
+                {
+                    if (!_webSockets.ContainsKey(endpoint) || _webSockets[endpoint].State != WebSocketState.Open)
+                    {
+                        if (_webSockets.ContainsKey(endpoint))
+                        {
+                            await DisconnectWebSocketAsync(_webSockets[endpoint]);
+                        }
+
+                        var webSocket = new ClientWebSocket();
+                        _webSockets[endpoint] = webSocket;
+
+                        await webSocket.ConnectAsync(
+                            new Uri($"ws://localhost:{port}{endpoint}"),
+                            _cts.Token
+                        );
+
+                        _ = ReceiveMessagesAsync(webSocket, endpoint);
+
+                        if (_isReconnecting)
+                        {
+                            _isReconnecting = false;
+                            await _notificationService.ShowNotification("Connection restored successfully");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (!_isReconnecting)
+                    {
+                        Log.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
+                        await _notificationService.ShowNotification(
+                            $"Connection to {endpoint} lost. Attempting to reconnect...",
+                            5
+                        );
+                        _isReconnecting = true;
+                    }
+                    throw; // Propagate to main loop for retry
+                }
+            }
+        }
+
 
     private async Task DisconnectWebSocketAsync(ClientWebSocket webSocket)
     {

@@ -8,9 +8,13 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, int port)
     {
-        services.AddHostedService<Worker>();
+        services.AddHostedService(provider => new Worker(
+            provider.GetRequiredService<IWebSocketServer>(),
+            provider.GetRequiredService<IStartupService>(),
+            port
+        ));
         services.AddSingleton<IWebSocketServer, WebSocketServer>();
         services.AddSingleton<IStartupService, StartupService>();
         services.AddSingleton<ITexToolsHelper, TexToolsHelper>();

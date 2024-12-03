@@ -30,8 +30,8 @@ public class WebSocketServerTests : IDisposable
     [Fact]
     public void Start_WhenCalledMultipleTimes_OnlyStartsOnce()
     {
-        _webSocketServer.Start();
-        _webSocketServer.Start();
+        _webSocketServer.Start(8765);
+        _webSocketServer.Start(8765);
         Assert.True(true);
     }
 
@@ -40,7 +40,7 @@ public class WebSocketServerTests : IDisposable
     {
         const string endpoint = "/status";
     
-        _webSocketServer.Start();
+        _webSocketServer.Start(8765);
     
         var connectionTask = _webSocketServer.HandleConnectionAsync(_mockWebSocket, endpoint);
         await Task.Delay(100);
@@ -68,7 +68,7 @@ public class WebSocketServerTests : IDisposable
         const string endpoint = "/currentTask";
         const string status = "Converting mod: test.pmp";
 
-        _webSocketServer.Start();
+        _webSocketServer.Start(8765);
         
         var connectionTask = _webSocketServer.HandleConnectionAsync(_mockWebSocket, endpoint);
         await Task.Delay(100);

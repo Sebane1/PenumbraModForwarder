@@ -12,78 +12,79 @@ using PenumbraModForwarder.UI.Services;
 using Serilog;
 using MenuItem = PenumbraModForwarder.UI.Models.MenuItem;
 
-namespace PenumbraModForwarder.UI.ViewModels;
-
-public class MainWindowViewModel : ViewModelBase
+namespace PenumbraModForwarder.UI.ViewModels
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly INotificationService _notificationService;
-    private readonly IWebSocketClient _webSocketClient;
-    private ViewModelBase _currentPage = null!;
-    private MenuItem _selectedMenuItem = null!;
-
-    public ObservableCollection<MenuItem> MenuItems { get; }
-    public ObservableCollection<Notification> Notifications => 
-        (_notificationService as NotificationService)?.Notifications ?? new();
-
-    public MenuItem SelectedMenuItem
+    public class MainWindowViewModel : ViewModelBase
     {
-        get => _selectedMenuItem;
-        set
+        private readonly IServiceProvider _serviceProvider;
+        private readonly INotificationService _notificationService;
+        private readonly IWebSocketClient _webSocketClient;
+        private ViewModelBase _currentPage = null!;
+        private MenuItem _selectedMenuItem = null!;
+
+        public ObservableCollection<MenuItem> MenuItems { get; }
+        public ObservableCollection<Notification> Notifications => 
+            (_notificationService as NotificationService)?.Notifications ?? new();
+
+        public MenuItem SelectedMenuItem
         {
-            this.RaiseAndSetIfChanged(ref _selectedMenuItem, value);
-            if (value != null)
-                CurrentPage = value.ViewModel;
+            get => _selectedMenuItem;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedMenuItem, value);
+                if (value != null)
+                    CurrentPage = value.ViewModel;
+            }
         }
-    }
 
-    public ViewModelBase CurrentPage
-    {
-        get => _currentPage;
-        set => this.RaiseAndSetIfChanged(ref _currentPage, value);
-    }
-
-    public ICommand NavigateToSettingsCommand { get; }
-
-    public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService, IWebSocketClient webSocketClient)
-    {
-        _serviceProvider = serviceProvider;
-        _notificationService = notificationService;
-        _webSocketClient = webSocketClient;
-        var app = Application.Current;
-
-        MenuItems = new ObservableCollection<MenuItem>
+        public ViewModelBase CurrentPage
         {
-            new MenuItem("Home",
-                app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<HomeViewModel>(_serviceProvider)),
-            new MenuItem("Mods",
-                app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider))
-        };
-
-        NavigateToSettingsCommand = ReactiveCommand.Create(() =>
-        {
-            SelectedMenuItem = null;
-            CurrentPage = ActivatorUtilities.CreateInstance<SettingsViewModel>(_serviceProvider);
-        });
-
-        _selectedMenuItem = MenuItems[0];
-        _currentPage = _selectedMenuItem.ViewModel;
-        
-        _ = InitializeWebSocketConnection();
-    }
-
-    private async Task InitializeWebSocketConnection()
-    {
-        try
-        {
-            await Task.Run(() => _webSocketClient.ConnectAsync());
+            get => _currentPage;
+            set => this.RaiseAndSetIfChanged(ref _currentPage, value);
         }
-        catch (Exception ex)
+
+        public ICommand NavigateToSettingsCommand { get; }
+
+        public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService, IWebSocketClient webSocketClient, int port)
         {
-            Log.Error(ex, "Failed to initialize WebSocket connection");
-            await _notificationService.ShowNotification("Failed to connect to background service");
+            _serviceProvider = serviceProvider;
+            _notificationService = notificationService;
+            _webSocketClient = webSocketClient;
+            var app = Application.Current;
+
+            MenuItems = new ObservableCollection<MenuItem>
+            {
+                new MenuItem("Home",
+                    app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
+                    ActivatorUtilities.CreateInstance<HomeViewModel>(_serviceProvider)),
+                new MenuItem("Mods",
+                    app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
+                    ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider))
+            };
+
+            NavigateToSettingsCommand = ReactiveCommand.Create(() =>
+            {
+                SelectedMenuItem = null;
+                CurrentPage = ActivatorUtilities.CreateInstance<SettingsViewModel>(_serviceProvider);
+            });
+
+            _selectedMenuItem = MenuItems[0];
+            _currentPage = _selectedMenuItem.ViewModel;
+            
+            _ = InitializeWebSocketConnection(port);
+        }
+
+        private async Task InitializeWebSocketConnection(int port)
+        {
+            try
+            {
+                await Task.Run(() => _webSocketClient.ConnectAsync(port));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to initialize WebSocket connection");
+                await _notificationService.ShowNotification("Failed to connect to background service");
+            }
         }
     }
 }

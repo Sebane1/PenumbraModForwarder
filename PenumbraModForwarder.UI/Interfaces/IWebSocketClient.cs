@@ -4,5 +4,5 @@ namespace PenumbraModForwarder.UI.Interfaces;
 
 public interface IWebSocketClient
 {
-    public Task ConnectAsync();
+    Task ConnectAsync(int port);
 }

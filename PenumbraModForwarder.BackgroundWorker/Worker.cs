@@ -8,18 +8,20 @@ public class Worker : BackgroundService
 {
     private readonly IWebSocketServer _webSocketServer;
     private readonly IStartupService _startupService;
+    private readonly int _port;
     private bool _initialized;
 
-    public Worker(IWebSocketServer webSocketServer, IStartupService startupService)
+    public Worker(IWebSocketServer webSocketServer, IStartupService startupService, int port)
     {
         _webSocketServer = webSocketServer;
         _startupService = startupService;
+        _port = port;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         Log.Information("Starting WebSocket Server...");
-        _webSocketServer.Start();
+        _webSocketServer.Start(_port);
         await base.StartAsync(cancellationToken);
     }
 
