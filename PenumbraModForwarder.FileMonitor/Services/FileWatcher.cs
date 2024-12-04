@@ -1,4 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
@@ -7,7 +12,6 @@ using PenumbraModForwarder.FileMonitor.Models;
 using Serilog;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
-
 public class FileWatcher : IFileWatcher
 {
     private readonly List<FileSystemWatcher> _watchers;
@@ -64,30 +68,60 @@ public class FileWatcher : IFileWatcher
         {
             foreach (var file in _fileQueue)
             {
-                if (DateTime.UtcNow - file.Value > TimeSpan.FromMinutes(1))
-                {
-                    if (_fileStorage.Exists(file.Key))
-                    {
-                        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file.Key);
-                        var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
+                if (DateTime.UtcNow - file.Value <= TimeSpan.FromMinutes(1))
+                    continue;
 
-                        _fileStorage.CreateDirectory(destinationFolder);
-
-                        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(file.Key));
-                        File.Move(file.Key, destinationPath);
-                        _fileQueue.TryRemove(file.Key, out _);
-
-                        FileMoved?.Invoke(this, new FileMovedEvent(file.Key, destinationPath));
-                        Log.Information("File moved: {SourcePath} to {DestinationPath}", file.Key, destinationPath);
-                    }
-                    else
-                    {
-                        _fileQueue.TryRemove(file.Key, out _);
-                        Log.Warning("File no longer exists: {FullPath}", file.Key);
-                    }
-                }
+                ProcessFile(file.Key);
             }
             await Task.Delay(1000, cancellationToken);
+        }
+    }
+
+    private void ProcessFile(string filePath)
+    {
+        if (_fileStorage.Exists(filePath))
+        {
+            if (IsFileReady(filePath))
+            {
+                MoveFile(filePath);
+            }
+            else
+            {
+                Log.Information("File is not ready for processing: {FullPath}", filePath);
+            }
+        }
+        else
+        {
+            _fileQueue.TryRemove(filePath, out _);
+            Log.Warning("File no longer exists: {FullPath}", filePath);
+        }
+    }
+
+    private void MoveFile(string filePath)
+    {
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+        var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
+
+        _fileStorage.CreateDirectory(destinationFolder);
+
+        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
+        File.Move(filePath, destinationPath);
+        _fileQueue.TryRemove(filePath, out _);
+
+        FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath));
+        Log.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
+    }
+
+    private bool IsFileReady(string filePath)
+    {
+        try
+        {
+            using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
         }
     }
 
