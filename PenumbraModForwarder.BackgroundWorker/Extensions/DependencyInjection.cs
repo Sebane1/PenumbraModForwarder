@@ -3,6 +3,7 @@ using PenumbraModForwarder.BackgroundWorker.Services;
 using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
+using PenumbraModForwarder.FileMonitor.Interfaces;
 
 namespace PenumbraModForwarder.BackgroundWorker.Extensions;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
         services.AddSingleton<IRegistryHelper, RegistryHelper>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IFileStorage, FileStorage>();
+        services.AddSingleton<IFileWatcher, IFileWatcher>();
         services.SetupLogging();
         return services;
     }
