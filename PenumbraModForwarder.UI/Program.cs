@@ -15,6 +15,14 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+#if DEBUG
+        // In debug mode, append a default port if none is provided
+        if (args.Length == 0)
+        {
+            args = new string[] { "12345" }; // Default port for debugging
+        }
+#endif
+
         try
         {
             var services = new ServiceCollection();

@@ -3,11 +3,14 @@ using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Check if the application is initialized by the Watchdog
 bool isInitializedByWatchdog = Environment.GetEnvironmentVariable("WATCHDOG_INITIALIZED") == "true";
 
 #if DEBUG
 isInitializedByWatchdog = true;
+if (args.Length == 0)
+{
+    args = new string[] { "12345" }; // Fixed port for debugging
+}
 #endif
 
 Log.Information($"Application initialized by watchdog: {isInitializedByWatchdog}");
@@ -17,14 +20,6 @@ if (!isInitializedByWatchdog)
     Log.Warning("Application must be started through the main executable");
     return;
 }
-
-#if DEBUG
-// In debug mode, provide a default port if none is specified
-if (args.Length == 0)
-{
-    args = ["12345"];
-}
-#endif
 
 if (args.Length == 0)
 {
