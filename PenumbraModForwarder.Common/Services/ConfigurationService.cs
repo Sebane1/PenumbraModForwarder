@@ -1,19 +1,18 @@
-﻿using Newtonsoft.Json;
+﻿using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using Serilog;
 
 namespace PenumbraModForwarder.Common.Services;
-
 public class ConfigurationService : IConfigurationService
 {
     private readonly IFileStorage _fileStorage;
     private ConfigurationModel _config;
-    
-    /// <summary>
-    /// Notify anything listening that the configuration has been updated
-    /// </summary>
-    public event EventHandler ConfigurationChanged;
+
+    public event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
 
     public ConfigurationService(IFileStorage fileStorage)
     {
@@ -21,9 +20,6 @@ public class ConfigurationService : IConfigurationService
         LoadConfiguration();
     }
 
-    /// <summary>
-    /// Load the in memory file system
-    /// </summary>
     private void LoadConfiguration()
     {
         if (_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
@@ -37,38 +33,28 @@ public class ConfigurationService : IConfigurationService
             _config = new ConfigurationModel();
         }
     }
-    
-    /// <summary>
-    /// Create a config file with the default values
-    /// </summary>
+
     public void CreateConfiguration()
     {
-        _fileStorage.CreateDirectory(ConfigurationConsts.ConfigurationPath);
-        _fileStorage.CreateDirectory(ConfigurationConsts.ConversionPath);
-        _fileStorage.CreateDirectory(ConfigurationConsts.ExtractionPath);
-        _fileStorage.CreateDirectory(ConfigurationConsts.ModsPath);
-
         if (!_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
+            _config = new ConfigurationModel();
             SaveConfiguration();
+            Log.Information("Configuration file created with default values.");
+        }
+        else
+        {
+            Log.Information("Configuration file already exists.");
         }
     }
-    
-    /// <summary>
-    /// Reset the config file to default
-    /// </summary>
+
     public void ResetToDefaultConfiguration()
     {
         _config = new ConfigurationModel();
         SaveConfiguration();
-        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+        ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs("All", _config));
     }
 
-    /// <summary>
-    /// Get a specific property value from the configuration model
-    /// </summary>
-    /// <param name="propertySelector">A function to select the property from the ConfigurationModel.</param>
-    /// <returns>The value of the specified property.</returns>
     public object ReturnConfigValue(Func<ConfigurationModel, object> propertySelector)
     {
         if (propertySelector == null)
@@ -78,11 +64,7 @@ public class ConfigurationService : IConfigurationService
 
         return propertySelector(_config);
     }
-    
-    /// <summary>
-    /// Update a specific property value in the configuration model and save it to the file
-    /// </summary>
-    /// <param name="propertyUpdater">A function to update the property in the ConfigurationModel.</param>
+
     public void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater)
     {
         if (propertyUpdater == null)
@@ -90,43 +72,45 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
         }
 
+        var originalConfig = JsonConvert.SerializeObject(_config);
         propertyUpdater(_config);
         SaveConfiguration();
 
-        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+        var updatedConfig = JsonConvert.SerializeObject(_config);
+        if (originalConfig != updatedConfig)
+        {
+            // Determine what changed
+            var changes = GetChanges(originalConfig, updatedConfig);
+            foreach (var change in changes)
+            {
+                ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
+            }
+        }
     }
-    
-    /// <summary>
-    /// Save the configuration to a file
-    /// </summary>
+
     private void SaveConfiguration()
     {
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
         _fileStorage.Write(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
     }
-    
-    /// <summary>
-    /// Populate the default values
-    /// This will probably only be used when a new option is added to configuration
-    /// </summary>
-    /// <param name="obj"></param>
-    /// <typeparam name="T"></typeparam>
-    private void PopulateDefaultValues<T>(T obj) where T : class, new()
+
+    private Dictionary<string, object> GetChanges(string originalConfig, string updatedConfig)
     {
-        var defaultInstance = new T();
+        var original = JsonConvert.DeserializeObject<ConfigurationModel>(originalConfig);
+        var updated = JsonConvert.DeserializeObject<ConfigurationModel>(updatedConfig);
 
-        var properties = typeof(T).GetProperties();
-    
-        foreach (var property in properties)
+        var changes = new Dictionary<string, object>();
+        foreach (var property in typeof(ConfigurationModel).GetProperties())
         {
-            var currentValue = property.GetValue(obj);
-            var defaultValue = property.GetValue(defaultInstance);
+            var originalValue = property.GetValue(original);
+            var updatedValue = property.GetValue(updated);
 
-            // If current value is null or default (like 0 for int), replace it with the default value.
-            if (currentValue == null || (property.PropertyType.IsValueType && currentValue.Equals(Activator.CreateInstance(property.PropertyType))))
+            if (!Equals(originalValue, updatedValue))
             {
-                property.SetValue(obj, defaultValue);
+                changes[property.Name] = updatedValue;
             }
         }
+
+        return changes;
     }
 }
