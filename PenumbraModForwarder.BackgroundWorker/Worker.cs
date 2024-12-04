@@ -21,10 +21,6 @@ public class Worker : BackgroundService
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         Log.Information("Starting WebSocket Server...");
-#if DEBUG
-        Log.Information("Running in debug mode, starting websocket server at 12345...");
-        _webSocketServer.Start(12345);
-#endif
         _webSocketServer.Start(_port);
         await base.StartAsync(cancellationToken);
     }

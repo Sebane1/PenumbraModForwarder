@@ -6,7 +6,7 @@
       "dotnetRunMessages": true,
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
-        "DEV_MODE": "true"
+        "WATCHDOG_INITIALIZED": "true"
       }
     }
   }
