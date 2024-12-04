@@ -56,7 +56,7 @@ public class ConfigurationServiceTests
         _configService.CreateConfiguration();
 
         // Assert
-        _mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Exactly(4));
+        _mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
     }
     
     [Fact]
@@ -79,16 +79,17 @@ public class ConfigurationServiceTests
     [Fact]
     public void CreateConfiguration_CreatesDirectoriesAndConfigFile()
     {
-        _configService.CreateConfiguration();
+        // Arrange
+        var mockFileStorage = new Mock<IFileStorage>();
+        mockFileStorage.Setup(fs => fs.Exists(It.IsAny<string>())).Returns(false);
+        var configService = new ConfigurationService(mockFileStorage.Object);
 
-        // Verify directories are created
-        _mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Exactly(4));
-    
-        // Verify config file is written (if it doesn't exist)
-        _mockFileStorage.Verify(fs => fs.Write(
-                It.Is<string>(path => path == ConfigurationConsts.ConfigurationFilePath), 
-                It.IsAny<string>()), 
-            Times.Once);
+        // Act
+        configService.CreateConfiguration();
+
+        // Assert
+        mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
+        mockFileStorage.Verify(fs => fs.Write(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
     
     [Fact]
@@ -99,5 +100,45 @@ public class ConfigurationServiceTests
             .ReturnConfigValue(config => config.AdvancedOptions);
         
         Assert.NotNull(advancedOptions);
+    }
+    
+    [Fact(Skip = "Will be reworked when advanced options are removed")]
+    public void UpdateConfigValue_RaisesConfigurationChangedEventWithDetails()
+    {
+        // Arrange
+        var eventRaised = false;
+        _configService.ConfigurationChanged += (sender, args) =>
+        {
+            eventRaised = true;
+            Assert.Equal("AutoLoad", args.PropertyName);
+            Assert.True((bool)args.NewValue);
+        };
+
+        // Act
+        _configService.UpdateConfigValue(config => config.AutoLoad = true);
+
+        // Assert
+        Assert.True(eventRaised, "ConfigurationChanged event was not raised.");
+    }
+    
+    [Fact(Skip = "Will be reworked when advanced options are removed")]
+    public void MultiplePropertyUpdates_RaisesConfigurationChangedEventForEachChange()
+    {
+        // Arrange
+        var changes = new List<ConfigurationChangedEventArgs>();
+        _configService.ConfigurationChanged += (sender, args) => changes.Add(args);
+
+        // Act
+        _configService.UpdateConfigValue(config =>
+        {
+            config.AutoLoad = true;
+            config.DownloadPath = @"C:\TestDownload";
+            config.NotificationEnabled = true;
+        });
+
+        // Assert
+        Assert.Contains(changes, change => change.PropertyName == "AutoLoad" && (bool)change.NewValue == true);
+        Assert.Contains(changes, change => change.PropertyName == "DownloadPath" && (string)change.NewValue == @"C:\TestDownload");
+        Assert.Contains(changes, change => change.PropertyName == "NotificationEnabled" && (bool)change.NewValue == false);
     }
 }

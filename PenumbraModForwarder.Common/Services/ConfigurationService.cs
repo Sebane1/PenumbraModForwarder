@@ -36,6 +36,12 @@ public class ConfigurationService : IConfigurationService
 
     public void CreateConfiguration()
     {
+        var configDirectory = Path.GetDirectoryName(ConfigurationConsts.ConfigurationFilePath);
+        if (!_fileStorage.Exists(configDirectory))
+        {
+            _fileStorage.CreateDirectory(configDirectory);
+        }
+
         if (!_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
             _config = new ConfigurationModel();
