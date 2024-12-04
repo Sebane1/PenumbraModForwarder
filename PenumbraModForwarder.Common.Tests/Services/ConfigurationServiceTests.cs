@@ -42,7 +42,7 @@ public class ConfigurationServiceTests
     public void UpdateConfigValue_ModifiesDownloadPath()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.DownloadPath = @"C:\Test\Path");
+        _configService.UpdateConfigValue(config => config.DownloadPath = [@"C:\Test\Path"]);
 
         // Assert
         var updatedPath = (string)_configService.ReturnConfigValue(config => config.DownloadPath);
@@ -65,7 +65,7 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config => 
         {
             config.AutoLoad = true;
-            config.DownloadPath = @"C:\TestDownload";
+            config.DownloadPath = [@"C:\Test\Path"];
             config.NotificationEnabled = false;
         });
 
@@ -132,7 +132,7 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config =>
         {
             config.AutoLoad = true;
-            config.DownloadPath = @"C:\TestDownload";
+            config.DownloadPath = [@"C:\Test\Path"];
             config.NotificationEnabled = true;
         });
 

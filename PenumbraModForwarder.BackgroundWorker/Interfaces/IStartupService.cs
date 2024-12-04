@@ -3,5 +3,4 @@
 public interface IStartupService
 {
     public Task InitializeAsync();
-    public Task SimulateProgress();
 }

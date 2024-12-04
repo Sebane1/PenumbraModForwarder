@@ -1,24 +1,80 @@
-﻿using PenumbraModForwarder.Common.Interfaces;
+﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
+using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.FileMonitor.Interfaces;
 using Serilog;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services;
 
-public class FileWatcherStartupService
+public class FileWatcherStartupService : IFileWatcherStartupService
 {
     private readonly IConfigurationService _configurationService;
+    private IFileWatcher _fileWatcher;
+    private CancellationTokenSource _cancellationTokenSource;
 
-    public FileWatcherStartupService(IConfigurationService configurationService)
+    public FileWatcherStartupService(IConfigurationService configurationService, IFileWatcher fileWatcher)
     {
         _configurationService = configurationService;
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
+        _fileWatcher = fileWatcher;
     }
 
-    public async Task InitializeAsync()
+    public void Start()
     {
-        _configurationService.ConfigurationChanged += ConfigChange;
+        InitializeFileWatcher();
     }
 
-    private void ConfigChange(object? sender, EventArgs e)
+    public void Stop()
     {
-        Log.Information("Configuration Has been changed");
+        DisposeFileWatcher();
+    }
+
+    private async void InitializeFileWatcher()
+    {
+        var downloadPaths = _configurationService.ReturnConfigValue(config => config.DownloadPath) as List<string>;
+
+        if (downloadPaths == null || downloadPaths.Count == 0)
+        {
+            Log.Warning("No download paths specified. FileWatcher will not be initialized.");
+            return;
+        }
+        
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            await _fileWatcher.StartWatchingAsync(downloadPaths, _cancellationTokenSource.Token);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occured while initializing the file watcher.");
+        }
+    }
+    
+    private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ConfigurationModel.DownloadPath))
+        {
+            Log.Information("Configuration changed. Restarting FileWatcher");
+            RestartFileWatcher();
+        }
+    }
+
+    private void RestartFileWatcher()
+    {
+        DisposeFileWatcher();
+        InitializeFileWatcher();
+    }
+
+    private void DisposeFileWatcher()
+    {
+        _cancellationTokenSource?.Cancel();
+        _fileWatcher.Dispose();
+    }
+
+    public void Dispose()
+    {
+        DisposeFileWatcher();
+        _configurationService.ConfigurationChanged -= OnConfigurationChanged;
     }
 }

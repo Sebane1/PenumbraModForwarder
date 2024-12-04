@@ -10,17 +10,26 @@ public class StartupService : IStartupService
 {
     private readonly IWebSocketServer _webSocketServer;
     private readonly ITexToolsHelper _texToolsHelper;
+    private readonly IFileWatcherStartupService _fileWatcherStartupService;
 
-    public StartupService(IWebSocketServer webSocketServer, ITexToolsHelper texToolsHelper)
+    public StartupService(IWebSocketServer webSocketServer, ITexToolsHelper texToolsHelper, IFileWatcherStartupService fileWatcherStartupService)
     {
         _webSocketServer = webSocketServer;
         _texToolsHelper = texToolsHelper;
+        _fileWatcherStartupService = fileWatcherStartupService;
     }
 
     public async Task InitializeAsync()
     {
         Log.Information("Initializing startup checks...");
         await CheckTexToolsInstallation();
+        await RunFileWatcherStartupService();
+    }
+
+    private async Task RunFileWatcherStartupService()
+    {
+        Log.Information("Starting file watcher..");
+        _fileWatcherStartupService.Start();
     }
 
     private async Task CheckTexToolsInstallation()
@@ -42,34 +51,5 @@ public class StartupService : IStartupService
             var message = WebSocketMessage.CreateStatus(taskId, messageStatus, messageText);
             await _webSocketServer.BroadcastToEndpointAsync("/status", message);
         }
-    }
-    
-    /// <summary>
-    /// This is used for Testing if the Progress bar is working correctly
-    /// </summary>
-    public async Task SimulateProgress()
-    {
-        var taskId = Guid.NewGuid().ToString();
-    
-        for (int i = 0; i <= 100; i += 10)
-        {
-            var message = WebSocketMessage.CreateProgress(
-                taskId,
-                i,
-                $"Processing..."
-            );
-        
-            await _webSocketServer.BroadcastToEndpointAsync("/status", message);
-            await Task.Delay(500); // Delay to simulate work
-        }
-
-        // Send completion message
-        var completionMessage = WebSocketMessage.CreateStatus(
-            taskId,
-            WebSocketMessageStatus.Completed,
-            "Process completed successfully"
-        );
-    
-        await _webSocketServer.BroadcastToEndpointAsync("/status", completionMessage);
     }
 }

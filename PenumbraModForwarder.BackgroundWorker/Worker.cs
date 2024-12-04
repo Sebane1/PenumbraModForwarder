@@ -22,6 +22,9 @@ public class Worker : BackgroundService
     {
         Log.Information("Starting WebSocket Server...");
         _webSocketServer.Start(_port);
+        
+        Log.Information("Starting FileWatcher...");
+        
         await base.StartAsync(cancellationToken);
     }
 
@@ -35,8 +38,6 @@ public class Worker : BackgroundService
                 {
                     await _startupService.InitializeAsync();
                     _initialized = true;
-
-                    await _startupService.SimulateProgress();
                 }
                 await Task.Delay(1000, stoppingToken);
             }

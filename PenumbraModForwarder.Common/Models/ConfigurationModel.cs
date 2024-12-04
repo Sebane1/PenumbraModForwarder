@@ -12,7 +12,7 @@ public class ConfigurationModel
     public bool NotificationEnabled { get; set; }
     public bool FileLinkingEnabled { get; set; }
     public bool StartOnBoot { get; set; }
-    public string DownloadPath { get; set; } = string.Empty;
+    public List<string> DownloadPath { get; set; } = [];
     public string TexToolPath { get; set; } = string.Empty;
     public AdvancedConfigurationModel AdvancedOptions { get; set; } = new();
 }
