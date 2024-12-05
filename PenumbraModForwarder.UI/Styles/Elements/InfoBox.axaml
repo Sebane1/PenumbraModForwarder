@@ -1,0 +1,46 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:PenumbraModForwarder.UI.Models">
+    <Style Selector="ItemsControl.infoBoxes">
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Margin" Value="20,20,0,0"/>
+        <Setter Property="ItemsPanel">
+            <ItemsPanelTemplate>
+                <StackPanel Spacing="10"/>
+            </ItemsPanelTemplate>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <DataTemplate x:DataType="models:InfoItem">
+                <ExperimentalAcrylicBorder CornerRadius="4" MinWidth="200">
+                    <ExperimentalAcrylicBorder.Material>
+                        <ExperimentalAcrylicMaterial
+                            BackgroundSource="Digger"
+                            TintColor="{StaticResource SecondaryColor}"
+                            TintOpacity="0.6"
+                            MaterialOpacity="0.5"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <Border BoxShadow="0 4 8 0 #40000000">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="16,12" MaxWidth="400">
+                                <TextBlock Text="{Binding Text}"
+                                           Margin="0,0,0,4"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Number}"
+                                           Margin="0,0,0,8"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </ExperimentalAcrylicBorder>
+            </DataTemplate>
+        </Setter>
+    </Style>
+</Styles>

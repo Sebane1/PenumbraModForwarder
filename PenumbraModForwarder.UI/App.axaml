@@ -10,10 +10,11 @@
     
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="/Styles/Button.axaml"/>
-        <StyleInclude Source="/Styles/Notification.axaml"/>
-        <StyleInclude Source="/Styles/TitleBar.axaml"/>
-        <StyleInclude Source="/Styles/Navigation.axaml"/>
+        <StyleInclude Source="/Styles/Elements/Button.axaml"/>
+        <StyleInclude Source="/Styles/Elements/Notification.axaml"/>
+        <StyleInclude Source="/Styles/Elements/TitleBar.axaml"/>
+        <StyleInclude Source="/Styles/Elements/Navigation.axaml"/>
+        <StyleInclude Source="/Styles/Elements/InfoBox.axaml"/>
     </Application.Styles>
     
     <Application.Resources>
