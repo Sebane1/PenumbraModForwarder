@@ -45,8 +45,8 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config => config.DownloadPath = [@"C:\Test\Path"]);
 
         // Assert
-        var updatedPath = (string)_configService.ReturnConfigValue(config => config.DownloadPath);
-        Assert.Equal(@"C:\Test\Path", updatedPath);
+        var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.DownloadPath);
+        Assert.Equal([@"C:\Test\Path"], updatedPath);
     }
 
     [Fact]
@@ -71,8 +71,8 @@ public class ConfigurationServiceTests
 
         // Verify each updated property
         Assert.True((bool)_configService.ReturnConfigValue(c => c.AutoLoad));
-        Assert.Equal(@"C:\TestDownload", 
-            (string)_configService.ReturnConfigValue(c => c.DownloadPath));
+        Assert.Equal([@"C:\Test\Path"], 
+            (List<string>)_configService.ReturnConfigValue(c => c.DownloadPath));
         Assert.False((bool)_configService.ReturnConfigValue(c => c.NotificationEnabled));
     }
     

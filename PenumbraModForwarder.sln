@@ -19,6 +19,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.UI", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.FileMonitor", "PenumbraModForwarder.FileMonitor\PenumbraModForwarder.FileMonitor.csproj", "{306327BB-C5FA-4F8B-BE03-6A8A0C0B4D56}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Statistics", "PenumbraModForwarder.Statistics\PenumbraModForwarder.Statistics.csproj", "{1AC2D158-6AC6-4EBF-8428-A44739CD6A74}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Statistics.Tests", "PenumbraModForwarder.Statistics.Tests\PenumbraModForwarder.Statistics.Tests.csproj", "{9CFAD392-476C-4994-8F85-77F5A622BA97}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +65,14 @@ Global
 		{306327BB-C5FA-4F8B-BE03-6A8A0C0B4D56}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{306327BB-C5FA-4F8B-BE03-6A8A0C0B4D56}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{306327BB-C5FA-4F8B-BE03-6A8A0C0B4D56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AC2D158-6AC6-4EBF-8428-A44739CD6A74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AC2D158-6AC6-4EBF-8428-A44739CD6A74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AC2D158-6AC6-4EBF-8428-A44739CD6A74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AC2D158-6AC6-4EBF-8428-A44739CD6A74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CFAD392-476C-4994-8F85-77F5A622BA97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CFAD392-476C-4994-8F85-77F5A622BA97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CFAD392-476C-4994-8F85-77F5A622BA97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CFAD392-476C-4994-8F85-77F5A622BA97}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
