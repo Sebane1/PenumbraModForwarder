@@ -68,12 +68,16 @@ public class FileWatcher : IFileWatcher
         {
             foreach (var file in _fileQueue)
             {
-                if (DateTime.UtcNow - file.Value <= TimeSpan.FromMinutes(1))
-                    continue;
-
-                ProcessFile(file.Key);
+                if (IsFileReady(file.Key))
+                {
+                    ProcessFile(file.Key);
+                }
+                else if (DateTime.UtcNow - file.Value > TimeSpan.FromSeconds(5))
+                {
+                    Log.Information("File is not ready for processing, will retry: {FullPath}", file.Key);
+                }
             }
-            await Task.Delay(1000, cancellationToken);
+            await Task.Delay(500, cancellationToken);
         }
     }
 
@@ -108,7 +112,7 @@ public class FileWatcher : IFileWatcher
         File.Move(filePath, destinationPath);
         _fileQueue.TryRemove(filePath, out _);
 
-        FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath));
+        FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath, fileNameWithoutExtension));
         Log.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
     }
 

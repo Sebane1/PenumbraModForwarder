@@ -2,6 +2,7 @@
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.FileMonitor.Interfaces;
+using PenumbraModForwarder.FileMonitor.Models;
 using Serilog;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services;
@@ -9,14 +10,17 @@ namespace PenumbraModForwarder.BackgroundWorker.Services;
 public class FileWatcherStartupService : IFileWatcherStartupService
 {
     private readonly IConfigurationService _configurationService;
-    private IFileWatcher _fileWatcher;
+    private readonly IFileWatcher _fileWatcher;
+    private readonly IWebSocketServer _webSocketServer;
     private CancellationTokenSource _cancellationTokenSource;
 
-    public FileWatcherStartupService(IConfigurationService configurationService, IFileWatcher fileWatcher)
+    public FileWatcherStartupService(IConfigurationService configurationService, IFileWatcher fileWatcher, IWebSocketServer webSocketServer)
     {
         _configurationService = configurationService;
         _configurationService.ConfigurationChanged += OnConfigurationChanged;
         _fileWatcher = fileWatcher;
+        _webSocketServer = webSocketServer;
+        _fileWatcher.FileMoved += OnFileMoved;
     }
 
     public void Start()
@@ -51,6 +55,14 @@ public class FileWatcherStartupService : IFileWatcherStartupService
         }
     }
     
+    private void OnFileMoved(object? sender, FileMovedEvent e)
+    {
+        Log.Information($"File moved: {e.DestinationPath}");
+        var taskId = Guid.NewGuid().ToString();
+        var message = WebSocketMessage.CreateStatus(taskId, "Found File", $"Found File: {e.FileName}");
+        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+    }
+    
     private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ConfigurationModel.DownloadPath))
@@ -68,7 +80,7 @@ public class FileWatcherStartupService : IFileWatcherStartupService
 
     private void DisposeFileWatcher()
     {
-        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource.Cancel();
         _fileWatcher.Dispose();
     }
 
