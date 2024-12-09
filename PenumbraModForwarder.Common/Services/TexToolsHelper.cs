@@ -31,7 +31,7 @@ public class TexToolsHelper : ITexToolsHelper
     /// </remarks>
     public TexToolsStatus SetTexToolConsolePath()
     {
-        if ((string)_configurationService.ReturnConfigValue(model => model.TexToolPath) != string.Empty)
+        if ((string)_configurationService.ReturnConfigValue(model => model.Common.TexToolPath) != string.Empty)
         {
             Log.Information("TexTools path already configured");
             return TexToolsStatus.AlreadyConfigured;
@@ -58,7 +58,7 @@ public class TexToolsHelper : ITexToolsHelper
             return TexToolsStatus.NotFound;
         }
 
-        _configurationService.UpdateConfigValue(config => config.TexToolPath = combinedPath);
+        _configurationService.UpdateConfigValue(config => config.Common.TexToolPath = combinedPath);
         Log.Information("Successfully configured TexTools path: {Path}", combinedPath);
         return TexToolsStatus.Found;
     }

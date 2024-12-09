@@ -1,4 +1,7 @@
-﻿using PenumbraModForwarder.Common.Interfaces;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using PenumbraModForwarder.Common.Interfaces;
 
 namespace PenumbraModForwarder.Common.Services;
 
@@ -6,14 +9,14 @@ public class FileStorage : IFileStorage
 {
     public bool Exists(string path)
     {
-        return File.Exists(path);
+        return File.Exists(path) || Directory.Exists(path);
     }
 
     public string Read(string path)
     {
-        if (!Exists(path))
+        if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"The file at path {path} does not exist.");
+            throw new FileNotFoundException($"The file at path '{path}' does not exist.");
         }
         return File.ReadAllText(path);
     }
@@ -29,5 +32,35 @@ public class FileStorage : IFileStorage
         {
             Directory.CreateDirectory(path);
         }
+    }
+
+    public void Delete(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    public void DeleteDirectory(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+    }
+
+    public Stream CreateFile(string path)
+    {
+        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+    }
+
+    public void CopyFile(string sourcePath, string destinationPath, bool overwrite)
+    {
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException($"The source file at '{sourcePath}' does not exist.");
+        }
+        File.Copy(sourcePath, destinationPath, overwrite);
     }
 }

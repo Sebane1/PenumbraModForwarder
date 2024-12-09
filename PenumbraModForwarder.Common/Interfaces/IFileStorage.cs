@@ -6,4 +6,8 @@ public interface IFileStorage
     string Read(string path);
     void Write(string path, string content);
     void CreateDirectory(string path);
+    void Delete(string path);
+    void DeleteDirectory(string path);
+    Stream CreateFile(string path);
+    void CopyFile(string sourcePath, string destinationPath, bool overwrite);
 }

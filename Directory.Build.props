@@ -1,0 +1,8 @@
+﻿<Project>
+<!--    <PropertyGroup>-->
+<!--        <VersionPrefix>$(MajorVersion).$(MinorVersion).$(PatchVersion)</VersionPrefix>-->
+<!--        <FileVersion>$(VersionPrefix)</FileVersion>-->
+<!--        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>-->
+<!--        <AssemblyInformationalVersion>v$(VersionPrefix)</AssemblyInformationalVersion>-->
+<!--    </PropertyGroup>-->
+</Project>

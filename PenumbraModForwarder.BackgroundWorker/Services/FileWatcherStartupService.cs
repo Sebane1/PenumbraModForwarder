@@ -35,7 +35,7 @@ public class FileWatcherStartupService : IFileWatcherStartupService
 
     private async void InitializeFileWatcher()
     {
-        var downloadPaths = _configurationService.ReturnConfigValue(config => config.DownloadPath) as List<string>;
+        var downloadPaths = _configurationService.ReturnConfigValue(config => config.Common.DownloadPath) as List<string>;
 
         if (downloadPaths == null || downloadPaths.Count == 0)
         {
@@ -65,7 +65,7 @@ public class FileWatcherStartupService : IFileWatcherStartupService
     
     private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ConfigurationModel.DownloadPath))
+        if (e.PropertyName == nameof(ConfigurationModel.Common.DownloadPath))
         {
             Log.Information("Configuration changed. Restarting FileWatcher");
             RestartFileWatcher();

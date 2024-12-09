@@ -21,7 +21,7 @@ public class ConfigurationServiceTests
     public void ReturnConfigValue_ReturnsCorrectBooleanProperty()
     {
         // Act
-        var autoLoadValue = (bool)_configService.ReturnConfigValue(config => config.AutoLoad);
+        var autoLoadValue = (bool)_configService.ReturnConfigValue(config => config.Common.AutoLoad);
 
         // Assert
         Assert.False(autoLoadValue); // Default value
@@ -31,10 +31,10 @@ public class ConfigurationServiceTests
     public void UpdateConfigValue_ModifiesAutoLoadProperty()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.AutoLoad = true);
+        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true);
 
         // Assert
-        var updatedValue = (bool)_configService.ReturnConfigValue(config => config.AutoLoad);
+        var updatedValue = (bool)_configService.ReturnConfigValue(config => config.Common.AutoLoad);
         Assert.True(updatedValue);
     }
 
@@ -42,10 +42,10 @@ public class ConfigurationServiceTests
     public void UpdateConfigValue_ModifiesDownloadPath()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.DownloadPath = [@"C:\Test\Path"]);
+        _configService.UpdateConfigValue(config => config.Common.DownloadPath = [@"C:\Test\Path"]);
 
         // Assert
-        var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.DownloadPath);
+        var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.Common.DownloadPath);
         Assert.Equal([@"C:\Test\Path"], updatedPath);
     }
 
@@ -64,16 +64,16 @@ public class ConfigurationServiceTests
     {
         _configService.UpdateConfigValue(config => 
         {
-            config.AutoLoad = true;
-            config.DownloadPath = [@"C:\Test\Path"];
-            config.NotificationEnabled = false;
+            config.Common.AutoLoad = true;
+            config.Common.DownloadPath = [@"C:\Test\Path"];
+            config.Common.NotificationEnabled = false;
         });
 
         // Verify each updated property
-        Assert.True((bool)_configService.ReturnConfigValue(c => c.AutoLoad));
+        Assert.True((bool)_configService.ReturnConfigValue(c => c.Common.AutoLoad));
         Assert.Equal([@"C:\Test\Path"], 
-            (List<string>)_configService.ReturnConfigValue(c => c.DownloadPath));
-        Assert.False((bool)_configService.ReturnConfigValue(c => c.NotificationEnabled));
+            (List<string>)_configService.ReturnConfigValue(c => c.Common.DownloadPath));
+        Assert.False((bool)_configService.ReturnConfigValue(c => c.Common.NotificationEnabled));
     }
     
     [Fact]
@@ -115,7 +115,7 @@ public class ConfigurationServiceTests
         };
 
         // Act
-        _configService.UpdateConfigValue(config => config.AutoLoad = true);
+        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true);
 
         // Assert
         Assert.True(eventRaised, "ConfigurationChanged event was not raised.");
@@ -131,9 +131,9 @@ public class ConfigurationServiceTests
         // Act
         _configService.UpdateConfigValue(config =>
         {
-            config.AutoLoad = true;
-            config.DownloadPath = [@"C:\Test\Path"];
-            config.NotificationEnabled = true;
+            config.Common.AutoLoad = true;
+            config.Common.DownloadPath = [@"C:\Test\Path"];
+            config.Common.NotificationEnabled = true;
         });
 
         // Assert
