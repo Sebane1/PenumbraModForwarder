@@ -116,8 +116,10 @@ public class PenumbraInstallerService : IPenumbraInstallerService
 
                 _logger.LogInformation($"Mod converted to DT: {dtPath}");
                 _systemTrayManager.ShowNotification("Mod Conversion", $"Mod converted to DT: {Path.GetFileName(modPath)}");
+
+                if (!_configurationService.GetConfigValue(config => config.AutoDelete)) return dtPath;
                 
-                File.Delete(modPath);
+                File.Delete(dtPath);
                 _logger.LogInformation($"Deleted original mod: {modPath}");
 
                 return dtPath;
