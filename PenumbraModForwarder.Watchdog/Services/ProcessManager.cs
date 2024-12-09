@@ -99,12 +99,35 @@ public class ProcessManager : IProcessManager
         var process = new Process { StartInfo = startInfo };
         process.EnableRaisingEvents = true;
 
+        // Attach event handlers to capture output and error streams
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                // Log the output from the child process
+                Log.Debug($"[{projectName} STDOUT]: {e.Data}");
+            }
+        };
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                // Log the error output from the child process
+                Log.Error($"[{projectName} STDERR]: {e.Data}");
+            }
+        };
+
         process.Exited += (sender, e) =>
         {
             Log.Information($"{projectName} exited with code {process.ExitCode}");
         };
 
         process.Start();
+
+        // Begin reading the output streams
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         return process;
     }
