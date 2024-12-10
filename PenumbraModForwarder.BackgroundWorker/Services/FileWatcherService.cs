@@ -1,4 +1,5 @@
 ﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
+using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.FileMonitor.Interfaces;
@@ -7,14 +8,14 @@ using Serilog;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services;
 
-public class FileWatcherStartupService : IFileWatcherStartupService
+public class FileWatcherService : IFileWatcherService
 {
     private readonly IConfigurationService _configurationService;
     private readonly IFileWatcher _fileWatcher;
     private readonly IWebSocketServer _webSocketServer;
     private CancellationTokenSource _cancellationTokenSource;
 
-    public FileWatcherStartupService(IConfigurationService configurationService, IFileWatcher fileWatcher, IWebSocketServer webSocketServer)
+    public FileWatcherService(IConfigurationService configurationService, IFileWatcher fileWatcher, IWebSocketServer webSocketServer)
     {
         _configurationService = configurationService;
         _configurationService.ConfigurationChanged += OnConfigurationChanged;

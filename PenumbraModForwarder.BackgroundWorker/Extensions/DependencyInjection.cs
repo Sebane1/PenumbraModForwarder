@@ -19,7 +19,7 @@ public static class DependencyInjection
         ));
         services.AddSingleton<IWebSocketServer, WebSocketServer>();
         services.AddSingleton<IStartupService, StartupService>();
-        services.AddSingleton<IFileWatcherStartupService, FileWatcherStartupService>();
+        services.AddSingleton<IFileWatcherService, FileWatcherService>();
         services.AddSingleton<ITexToolsHelper, TexToolsHelper>();
         services.AddSingleton<IRegistryHelper, RegistryHelper>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();

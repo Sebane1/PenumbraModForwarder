@@ -1,4 +1,4 @@
-﻿namespace PenumbraModForwarder.Common.Models;
+﻿namespace PenumbraModForwarder.Common.Events;
 
 public class ConfigurationChangedEventArgs : EventArgs
 {

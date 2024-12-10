@@ -1,5 +1,6 @@
 ﻿using Moq;
 using PenumbraModForwarder.Common.Consts;
+using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Common.Services;

@@ -1,4 +1,5 @@
-﻿using PenumbraModForwarder.Common.Models;
+﻿using PenumbraModForwarder.Common.Events;
+using PenumbraModForwarder.Common.Models;
 
 namespace PenumbraModForwarder.Common.Interfaces;
 

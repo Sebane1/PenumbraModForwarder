@@ -10,13 +10,13 @@ public class StartupService : IStartupService
 {
     private readonly IWebSocketServer _webSocketServer;
     private readonly ITexToolsHelper _texToolsHelper;
-    private readonly IFileWatcherStartupService _fileWatcherStartupService;
+    private readonly IFileWatcherService _iFileWatcherService;
 
-    public StartupService(IWebSocketServer webSocketServer, ITexToolsHelper texToolsHelper, IFileWatcherStartupService fileWatcherStartupService)
+    public StartupService(IWebSocketServer webSocketServer, ITexToolsHelper texToolsHelper, IFileWatcherService iFileWatcherService)
     {
         _webSocketServer = webSocketServer;
         _texToolsHelper = texToolsHelper;
-        _fileWatcherStartupService = fileWatcherStartupService;
+        _iFileWatcherService = iFileWatcherService;
     }
 
     public async Task InitializeAsync()
@@ -29,7 +29,7 @@ public class StartupService : IStartupService
     private async Task RunFileWatcherStartupService()
     {
         Log.Information("Starting file watcher..");
-        _fileWatcherStartupService.Start();
+        _iFileWatcherService.Start();
     }
 
     private async Task CheckTexToolsInstallation()
