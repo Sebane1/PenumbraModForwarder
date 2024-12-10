@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IFileStorage, FileStorage>();
         services.AddSingleton<IFileWatcher, FileWatcher>();
+        services.AddSingleton<IArchiveExtractionService, ArchiveExtractionService>();
         services.SetupLogging();
         return services;
     }

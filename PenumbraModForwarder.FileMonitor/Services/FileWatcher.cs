@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
 using Serilog;
+using SevenZipExtractor;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
-public class FileWatcher : IFileWatcher
+
+public class FileWatcher : IFileWatcher, IDisposable
 {
     private readonly List<FileSystemWatcher> _watchers;
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
@@ -49,7 +46,6 @@ public class FileWatcher : IFileWatcher
 
             watcher.Created += OnCreated;
             _watchers.Add(watcher);
-
             Log.Information("Started watching directory: {Path}", path);
         }
 
@@ -66,28 +62,46 @@ public class FileWatcher : IFileWatcher
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            foreach (var file in _fileQueue)
+            var filesToProcess = _fileQueue.Keys.ToList();
+
+            foreach (var filePath in filesToProcess)
             {
-                if (IsFileReady(file.Key))
+                if (IsFileReady(filePath))
                 {
-                    ProcessFile(file.Key);
+                    await ProcessFileAsync(filePath, cancellationToken);
                 }
-                else if (DateTime.UtcNow - file.Value > TimeSpan.FromSeconds(5))
+                else if (DateTime.UtcNow - _fileQueue[filePath] > TimeSpan.FromSeconds(5))
                 {
-                    Log.Information("File is not ready for processing, will retry: {FullPath}", file.Key);
+                    Log.Information("File is not ready for processing, will retry: {FullPath}", filePath);
                 }
             }
+
             await Task.Delay(500, cancellationToken);
         }
     }
 
-    private void ProcessFile(string filePath)
+    private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
         if (_fileStorage.Exists(filePath))
         {
             if (IsFileReady(filePath))
             {
-                MoveFile(filePath);
+                var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
+
+                if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+                {
+                    await ProcessArchiveFileAsync(filePath, cancellationToken);
+                }
+                else if (FileExtensionsConsts.ModFileTypes.Contains(extension))
+                {
+                    MoveFile(filePath);
+                    _fileQueue.TryRemove(filePath, out _);
+                }
+                else
+                {
+                    Log.Warning("Unhandled file type: {FullPath}", filePath);
+                    _fileQueue.TryRemove(filePath, out _);
+                }
             }
             else
             {
@@ -101,11 +115,47 @@ public class FileWatcher : IFileWatcher
         }
     }
 
+    private async Task ProcessArchiveFileAsync(string archivePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using (var archiveFile = new ArchiveFile(archivePath))
+            {
+                bool containsModFile = archiveFile.Entries.Any(entry =>
+                {
+                    var entryExtension = Path.GetExtension(entry?.FileName)?.ToLowerInvariant();
+                    return FileExtensionsConsts.ModFileTypes.Contains(entryExtension);
+                });
+
+                if (containsModFile)
+                {
+                    MoveFile(archivePath);
+                    _fileQueue.TryRemove(archivePath, out _);
+                    Log.Information("Archive moved: {ArchivePath}", archivePath);
+                }
+                else
+                {
+                    Log.Information("Archive does not contain mod files: {ArchivePath}", archivePath);
+                    _fileQueue.TryRemove(archivePath, out _);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Information("Processing of archive was canceled: {ArchivePath}", archivePath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error processing archive: {ArchivePath}", archivePath);
+        }
+
+        await Task.CompletedTask;
+    }
+
     private void MoveFile(string filePath)
     {
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
-
         _fileStorage.CreateDirectory(destinationFolder);
 
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
@@ -159,6 +209,7 @@ public class FileWatcher : IFileWatcher
                         _fileQueue.TryAdd(item.Key, item.Value);
                     }
                 }
+
                 Log.Information("File queue state loaded.");
             }
         }
@@ -176,8 +227,7 @@ public class FileWatcher : IFileWatcher
 
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
 
         if (disposing)
         {
@@ -186,6 +236,7 @@ public class FileWatcher : IFileWatcher
                 watcher.EnableRaisingEvents = false;
                 watcher.Dispose();
             }
+
             Log.Information("All FileWatchers disposed.");
         }
 

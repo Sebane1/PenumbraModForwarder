@@ -22,4 +22,8 @@
       <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
       <ProjectReference Include="..\PenumbraModForwarder.FileMonitor\PenumbraModForwarder.FileMonitor.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Consts\" />
+    </ItemGroup>
 </Project>
