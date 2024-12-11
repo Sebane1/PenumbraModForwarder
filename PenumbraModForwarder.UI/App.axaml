@@ -15,6 +15,7 @@
         <StyleInclude Source="/Styles/Elements/TitleBar.axaml"/>
         <StyleInclude Source="/Styles/Elements/Navigation.axaml"/>
         <StyleInclude Source="/Styles/Elements/InfoBox.axaml"/>
+        <StyleInclude Source="/Styles/Elements/SettingsStyles.axaml"/>
     </Application.Styles>
     
     <Application.Resources>

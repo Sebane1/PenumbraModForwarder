@@ -1,8 +1,7 @@
-﻿using Avalonia;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace PenumbraModForwarder.UI.Views;
+namespace PenumbraModForwarder.UI.Views.Settings;
 
 public partial class SettingsView : UserControl
 {

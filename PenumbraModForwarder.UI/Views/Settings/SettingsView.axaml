@@ -1,0 +1,129 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PenumbraModForwarder.UI.ViewModels.Settings"
+             x:Class="PenumbraModForwarder.UI.Views.Settings.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    <UserControl.Resources>
+        <!-- Templates for Settings -->
+        <DataTemplate x:Key="BooleanSettingTemplate" DataType="vm:BooleanSettingViewModel">
+            <CheckBox IsChecked="{Binding Value, Mode=TwoWay}"
+                      Content="{Binding DisplayName}"
+                      Classes="settingsCheckbox"/>
+        </DataTemplate>
+        <DataTemplate x:Key="StringSettingTemplate" DataType="vm:StringSettingViewModel">
+            <StackPanel Orientation="Horizontal" Margin="10,0">
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,0"/>
+                <TextBox Text="{Binding Value, Mode=TwoWay}"
+                         Width="200"/>
+            </StackPanel>
+        </DataTemplate>
+        <!-- Numeric Settings Templates -->
+        <DataTemplate x:Key="IntNumberSettingTemplate" DataType="vm:IntSettingViewModel">
+            <StackPanel Orientation="Horizontal" Margin="10,0">
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,5,0"/>
+                <TextBox Text="{Binding Input, Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged}"
+                         Width="200"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="DoubleNumberSettingTemplate" DataType="vm:DoubleSettingViewModel">
+            <!-- Similar structure to IntNumberSettingTemplate -->
+        </DataTemplate>
+    </UserControl.Resources>
+    <TabControl Margin="20" ItemsSource="{Binding Tabs}">
+        <TabControl.ItemTemplate>
+            <!-- Defines the TabItem header -->
+            <DataTemplate DataType="vm:TabItemViewModel">
+                <TextBlock Text="{Binding Header}" />
+            </DataTemplate>
+        </TabControl.ItemTemplate>
+        <TabControl.ContentTemplate>
+            <!-- Defines the content inside each Tab -->
+            <DataTemplate DataType="vm:TabItemViewModel">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding SettingGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:SettingGroupViewModel">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding GroupName}" Classes="groupHeader"/>
+                                    <ItemsControl ItemsSource="{Binding Settings}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ContentControl Content="{Binding}">
+                                                    <ContentControl.DataTemplates>
+                                                        <!-- Include all necessary DataTemplates -->
+                                                        <!-- Boolean Setting Template -->
+                                                        <DataTemplate DataType="vm:BooleanSettingViewModel">
+                                                            <CheckBox IsChecked="{Binding Value, Mode=TwoWay}"
+                                                                      Content="{Binding DisplayName}"
+                                                                      Classes="settingsCheckbox"/>
+                                                        </DataTemplate>
+                                                        <!-- String Setting Template -->
+                                                        <DataTemplate DataType="vm:StringSettingViewModel">
+                                                            <StackPanel Orientation="Horizontal" Margin="10,0">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,5,0"/>
+                                                                <TextBox Text="{Binding Value, Mode=TwoWay}"
+                                                                         Width="200"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                        <!-- Int Setting Template -->
+                                                        <DataTemplate DataType="vm:IntSettingViewModel">
+                                                            <StackPanel Orientation="Horizontal" Margin="10,0">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,5,0"/>
+                                                                <TextBox Text="{Binding Input, Mode=TwoWay,
+                                                                                        UpdateSourceTrigger=PropertyChanged}"
+                                                                         Width="200"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                        <!-- Double Setting Template -->
+                                                        <DataTemplate DataType="vm:DoubleSettingViewModel">
+                                                            <StackPanel Orientation="Horizontal" Margin="10,0">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,5,0"/>
+                                                                <TextBox Text="{Binding Input, Mode=TwoWay,
+                                                                                        UpdateSourceTrigger=PropertyChanged}"
+                                                                         Width="200"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                        <DataTemplate DataType="vm:ListStringSettingViewModel">
+                                                            <StackPanel Margin="10,0">
+                                                                <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,5" Classes="groupHeader"/>
+                                                                <ItemsControl ItemsSource="{Binding Value}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                    Width="200"/>
+                                                                                <Button Content="-"
+                                                                                    Command="{Binding RemoveCommand}"
+                                                                                    Margin="5,0"/>
+                                                                            </StackPanel>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                                <Button Content="+" Command="{Binding AddItemCommand}" Width="30"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ContentControl.DataTemplates>
+                                                </ContentControl>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DataTemplate>
+        </TabControl.ContentTemplate>
+    </TabControl>
+</UserControl>

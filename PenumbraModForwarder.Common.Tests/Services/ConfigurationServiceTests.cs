@@ -43,10 +43,10 @@ public class ConfigurationServiceTests
     public void UpdateConfigValue_ModifiesDownloadPath()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.Common.DownloadPath = [@"C:\Test\Path"]);
+        _configService.UpdateConfigValue(config => config.Watchdog.DownloadPath = [@"C:\Test\Path"]);
 
         // Assert
-        var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.Common.DownloadPath);
+        var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.Watchdog.DownloadPath);
         Assert.Equal([@"C:\Test\Path"], updatedPath);
     }
 
@@ -66,15 +66,15 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config => 
         {
             config.Common.AutoLoad = true;
-            config.Common.DownloadPath = [@"C:\Test\Path"];
-            config.Common.NotificationEnabled = false;
+            config.Watchdog.DownloadPath = [@"C:\Test\Path"];
+            config.UI.NotificationEnabled = false;
         });
 
         // Verify each updated property
         Assert.True((bool)_configService.ReturnConfigValue(c => c.Common.AutoLoad));
         Assert.Equal([@"C:\Test\Path"], 
-            (List<string>)_configService.ReturnConfigValue(c => c.Common.DownloadPath));
-        Assert.False((bool)_configService.ReturnConfigValue(c => c.Common.NotificationEnabled));
+            (List<string>)_configService.ReturnConfigValue(c => c.Watchdog.DownloadPath));
+        Assert.False((bool)_configService.ReturnConfigValue(c => c.UI.NotificationEnabled));
     }
     
     [Fact]
@@ -133,8 +133,8 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config =>
         {
             config.Common.AutoLoad = true;
-            config.Common.DownloadPath = [@"C:\Test\Path"];
-            config.Common.NotificationEnabled = true;
+            config.Watchdog.DownloadPath = [@"C:\Test\Path"];
+            config.UI.NotificationEnabled = true;
         });
 
         // Assert

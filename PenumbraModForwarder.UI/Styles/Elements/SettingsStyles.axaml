@@ -1,0 +1,34 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Style for group headers -->
+    <Style Selector="TextBlock.groupHeader">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Margin" Value="0,20,0,5"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
+    <!-- Style for settings checkboxes -->
+    <Style Selector="CheckBox.settingsCheckbox">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{TemplateBinding IsChecked}"
+                                  IsEnabled="{TemplateBinding IsEnabled}"
+                                  Margin="0"/>
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   Margin="5,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontWeight="Normal"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="Margin" Value="10,0"/>
+    </Style>
+
+</Styles>
