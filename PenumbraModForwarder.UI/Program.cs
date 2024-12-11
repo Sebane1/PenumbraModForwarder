@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Interfaces;
-using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
 using Serilog;
@@ -9,49 +8,71 @@ namespace PenumbraModForwarder.UI;
 
 static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
+    private static IServiceProvider _serviceProvider;
+
+    public static bool IsExiting { get; private set; } = false;
+
     [STAThread]
     static void Main(string[] args)
     {
-        var serviceProvider = Extensions.ServiceExtensions.Configuration();
-        
+        _serviceProvider = Extensions.ServiceExtensions.Configuration();
+
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        
+
         if (args.Length > 0)
         {
             var filePath = args[0];
-            HandleFileArgs(serviceProvider, filePath);
+            HandleFileArgs(filePath);
             return;
         }
-        
-        IsProgramAlreadyRunning(serviceProvider);
-        CheckForUpdates(serviceProvider);
-        MigrateOldConfigIfExists(serviceProvider);
-        CreateStartMenuShortcut(serviceProvider);
-        SetTexToolsPath(serviceProvider);
+
         Application.ApplicationExit += OnApplicationExit;
-        Application.Run(serviceProvider.GetRequiredService<MainWindow>());
+
+        IsProgramAlreadyRunning();
+
+        CheckForUpdates();
+
+        if (IsExiting)
+        {
+            return;
+        }
+
+        MigrateOldConfigIfExists();
+        CreateStartMenuShortcut();
+        SetTexToolsPath();
+        Application.Run(_serviceProvider.GetRequiredService<MainWindow>());
     }
-    
+
     private static void OnApplicationExit(object sender, EventArgs e)
     {
-        Log.CloseAndFlush();
-        
-        // Clean up temp files
-        var serviceProvider = Extensions.ServiceExtensions.Configuration();
-        var fileHandlerService = serviceProvider.GetRequiredService<IFileHandlerService>();
-        fileHandlerService.CleanUpTempFiles();
+        // Optional: Additional cleanup if needed
     }
-    
-    private static void HandleFileArgs(IServiceProvider serviceProvider, string filePath)
+
+    public static void ExitApplication()
+    {
+        IsExiting = true;
+
+        Log.Information("Application is exiting.");
+        Log.CloseAndFlush();
+
+        var fileHandlerService = _serviceProvider.GetRequiredService<IFileHandlerService>();
+        fileHandlerService.CleanUpTempFiles();
+
+        if (_serviceProvider is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
+        Application.Exit();
+    }
+
+    private static void HandleFileArgs(string filePath)
     {
         try
         {
             Log.Information($"Running application with file: {filePath}");
-    
+
             var allowedExtensions = new[] { ".pmp", ".ttmp2", ".ttmp" };
             if (!allowedExtensions.Contains(Path.GetExtension(filePath)))
             {
@@ -59,8 +80,8 @@ static class Program
                 return;
             }
 
-            var installService = serviceProvider.GetRequiredService<IPenumbraInstallerService>();
-    
+            var installService = _serviceProvider.GetRequiredService<IPenumbraInstallerService>();
+
             Log.Information("Starting mod installation...");
             var result = installService.InstallMod(filePath);
 
@@ -69,53 +90,54 @@ static class Program
                 Log.Error("Mod installation failed.");
                 return;
             }
-        
+
             Log.Information("Mod installed successfully.");
-        
-            var systemTrayService = serviceProvider.GetRequiredService<ISystemTrayManager>();
+
+            var systemTrayService = _serviceProvider.GetRequiredService<ISystemTrayManager>();
             Log.Information("Triggering exit process...");
             systemTrayService.TriggerExit();
-        
+
             Log.Information("Exiting application...");
-            Environment.Exit(0);
+            ExitApplication();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "An error occurred during the file handling process.");
             MessageBox.Show($"An unexpected error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            ExitApplication();
         }
     }
-    
-    private static void MigrateOldConfigIfExists(IServiceProvider serviceProvider)
+
+    private static void MigrateOldConfigIfExists()
     {
-        var configurationService = serviceProvider.GetRequiredService<IConfigurationService>();
+        var configurationService = _serviceProvider.GetRequiredService<IConfigurationService>();
         configurationService.MigrateOldConfig();
     }
-    
-    private static void CheckForUpdates(IServiceProvider serviceProvider)
+
+    private static void CheckForUpdates()
     {
-        var updateService = serviceProvider.GetRequiredService<IUpdateService>();
+        var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
         updateService.CheckForUpdates();
     }
-    
-    private static void CreateStartMenuShortcut(IServiceProvider serviceProvider)
+
+    private static void CreateStartMenuShortcut()
     {
-        var shortcutService = serviceProvider.GetRequiredService<IShortcutService>();
+        var shortcutService = _serviceProvider.GetRequiredService<IShortcutService>();
         shortcutService.CreateShortcutInStartMenus();
     }
-    
-    private static void SetTexToolsPath(IServiceProvider serviceProvider)
+
+    private static void SetTexToolsPath()
     {
-        var texToolsHelper = serviceProvider.GetRequiredService<ITexToolsHelper>();
+        var texToolsHelper = _serviceProvider.GetRequiredService<ITexToolsHelper>();
         texToolsHelper.SetTexToolsConsolePath();
     }
 
-    private static void IsProgramAlreadyRunning(IServiceProvider serviceProvider)
+    private static void IsProgramAlreadyRunning()
     {
-        var processHelperService = serviceProvider.GetRequiredService<IProcessHelperService>();
+        var processHelperService = _serviceProvider.GetRequiredService<IProcessHelperService>();
         var result = processHelperService.IsApplicationAlreadyOpen();
         if (!result) return;
         MessageBox.Show("An instance of Penumbra Mod Forwarder is already running.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        Environment.Exit(0);
+        ExitApplication();
     }
 }
