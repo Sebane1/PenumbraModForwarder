@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Collections;
+using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
@@ -116,22 +117,85 @@ public class ConfigurationService : IConfigurationService
     {
         if (original == null || updated == null) return;
 
-        var properties = original.GetType().GetProperties();
+        var type = original.GetType();
+
+        // If the type is a collection, compare the contents
+        if (typeof(IEnumerable).IsAssignableFrom(type) && type != typeof(string))
+        {
+            if (!CompareEnumerables(original as IEnumerable, updated as IEnumerable))
+            {
+                var propName = string.IsNullOrEmpty(parentProperty) ? type.Name : parentProperty;
+                changes[propName] = updated;
+            }
+            return;
+        }
+
+        var properties = type.GetProperties();
         foreach (var property in properties)
         {
+            // Skip indexer properties
+            if (property.GetIndexParameters().Length > 0)
+                continue;
+
             var originalValue = property.GetValue(original);
             var updatedValue = property.GetValue(updated);
 
-            if (property.PropertyType.IsClass && property.PropertyType != typeof(string))
+            var propertyType = property.PropertyType;
+
+            var newParent = string.IsNullOrEmpty(parentProperty) ? property.Name : $"{parentProperty}.{property.Name}";
+
+            if (propertyType.IsClass && propertyType != typeof(string))
             {
-                var newParent = string.IsNullOrEmpty(parentProperty) ? property.Name : $"{parentProperty}.{property.Name}";
                 CompareProperties(originalValue, updatedValue, changes, newParent);
+            }
+            else if (typeof(IEnumerable).IsAssignableFrom(propertyType) && propertyType != typeof(string))
+            {
+                if (!CompareEnumerables(originalValue as IEnumerable, updatedValue as IEnumerable))
+                {
+                    changes[newParent] = updatedValue;
+                }
             }
             else if (!Equals(originalValue, updatedValue))
             {
-                var propName = string.IsNullOrEmpty(parentProperty) ? property.Name : $"{parentProperty}.{property.Name}";
-                changes[propName] = updatedValue;
+                changes[newParent] = updatedValue;
             }
         }
+    }
+
+    private bool CompareEnumerables(IEnumerable original, IEnumerable updated)
+    {
+        if (original == null && updated == null) return true;
+        if (original == null || updated == null) return false;
+
+        var originalEnum = original.Cast<object>().ToList();
+        var updatedEnum = updated.Cast<object>().ToList();
+
+        if (originalEnum.Count != updatedEnum.Count)
+            return false;
+
+        for (int i = 0; i < originalEnum.Count; i++)
+        {
+            var originalItem = originalEnum[i];
+            var updatedItem = updatedEnum[i];
+
+            if (originalItem == null && updatedItem == null)
+                continue;
+
+            if (originalItem == null || updatedItem == null)
+                return false;
+
+            if (originalItem.GetType().IsClass && originalItem.GetType() != typeof(string))
+            {
+                var changes = new Dictionary<string, object>();
+                CompareProperties(originalItem, updatedItem, changes, "");
+                if (changes.Any())
+                    return false;
+            }
+            else if (!originalItem.Equals(updatedItem))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

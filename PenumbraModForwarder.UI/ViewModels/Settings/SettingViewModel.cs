@@ -37,49 +37,37 @@ public class SettingViewModel : ViewModelBase
 
 public class BooleanSettingViewModel : SettingViewModel
 {
-    public new bool Value
+    public bool TypedValue
     {
-        get => base.Value != null && (bool)base.Value;
-        set => base.Value = value;
+        get => Value != null && (bool)Value;
+        set => Value = value;
     }
 }
 
 public class StringSettingViewModel : SettingViewModel
 {
-    public new string Value
+    public string TypedValue
     {
-        get => (string)base.Value ?? string.Empty;
-        set => base.Value = value;
+        get => Value as string ?? string.Empty;
+        set => Value = value;
     }
 }
 
-
-public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo where T : struct, IComparable, IFormattable
+public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo
+    where T : struct, IComparable, IFormattable
 {
     private string _input;
     private string _error;
 
     public NumberSettingViewModel()
     {
-        // Initialize Input with the string representation of Value
-        _input = Value.ToString(null, CultureInfo.InvariantCulture);
+        _input = Value?.ToString() ?? string.Empty;
     }
 
-    public new T Value
+    public T TypedValue
     {
-        get => base.Value != null ? (T)base.Value : default;
-        set
-        {
-            base.Value = value;
-
-            // Update _input directly to prevent recursive calls
-            var newInput = value.ToString(null, CultureInfo.InvariantCulture);
-            if (_input != newInput)
-            {
-                _input = newInput;
-                this.RaisePropertyChanged(nameof(Input));
-            }
-        }
+        get => Value != null ? (T)Value : default;
+        set => Value = value;
     }
 
     public string Input
@@ -90,11 +78,9 @@ public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo where 
             this.RaiseAndSetIfChanged(ref _input, value);
             if (TryParseInput(value, out T parsedValue))
             {
-                // Update Value if it has changed
-                if (!EqualityComparer<T>.Default.Equals(Value, parsedValue))
+                if (!EqualityComparer<T>.Default.Equals(TypedValue, parsedValue))
                 {
-                    base.Value = parsedValue;
-                    this.RaisePropertyChanged(nameof(Value));
+                    TypedValue = parsedValue;
                 }
                 _error = null;
             }
@@ -102,7 +88,6 @@ public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo where 
             {
                 _error = "Invalid number format.";
             }
-            // Notify that Error has changed
             this.RaisePropertyChanged(nameof(Error));
             this.RaisePropertyChanged("Item[]");
         }
@@ -132,29 +117,18 @@ public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo where 
     }
 }
 
-public class IntSettingViewModel : NumberSettingViewModel<int>
-{
-    
-}
+public class IntSettingViewModel : NumberSettingViewModel<int> { }
 
-public class DoubleSettingViewModel : NumberSettingViewModel<double>
-{
-    
-}
+public class DoubleSettingViewModel : NumberSettingViewModel<double> { }
 
-public class DecimalSettingViewModel : NumberSettingViewModel<decimal>
-{
-    
-}
+public class DecimalSettingViewModel : NumberSettingViewModel<decimal> { }
 
-public class FloatSettingViewModel : NumberSettingViewModel<float>
-{
-    
-}
+public class FloatSettingViewModel : NumberSettingViewModel<float> { }
 
-public class StringItemViewModel : SettingViewModel
+public class StringItemViewModel : ViewModelBase
 {
     private string _value;
+
     public string Value
     {
         get => _value;
@@ -176,21 +150,26 @@ public class ListStringSettingViewModel : SettingViewModel
 {
     public ListStringSettingViewModel()
     {
-        Value = new ObservableCollection<StringItemViewModel>();
+        Items = new ObservableCollection<StringItemViewModel>();
         AddItemCommand = ReactiveCommand.Create(AddItem);
 
         // Subscribe to collection changes to trigger ValueChangedAction
-        Value.CollectionChanged += (s, e) => OnValueChanged();
+        Items.CollectionChanged += (s, e) => OnValueChanged();
+
+        // Subscribe to property changes of items to trigger ValueChangedAction
+        foreach (var item in Items)
+        {
+            item.WhenAnyValue(i => i.Value).Subscribe(_ => OnValueChanged());
+        }
     }
 
-    public new ObservableCollection<StringItemViewModel> Value
+    public ObservableCollection<StringItemViewModel> Items
     {
-        get => base.Value as ObservableCollection<StringItemViewModel> ?? new ObservableCollection<StringItemViewModel>();
+        get => Value as ObservableCollection<StringItemViewModel>;
         set
         {
-            base.Value = value;
+            Value = value;
             this.RaisePropertyChanged();
-            OnValueChanged();
         }
     }
 
@@ -198,13 +177,15 @@ public class ListStringSettingViewModel : SettingViewModel
 
     private void AddItem()
     {
-        var item = new StringItemViewModel(Value) { Value = string.Empty };
-        Value.Add(item);
+        var item = new StringItemViewModel(Items) { Value = string.Empty };
+        item.WhenAnyValue(i => i.Value).Subscribe(_ => OnValueChanged());
+        Items.Add(item);
     }
 
     public override void OnValueChanged()
     {
-        var stringList = Value.Select(item => item.Value).ToList();
+        // Convert the collection of StringItemViewModel to List<string>
+        var stringList = Items.Select(item => item.Value).ToList();
         ValueChangedAction?.Invoke(stringList);
     }
 }
