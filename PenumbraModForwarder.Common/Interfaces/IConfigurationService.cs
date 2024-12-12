@@ -5,9 +5,10 @@ namespace PenumbraModForwarder.Common.Interfaces;
 
 public interface IConfigurationService
 {
-    public void CreateConfiguration();
-    public event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
-    public void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater);
-    public object ReturnConfigValue(Func<ConfigurationModel, object> propertySelector);
-    public void ResetToDefaultConfiguration();
+    void CreateConfiguration();
+    event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
+    void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater);
+    object ReturnConfigValue(Func<ConfigurationModel, object> propertySelector);
+    void ResetToDefaultConfiguration();
+    ConfigurationModel GetConfiguration();
 }

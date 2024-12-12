@@ -33,6 +33,23 @@
         <DataTemplate x:Key="DoubleNumberSettingTemplate" DataType="vm:DoubleSettingViewModel">
             <!-- Similar structure to IntNumberSettingTemplate -->
         </DataTemplate>
+        
+        <DataTemplate x:Key="ListStringSettingTemplate" DataType="vm:ListStringSettingViewModel">
+            <StackPanel Margin="10,0">
+                <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,5" Classes="groupHeader" />
+                <ItemsControl ItemsSource="{Binding Value}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="200" />
+                                <Button Content="-" Command="{Binding RemoveCommand}" Margin="5,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="+" Command="{Binding AddItemCommand}" Width="30" />
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
     <TabControl Margin="20" ItemsSource="{Binding Tabs}">
         <TabControl.ItemTemplate>
@@ -96,21 +113,18 @@
                                                         </DataTemplate>
                                                         <DataTemplate DataType="vm:ListStringSettingViewModel">
                                                             <StackPanel Margin="10,0">
-                                                                <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,5" Classes="groupHeader"/>
+                                                                <TextBlock Text="{Binding DisplayName}" Margin="0,0,0,5" Classes="groupHeader" />
                                                                 <ItemsControl ItemsSource="{Binding Value}">
                                                                     <ItemsControl.ItemTemplate>
                                                                         <DataTemplate>
                                                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                                    Width="200"/>
-                                                                                <Button Content="-"
-                                                                                    Command="{Binding RemoveCommand}"
-                                                                                    Margin="5,0"/>
+                                                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="200" />
+                                                                                <Button Content="-" Command="{Binding RemoveCommand}" Margin="5,0" />
                                                                             </StackPanel>
                                                                         </DataTemplate>
                                                                     </ItemsControl.ItemTemplate>
                                                                 </ItemsControl>
-                                                                <Button Content="+" Command="{Binding AddItemCommand}" Width="30"/>
+                                                                <Button Content="+" Command="{Binding AddItemCommand}" Width="30" />
                                                             </StackPanel>
                                                         </DataTemplate>
                                                     </ContentControl.DataTemplates>

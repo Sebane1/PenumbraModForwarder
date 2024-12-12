@@ -5,12 +5,16 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using PenumbraModForwarder.Common.Attributes;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 
 namespace PenumbraModForwarder.UI.ViewModels.Settings;
 
 public class SettingsViewModel : ViewModelBase
 {
+    
+    private readonly IConfigurationService _configurationService;
+    
     // Collections for each category
     public ObservableCollection<SettingGroupViewModel> CommonSettingGroups { get; } = new();
     public ObservableCollection<SettingGroupViewModel> UISettingGroups { get; } = new();
@@ -19,8 +23,10 @@ public class SettingsViewModel : ViewModelBase
     
     public ObservableCollection<TabItemViewModel> Tabs { get; } = new();
 
-    public SettingsViewModel(ConfigurationModel configuration)
+    public SettingsViewModel(IConfigurationService configurationService)
     {
+        _configurationService = configurationService;
+        var configuration = _configurationService.GetConfiguration();
         LoadSettings(configuration);
         
         Tabs.Add(new TabItemViewModel

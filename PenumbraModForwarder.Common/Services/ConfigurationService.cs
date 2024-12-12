@@ -53,6 +53,11 @@ public class ConfigurationService : IConfigurationService
         }
     }
 
+    public ConfigurationModel GetConfiguration()
+    {
+        return _config;
+    }
+
     private void SaveConfiguration()
     {
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);

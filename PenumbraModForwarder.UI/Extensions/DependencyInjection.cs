@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Extensions;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
@@ -21,6 +23,8 @@ public static class DependencyInjection
         // Services
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
+        services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IFileStorage, FileStorage>();
 
         // ViewModels
         services.AddTransient<MainWindowViewModel>();
