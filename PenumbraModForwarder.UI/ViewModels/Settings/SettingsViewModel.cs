@@ -57,7 +57,7 @@ namespace PenumbraModForwarder.UI.ViewModels.Settings
             // Load settings for each category
             LoadSettingsFromModel(configuration.Common, CommonSettingGroups);
             LoadSettingsFromModel(configuration.UI, UISettingGroups);
-            LoadSettingsFromModel(configuration.Watchdog, BackgroundWorkerSettingGroups);
+            LoadSettingsFromModel(configuration.BackgroundWorker, BackgroundWorkerSettingGroups);
             LoadSettingsFromModel(configuration.AdvancedOptions, AdvancedSettingGroups);
         }
 
@@ -65,7 +65,7 @@ namespace PenumbraModForwarder.UI.ViewModels.Settings
         {
             if (currentModel == _configuration.Common) return config.Common;
             if (currentModel == _configuration.UI) return config.UI;
-            if (currentModel == _configuration.Watchdog) return config.Watchdog;
+            if (currentModel == _configuration.BackgroundWorker) return config.BackgroundWorker;
             if (currentModel == _configuration.AdvancedOptions) return config.AdvancedOptions;
 
             return null;
