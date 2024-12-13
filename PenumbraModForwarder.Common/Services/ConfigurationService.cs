@@ -41,11 +41,10 @@ public class ConfigurationService : IConfigurationService
         {
             _fileStorage.CreateDirectory(configDirectory);
         }
-
         if (!_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
             _config = new ConfigurationModel();
-            SaveConfiguration();
+            SaveConfiguration(_config);
             Log.Information("Configuration file created with default values.");
         }
         else
@@ -59,8 +58,27 @@ public class ConfigurationService : IConfigurationService
         return _config;
     }
 
-    private void SaveConfiguration()
+    public void SaveConfiguration(ConfigurationModel updatedConfig, bool detectChangesAndInvokeEvents = true)
     {
+        if (updatedConfig == null) throw new ArgumentNullException(nameof(updatedConfig));
+
+        if (detectChangesAndInvokeEvents)
+        {
+            var originalConfigJson = JsonConvert.SerializeObject(_config);
+            var updatedConfigJson = JsonConvert.SerializeObject(updatedConfig);
+
+            if (originalConfigJson != updatedConfigJson)
+            {
+                var changes = GetChanges(originalConfigJson, updatedConfigJson);
+                foreach (var change in changes)
+                {
+                    ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
+                }
+            }
+        }
+
+        _config = updatedConfig;
+
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
         _fileStorage.Write(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
     }
@@ -68,7 +86,7 @@ public class ConfigurationService : IConfigurationService
     public void ResetToDefaultConfiguration()
     {
         _config = new ConfigurationModel();
-        SaveConfiguration();
+        SaveConfiguration(_config);
         ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs("All", _config));
     }
 
@@ -88,26 +106,28 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
         }
 
-        var originalConfig = JsonConvert.SerializeObject(_config);
-        propertyUpdater(_config);
-        SaveConfiguration();
+        var originalConfigJson = JsonConvert.SerializeObject(_config);
 
-        var updatedConfig = JsonConvert.SerializeObject(_config);
-        if (originalConfig != updatedConfig)
+        propertyUpdater(_config);
+
+        var updatedConfigJson = JsonConvert.SerializeObject(_config);
+
+        if (originalConfigJson != updatedConfigJson)
         {
-            var changes = GetChanges(originalConfig, updatedConfig);
+            var changes = GetChanges(originalConfigJson, updatedConfigJson);
             foreach (var change in changes)
             {
                 ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
             }
         }
+
+        SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
     }
 
     private Dictionary<string, object> GetChanges(string originalConfig, string updatedConfig)
     {
         var original = JsonConvert.DeserializeObject<ConfigurationModel>(originalConfig);
         var updated = JsonConvert.DeserializeObject<ConfigurationModel>(updatedConfig);
-
         var changes = new Dictionary<string, object>();
         CompareProperties(original, updated, changes, "");
         return changes;
@@ -134,14 +154,11 @@ public class ConfigurationService : IConfigurationService
         foreach (var property in properties)
         {
             // Skip indexer properties
-            if (property.GetIndexParameters().Length > 0)
-                continue;
+            if (property.GetIndexParameters().Length > 0) continue;
 
             var originalValue = property.GetValue(original);
             var updatedValue = property.GetValue(updated);
-
             var propertyType = property.PropertyType;
-
             var newParent = string.IsNullOrEmpty(parentProperty) ? property.Name : $"{parentProperty}.{property.Name}";
 
             if (propertyType.IsClass && propertyType != typeof(string))
@@ -170,26 +187,21 @@ public class ConfigurationService : IConfigurationService
         var originalEnum = original.Cast<object>().ToList();
         var updatedEnum = updated.Cast<object>().ToList();
 
-        if (originalEnum.Count != updatedEnum.Count)
-            return false;
+        if (originalEnum.Count != updatedEnum.Count) return false;
 
         for (int i = 0; i < originalEnum.Count; i++)
         {
             var originalItem = originalEnum[i];
             var updatedItem = updatedEnum[i];
 
-            if (originalItem == null && updatedItem == null)
-                continue;
-
-            if (originalItem == null || updatedItem == null)
-                return false;
+            if (originalItem == null && updatedItem == null) continue;
+            if (originalItem == null || updatedItem == null) return false;
 
             if (originalItem.GetType().IsClass && originalItem.GetType() != typeof(string))
             {
                 var changes = new Dictionary<string, object>();
                 CompareProperties(originalItem, updatedItem, changes, "");
-                if (changes.Any())
-                    return false;
+                if (changes.Any()) return false;
             }
             else if (!originalItem.Equals(updatedItem))
             {

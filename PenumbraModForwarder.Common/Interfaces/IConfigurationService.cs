@@ -11,4 +11,5 @@ public interface IConfigurationService
     object ReturnConfigValue(Func<ConfigurationModel, object> propertySelector);
     void ResetToDefaultConfiguration();
     ConfigurationModel GetConfiguration();
+    void SaveConfiguration(ConfigurationModel updatedConfig, bool detectChangesAndInvokeEvents = true);
 }

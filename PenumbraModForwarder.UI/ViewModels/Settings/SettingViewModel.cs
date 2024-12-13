@@ -3,94 +3,95 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
 using System.Reactive;
+using System.Reflection;
 using ReactiveUI;
 
 namespace PenumbraModForwarder.UI.ViewModels.Settings;
 
-public class SettingViewModel : ViewModelBase
+public class SettingViewModel : ReactiveObject
 {
-    private object _value;
-
     public string DisplayName { get; set; }
     public string GroupName { get; set; }
 
-    public virtual object Value
-    {
-        get => _value;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _value, value);
-            OnValueChanged();
-        }
-    }
-
-    // Action to update the configuration model when the value changes
-    public Action<object> ValueChangedAction { get; set; }
-
-    public virtual void OnValueChanged()
-    {
-        ValueChangedAction?.Invoke(Value);
-    }
+    // Properties to assist in saving settings
+    public Type ModelType { get; set; }
+    public PropertyInfo PropertyInfo { get; set; }
 }
 
 public class BooleanSettingViewModel : SettingViewModel
 {
+    private bool _typedValue;
+
     public bool TypedValue
     {
-        get => Value != null && (bool)Value;
-        set => Value = value;
+        get => _typedValue;
+        set => this.RaiseAndSetIfChanged(ref _typedValue, value);
     }
 }
 
 public class StringSettingViewModel : SettingViewModel
 {
+    private string _typedValue = string.Empty;
+
     public string TypedValue
     {
-        get => Value as string ?? string.Empty;
-        set => Value = value;
+        get => _typedValue;
+        set => this.RaiseAndSetIfChanged(ref _typedValue, value ?? string.Empty);
     }
 }
 
 public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo
     where T : struct, IComparable, IFormattable
 {
+    private T _typedValue;
     private string _input;
     private string _error;
 
     public NumberSettingViewModel()
     {
-        _input = Value?.ToString() ?? string.Empty;
+        // Initialize Input based on TypedValue
+        _input = _typedValue.ToString(null, CultureInfo.InvariantCulture);
+
+        // Handle changes to Input
+        this.WhenAnyValue(vm => vm.Input)
+            .Subscribe(newValue =>
+            {
+                if (TryParseInput(newValue, out T parsedValue))
+                {
+                    if (!EqualityComparer<T>.Default.Equals(TypedValue, parsedValue))
+                    {
+                        TypedValue = parsedValue;
+                    }
+                    _error = null;
+                }
+                else
+                {
+                    _error = "Invalid number format.";
+                }
+                this.RaisePropertyChanged(nameof(Error));
+                this.RaisePropertyChanged("Item[]");
+            });
     }
 
     public T TypedValue
     {
-        get => Value != null ? (T)Value : default;
-        set => Value = value;
+        get => _typedValue;
+        set
+        {
+            if (!EqualityComparer<T>.Default.Equals(_typedValue, value))
+            {
+                this.RaiseAndSetIfChanged(ref _typedValue, value);
+                // Update Input when TypedValue changes
+                Input = _typedValue.ToString(null, CultureInfo.InvariantCulture);
+            }
+        }
     }
 
     public string Input
     {
         get => _input;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _input, value);
-            if (TryParseInput(value, out T parsedValue))
-            {
-                if (!EqualityComparer<T>.Default.Equals(TypedValue, parsedValue))
-                {
-                    TypedValue = parsedValue;
-                }
-                _error = null;
-            }
-            else
-            {
-                _error = "Invalid number format.";
-            }
-            this.RaisePropertyChanged(nameof(Error));
-            this.RaisePropertyChanged("Item[]");
-        }
+        set => this.RaiseAndSetIfChanged(ref _input, value);
     }
 
     public string Error => _error;
@@ -118,14 +119,11 @@ public class NumberSettingViewModel<T> : SettingViewModel, IDataErrorInfo
 }
 
 public class IntSettingViewModel : NumberSettingViewModel<int> { }
-
 public class DoubleSettingViewModel : NumberSettingViewModel<double> { }
-
 public class DecimalSettingViewModel : NumberSettingViewModel<decimal> { }
-
 public class FloatSettingViewModel : NumberSettingViewModel<float> { }
 
-public class StringItemViewModel : ViewModelBase
+public class StringItemViewModel : ReactiveObject
 {
     private string _value;
 
@@ -148,44 +146,28 @@ public class StringItemViewModel : ViewModelBase
 
 public class ListStringSettingViewModel : SettingViewModel
 {
+    private ObservableCollection<StringItemViewModel> _items;
+
     public ListStringSettingViewModel()
     {
-        Items = new ObservableCollection<StringItemViewModel>();
+        _items = new ObservableCollection<StringItemViewModel>();
         AddItemCommand = ReactiveCommand.Create(AddItem);
-
-        // Subscribe to collection changes to trigger ValueChangedAction
-        Items.CollectionChanged += (s, e) => OnValueChanged();
-
-        // Subscribe to property changes of items to trigger ValueChangedAction
-        foreach (var item in Items)
-        {
-            item.WhenAnyValue(i => i.Value).Subscribe(_ => OnValueChanged());
-        }
     }
 
     public ObservableCollection<StringItemViewModel> Items
     {
-        get => Value as ObservableCollection<StringItemViewModel>;
-        set
-        {
-            Value = value;
-            this.RaisePropertyChanged();
-        }
+        get => _items;
+        set => this.RaiseAndSetIfChanged(ref _items, value);
     }
 
     public ReactiveCommand<Unit, Unit> AddItemCommand { get; }
 
     private void AddItem()
     {
-        var item = new StringItemViewModel(Items) { Value = string.Empty };
-        item.WhenAnyValue(i => i.Value).Subscribe(_ => OnValueChanged());
+        var item = new StringItemViewModel(Items)
+        {
+            Value = string.Empty
+        };
         Items.Add(item);
-    }
-
-    public override void OnValueChanged()
-    {
-        // Convert the collection of StringItemViewModel to List<string>
-        var stringList = Items.Select(item => item.Value).ToList();
-        ValueChangedAction?.Invoke(stringList);
     }
 }
