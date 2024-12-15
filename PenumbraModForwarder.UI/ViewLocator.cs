@@ -10,12 +10,6 @@ public class ViewLocator : IDataTemplate
 {
     public Control Build(object data)
     {
-        // For settings-related view models, let the DataTemplates handle them
-        if (data is SettingViewModel || data is SettingGroupViewModel)
-        {
-            return null!;
-        }
-
         var name = data.GetType().FullName!.Replace("ViewModel", "View");
         var type = Type.GetType(name);
 
@@ -29,12 +23,6 @@ public class ViewLocator : IDataTemplate
 
     public bool Match(object data)
     {
-        // Don't match any settings-related ViewModels
-        if (data is SettingViewModel || data is SettingGroupViewModel)
-        {
-            return false;
-        }
-
         return data is ViewModelBase;
     }
 }
