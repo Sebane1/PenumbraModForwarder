@@ -119,7 +119,7 @@ public class PenumbraInstallerService : IPenumbraInstallerService
 
                 if (!_configurationService.GetConfigValue(config => config.AutoDelete)) return dtPath;
                 
-                File.Delete(dtPath);
+                File.Delete(modPath);
                 _logger.LogInformation($"Deleted original mod: {modPath}");
 
                 return dtPath;
