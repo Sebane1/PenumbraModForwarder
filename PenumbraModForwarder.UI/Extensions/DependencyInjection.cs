@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
@@ -6,7 +9,6 @@ using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
-using PenumbraModForwarder.UI.ViewModels.Settings;
 
 namespace PenumbraModForwarder.UI.Extensions;
 
@@ -25,6 +27,18 @@ public static class DependencyInjection
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IFileStorage, FileStorage>();
+        services.AddSingleton<IFileDialogService>(provider =>
+        {
+            var applicationLifetime = Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var mainWindow = applicationLifetime?.MainWindow;
+
+            if (mainWindow == null)
+            {
+                throw new InvalidOperationException("MainWindow is not initialized.");
+            }
+
+            return new FileDialogService(mainWindow);
+        });
 
         // ViewModels
         services.AddTransient<MainWindowViewModel>();

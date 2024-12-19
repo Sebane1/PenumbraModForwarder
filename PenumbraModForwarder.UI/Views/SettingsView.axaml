@@ -1,0 +1,158 @@
+﻿<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="clr-namespace:PenumbraModForwarder.UI.ViewModels"
+    xmlns:converters="clr-namespace:PenumbraModForwarder.UI.Converters"
+    xmlns:helpers="clr-namespace:PenumbraModForwarder.UI.Helpers"
+    xmlns:system="clr-namespace:System;assembly=netstandard"
+    x:Class="PenumbraModForwarder.UI.Views.SettingsView"
+    x:DataType="vm:SettingsViewModel">
+    <UserControl.Resources>
+        <!-- Boolean Template -->
+        <DataTemplate x:Key="BooleanTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+
+                <CheckBox Grid.Column="1"
+                          IsChecked="{Binding Value, Mode=TwoWay}"
+                          VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- String Template -->
+        <DataTemplate x:Key="StringTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+
+                <TextBox Grid.Column="1"
+                         Text="{Binding Value, Mode=TwoWay}"
+                         VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Integer Template -->
+        <DataTemplate x:Key="IntegerTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+
+                <NumericUpDown Grid.Column="1"
+                               Value="{Binding Value, Mode=TwoWay}"
+                               VerticalAlignment="Center"
+                               Minimum="0"
+                               Maximum="1000000"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Path Template -->
+        <DataTemplate x:Key="PathTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+
+                <TextBox Grid.Column="1"
+                         Text="{Binding Value, Mode=TwoWay}"
+                         VerticalAlignment="Center"/>
+
+                <Button Grid.Column="2"
+                        Content="Browse"
+                        Command="{Binding BrowseCommand}"
+                        VerticalAlignment="Center"
+                        Margin="10,0,0,0"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Multi-Path Template -->
+        <DataTemplate x:Key="MultiPathTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
+            <StackPanel Margin="5">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontWeight="Bold"
+                           Margin="0,0,0,5"/>
+                <ItemsControl ItemsSource="{Binding PathItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="helpers:PathItemViewModel">
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"/>
+
+                                <Button Grid.Column="1"
+                                        Content="Remove"
+                                        Command="{Binding RemoveCommand}"
+                                        Margin="10,0,0,0"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Content="Add Path"
+                        Command="{Binding BrowseCommand}"
+                        Margin="0,5,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Converter -->
+        <converters:TypeToControlTemplateConverter x:Key="TypeToControlTemplateConverter"
+            BooleanTemplate="{StaticResource BooleanTemplate}"
+            StringTemplate="{StaticResource StringTemplate}"
+            IntegerTemplate="{StaticResource IntegerTemplate}"
+            PathTemplate="{StaticResource PathTemplate}"
+            MultiPathTemplate="{StaticResource MultiPathTemplate}"/>
+    </UserControl.Resources>
+
+    <ScrollViewer>
+        <TabControl ItemsSource="{Binding Groups}">
+            <!-- Tab Headers -->
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="helpers:ConfigurationGroup">
+                    <TextBlock Text="{Binding GroupName}" FontWeight="Bold" Padding="10"/>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <!-- Tab Content -->
+            <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="helpers:ConfigurationGroup">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Properties}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="helpers:ConfigurationPropertyDescriptor">
+                                    <ContentControl Content="{Binding}"
+                                                    ContentTemplate="{Binding Converter={StaticResource TypeToControlTemplateConverter}}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </ScrollViewer>
+</UserControl>

@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using System;
 using PenumbraModForwarder.UI.ViewModels;
-using PenumbraModForwarder.UI.ViewModels.Settings;
 
 namespace PenumbraModForwarder.UI;
 

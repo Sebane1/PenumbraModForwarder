@@ -1,7 +1,0 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:PenumbraModForwarder.UI.ViewModels.Settings"
-             x:Class="PenumbraModForwarder.UI.Views.Settings.SettingsView"
-             x:DataType="vm:SettingsViewModel">
-    
-</UserControl>

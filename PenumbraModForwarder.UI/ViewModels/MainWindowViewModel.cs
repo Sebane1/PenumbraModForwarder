@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using PenumbraModForwarder.UI.Services;
-using PenumbraModForwarder.UI.ViewModels.Settings;
 using ReactiveUI;
 using Serilog;
 
