@@ -103,7 +103,7 @@ public class ConfigurationServiceTests
         Assert.NotNull(advancedOptions);
     }
     
-    [Fact(Skip = "Will be reworked when advanced options are removed")]
+    [Fact]
     public void UpdateConfigValue_RaisesConfigurationChangedEventWithDetails()
     {
         // Arrange
@@ -111,7 +111,7 @@ public class ConfigurationServiceTests
         _configService.ConfigurationChanged += (sender, args) =>
         {
             eventRaised = true;
-            Assert.Equal("AutoLoad", args.PropertyName);
+            Assert.Equal("Common.AutoLoad", args.PropertyName);
             Assert.True((bool)args.NewValue);
         };
 
@@ -121,8 +121,8 @@ public class ConfigurationServiceTests
         // Assert
         Assert.True(eventRaised, "ConfigurationChanged event was not raised.");
     }
-    
-    [Fact(Skip = "Will be reworked when advanced options are removed")]
+
+    [Fact]
     public void MultiplePropertyUpdates_RaisesConfigurationChangedEventForEachChange()
     {
         // Arrange
@@ -133,13 +133,13 @@ public class ConfigurationServiceTests
         _configService.UpdateConfigValue(config =>
         {
             config.Common.AutoLoad = true;
-            config.BackgroundWorker.DownloadPath = [@"C:\Test\Path"];
-            config.UI.NotificationEnabled = true;
+            config.BackgroundWorker.DownloadPath = new List<string> { @"C:\Test\Path" };
+            config.UI.NotificationEnabled = false;
         });
 
         // Assert
-        Assert.Contains(changes, change => change.PropertyName == "AutoLoad" && (bool)change.NewValue == true);
-        Assert.Contains(changes, change => change.PropertyName == "DownloadPath" && (string)change.NewValue == @"C:\TestDownload");
-        Assert.Contains(changes, change => change.PropertyName == "NotificationEnabled" && (bool)change.NewValue == false);
+        Assert.Contains(changes, change => change.PropertyName == "Common.AutoLoad" && (bool)change.NewValue);
+        Assert.Contains(changes, change => change.PropertyName == "BackgroundWorker.DownloadPath" && ((List<string>)change.NewValue).SequenceEqual(new List<string> { @"C:\Test\Path" }));
+        Assert.Contains(changes, change => change.PropertyName == "UI.NotificationEnabled" && (bool)change.NewValue == false);
     }
 }
