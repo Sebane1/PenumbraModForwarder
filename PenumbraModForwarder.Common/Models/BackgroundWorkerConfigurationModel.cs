@@ -8,8 +8,8 @@ public class BackgroundWorkerConfigurationModel
     public bool AutoDelete { get; set; } = true;
     [Display(Name = "Extract All", GroupName = "Extraction")]
     public bool ExtractAll { get; set; }
-    [Display(Name = "Extract To", GroupName = "Extraction")]
-    public string ExtractTo { get; set; } = string.Empty;
+    [Display(Name = "Extraction Path", GroupName = "Extraction")]
+    public string ExtractTo { get; set; } = Consts.ConfigurationConsts.ExtractionPath;
     [Display(Name = "Download Path", GroupName = "Pathing")]
     public List<string> DownloadPath { get; set; } = new();
     [Display(Name = "TexTool Path", GroupName = "Pathing")]

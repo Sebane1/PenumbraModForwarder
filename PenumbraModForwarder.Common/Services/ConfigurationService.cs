@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Reflection;
+﻿using KellermanSoftware.CompareNetObjects;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Events;
@@ -65,15 +64,22 @@ public class ConfigurationService : IConfigurationService
 
         if (detectChangesAndInvokeEvents)
         {
-            var originalConfig = _config;
-            var changes = GetChanges(originalConfig, updatedConfig);
-            foreach (var change in changes)
+            var originalConfig = _config.DeepClone();
+            _config = updatedConfig;
+
+            var changes = GetChanges(originalConfig, _config);
+            if (changes.Any())
             {
-                ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
+                foreach (var change in changes)
+                {
+                    ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
+                }
             }
         }
-
-        _config = updatedConfig;
+        else
+        {
+            _config = updatedConfig;
+        }
 
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
         _fileStorage.Write(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
@@ -102,19 +108,10 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
         }
 
-        // Make a deep copy of the original configuration
         var originalConfig = _config.DeepClone();
 
-        // Log the state of originalConfig
-        Log.Debug("Original Config after cloning: {Config}", JsonConvert.SerializeObject(originalConfig));
-
-        // Apply updates
         propertyUpdater(_config);
 
-        // Log the state of updated _config
-        Log.Debug("Updated Config after applying propertyUpdater: {Config}", JsonConvert.SerializeObject(_config));
-
-        // Detect changes
         var changes = GetChanges(originalConfig, _config);
         if (changes.Any())
         {
@@ -124,95 +121,42 @@ public class ConfigurationService : IConfigurationService
             }
         }
 
-        // Save configuration without detecting changes again
         SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
     }
 
     private Dictionary<string, object> GetChanges(ConfigurationModel original, ConfigurationModel updated)
     {
         var changes = new Dictionary<string, object>();
-        CompareProperties(original, updated, changes, "");
+
+        var compareLogic = new CompareLogic
+        {
+            Config =
+            {
+                MaxDifferences = int.MaxValue,
+                IgnoreObjectTypes = false,
+                CompareFields = true,
+                CompareProperties = true,
+                ComparePrivateFields = false,
+                ComparePrivateProperties = false,
+                IgnoreCollectionOrder = false
+            }
+        };
+
+        var comparisonResult = compareLogic.Compare(original, updated);
+
+        if (!comparisonResult.AreEqual)
+        {
+            foreach (var difference in comparisonResult.Differences)
+            {
+                var propertyName = difference.PropertyName.TrimStart('.');
+                
+                var newValue = difference.Object2;
+                
+                changes[propertyName] = newValue;
+            }
+        }
+
         return changes;
-    }
-
-    private void CompareProperties(object original, object updated, Dictionary<string, object> changes, string parentProperty)
-    {
-        if (original == null && updated == null)
-        {
-            return;
-        }
-
-        var type = (original ?? updated).GetType();
-
-        // Handle simple types and strings
-        if (type.IsPrimitive || type.IsEnum || type == typeof(string))
-        {
-            if (!Equals(original, updated))
-            {
-                var propName = string.IsNullOrEmpty(parentProperty) ? type.Name : parentProperty;
-                changes[propName] = updated;
-            }
-            return;
-        }
-
-        // Handle collections
-        if (typeof(IEnumerable).IsAssignableFrom(type) && type != typeof(string))
-        {
-            if (!CompareEnumerables(original as IEnumerable, updated as IEnumerable))
-            {
-                var propName = string.IsNullOrEmpty(parentProperty) ? type.Name : parentProperty;
-                changes[propName] = updated;
-            }
-            return;
-        }
-
-        // Compare properties
-        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        foreach (var property in properties)
-        {
-            if (property.GetIndexParameters().Length > 0 || !property.CanRead) continue;
-
-            var originalValue = original != null ? property.GetValue(original) : null;
-            var updatedValue = updated != null ? property.GetValue(updated) : null;
-
-            var newParent = string.IsNullOrEmpty(parentProperty) ? property.Name : $"{parentProperty}.{property.Name}";
-
-            CompareProperties(originalValue, updatedValue, changes, newParent);
-        }
-    }
-
-    private bool CompareEnumerables(IEnumerable original, IEnumerable updated)
-    {
-        if (original == null && updated == null) return true;
-        if (original == null || updated == null) return false;
-
-        var originalEnum = original.Cast<object>().ToList();
-        var updatedEnum = updated.Cast<object>().ToList();
-
-        if (originalEnum.Count != updatedEnum.Count) return false;
-
-        for (int i = 0; i < originalEnum.Count; i++)
-        {
-            var originalItem = originalEnum[i];
-            var updatedItem = updatedEnum[i];
-
-            if (originalItem == null && updatedItem == null) continue;
-            if (originalItem == null || updatedItem == null) return false;
-
-            var itemType = originalItem.GetType();
-
-            if (itemType.IsClass && itemType != typeof(string))
-            {
-                var changes = new Dictionary<string, object>();
-                CompareProperties(originalItem, updatedItem, changes, "");
-                if (changes.Any()) return false;
-            }
-            else if (!Equals(originalItem, updatedItem))
-            {
-                return false;
-            }
-        }
-        return true;
     }
 }
 
@@ -223,12 +167,12 @@ public static class CloneExtensions
     {
         if (obj == null) return default(T);
 
-        // Configure serialization settings to include all properties
         var settings = new JsonSerializerSettings
         {
             ObjectCreationHandling = ObjectCreationHandling.Replace,
             PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-            TypeNameHandling = TypeNameHandling.Auto
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented
         };
 
         var serialized = JsonConvert.SerializeObject(obj, settings);

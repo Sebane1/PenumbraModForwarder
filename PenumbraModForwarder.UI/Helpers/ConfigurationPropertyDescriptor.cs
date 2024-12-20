@@ -14,6 +14,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
     public string GroupName { get; set; }
     public PropertyInfo PropertyInfo { get; set; }
     public object ModelInstance { get; set; }
+    public ConfigurationPropertyDescriptor ParentDescriptor { get; set; }
 
     private object _value;
     public object Value
@@ -69,7 +70,6 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
         try
         {
             object convertedValue;
-
             if (PropertyInfo.PropertyType == typeof(int) && value is decimal decimalValue)
             {
                 convertedValue = Convert.ToInt32(decimalValue);

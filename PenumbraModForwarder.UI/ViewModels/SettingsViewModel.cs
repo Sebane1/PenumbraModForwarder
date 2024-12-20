@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Attributes;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Helpers;
 using PenumbraModForwarder.UI.Interfaces;
 using ReactiveUI;
@@ -34,18 +35,11 @@ public class SettingsViewModel : ViewModelBase
     {
         var configurationModel = _configurationService.GetConfiguration();
 
-        // Get all configuration model properties
-        var configModelProperties = configurationModel.GetType().GetProperties()
-            .Where(p => p.PropertyType.Namespace == "PenumbraModForwarder.Common.Models");
-
-        foreach (var prop in configModelProperties)
-        {
-            var modelInstance = prop.GetValue(configurationModel);
-            LoadPropertiesFromModel(modelInstance);
-        }
+        // Load all properties recursively
+        LoadPropertiesFromModel(configurationModel);
     }
 
-    private void LoadPropertiesFromModel(object model)
+    private void LoadPropertiesFromModel(object model, ConfigurationPropertyDescriptor parentDescriptor = null, string parentGroupName = null)
     {
         var properties = model.GetType().GetProperties();
 
@@ -57,46 +51,68 @@ public class SettingsViewModel : ViewModelBase
 
             var displayAttr = prop.GetCustomAttribute<DisplayAttribute>();
             string displayName = displayAttr?.Name ?? prop.Name;
-            string groupName = displayAttr?.GroupName ?? "General";
+            string groupName = displayAttr?.GroupName ?? parentGroupName ?? "General";
 
-            var descriptor = new ConfigurationPropertyDescriptor
+            var propertyType = prop.PropertyType;
+
+            if (propertyType.Namespace == "PenumbraModForwarder.Common.Models")
             {
-                DisplayName = displayName,
-                PropertyInfo = prop,
-                ModelInstance = model,
-                GroupName = groupName
-            };
+                // Nested model, create a descriptor for it
+                var nestedModelInstance = prop.GetValue(model);
 
-            // Set initial value
-            descriptor.Value = prop.GetValue(model);
+                var nestedDescriptor = new ConfigurationPropertyDescriptor
+                {
+                    DisplayName = displayName,
+                    PropertyInfo = prop,
+                    ModelInstance = model,
+                    ParentDescriptor = parentDescriptor,
+                    GroupName = groupName
+                };
 
-            // Handle commands if necessary
-            if (prop.PropertyType == typeof(string) && displayName.Contains("Path"))
-            {
-                descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
+                // Recurse into the nested model
+                LoadPropertiesFromModel(nestedModelInstance, nestedDescriptor, groupName);
             }
-
-            if (prop.PropertyType == typeof(List<string>))
+            else
             {
-                descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
-                // No need to assign RemovePathCommand here; it's handled in PathItemViewModel
+                var descriptor = new ConfigurationPropertyDescriptor
+                {
+                    DisplayName = displayName,
+                    PropertyInfo = prop,
+                    ModelInstance = model,
+                    ParentDescriptor = parentDescriptor,
+                    GroupName = groupName
+                };
+
+                // Set initial value
+                descriptor.Value = prop.GetValue(model);
+
+                // Handle commands if necessary
+                if (prop.PropertyType == typeof(string) && displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
+                {
+                    descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
+                }
+
+                if (prop.PropertyType == typeof(List<string>))
+                {
+                    descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
+                }
+
+                var group = Groups.FirstOrDefault(g => g.GroupName == groupName);
+                if (group == null)
+                {
+                    group = new ConfigurationGroup(groupName);
+                    Groups.Add(group);
+                }
+
+                group.Properties.Add(descriptor);
+
+                // Subscribe to changes and pass descriptor to SaveSettings
+                descriptor.WhenAnyValue(d => d.Value)
+                    .Skip(1) // Skip the initial value
+                    .Throttle(TimeSpan.FromMilliseconds(200))
+                    .ObserveOn(RxApp.MainThreadScheduler)
+                    .Subscribe(_ => SaveSettings(descriptor));
             }
-
-            var group = Groups.FirstOrDefault(g => g.GroupName == groupName);
-            if (group == null)
-            {
-                group = new ConfigurationGroup(groupName);
-                Groups.Add(group);
-            }
-
-            group.Properties.Add(descriptor);
-
-            // Subscribe to changes and save configuration
-            descriptor.WhenAnyValue(d => d.Value)
-                .Skip(1) // Skip the initial value
-                .Throttle(TimeSpan.FromMilliseconds(200))
-                .ObserveOn(RxApp.MainThreadScheduler)
-                .Subscribe(_ => SaveSettings());
         }
     }
 
@@ -135,15 +151,62 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    private void SaveSettings()
+    private void SaveSettings(ConfigurationPropertyDescriptor descriptor)
     {
         try
         {
-            _configurationService.UpdateConfigValue(_ => { /* No action needed since model instances are updated */ });
+            _configurationService.UpdateConfigValue(config =>
+            {
+                SetNestedPropertyValue(config, descriptor);
+            });
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Error saving settings");
         }
+    }
+
+    private void SetNestedPropertyValue(ConfigurationModel config, ConfigurationPropertyDescriptor descriptor)
+    {
+        var propertyPath = GetPropertyPath(descriptor);
+        var properties = propertyPath.Split('.');
+
+        object currentObject = config;
+        PropertyInfo propertyInfo = null;
+
+        for (int i = 0; i < properties.Length; i++)
+        {
+            var propertyName = properties[i];
+            propertyInfo = currentObject.GetType().GetProperty(propertyName);
+            if (propertyInfo == null)
+            {
+                throw new Exception($"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'");
+            }
+
+            if (i == properties.Length - 1)
+            {
+                // Last property - set the value
+                propertyInfo.SetValue(currentObject, descriptor.Value);
+            }
+            else
+            {
+                // Navigate to the next level
+                currentObject = propertyInfo.GetValue(currentObject);
+            }
+        }
+    }
+
+    private string GetPropertyPath(ConfigurationPropertyDescriptor descriptor)
+    {
+        var pathSegments = new List<string>();
+        var currentDescriptor = descriptor;
+
+        while (currentDescriptor != null)
+        {
+            pathSegments.Insert(0, currentDescriptor.PropertyInfo.Name);
+            currentDescriptor = currentDescriptor.ParentDescriptor;
+        }
+
+        return string.Join(".", pathSegments);
     }
 }
