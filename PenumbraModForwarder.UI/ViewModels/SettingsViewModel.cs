@@ -37,7 +37,6 @@ public class SettingsViewModel : ViewModelBase
     private void LoadConfigurationSettings()
     {
         var configurationModel = _configurationService.GetConfiguration();
-
         // Load all properties recursively
         LoadPropertiesFromModel(configurationModel);
     }
@@ -45,7 +44,6 @@ public class SettingsViewModel : ViewModelBase
     private void LoadPropertiesFromModel(object model, ConfigurationPropertyDescriptor parentDescriptor = null, string parentGroupName = null)
     {
         var properties = model.GetType().GetProperties();
-
         foreach (var prop in properties)
         {
             // Skip properties marked with [ExcludeFromSettingsUI]
@@ -58,11 +56,18 @@ public class SettingsViewModel : ViewModelBase
 
             var propertyType = prop.PropertyType;
 
-            if (propertyType.Namespace == "PenumbraModForwarder.Common.Models")
+            // Add logging
+            Log.Debug("Processing property '{PropertyName}' of type '{PropertyType}' in group '{GroupName}'", prop.Name, prop.PropertyType.Name, groupName);
+
+            if (propertyType.Namespace == "PenumbraModForwarder.Common.Models"
+                && propertyType.IsClass
+                && !propertyType.IsPrimitive
+                && !propertyType.IsEnum
+                && propertyType != typeof(string)
+                && !typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
             {
                 // Nested model, create a descriptor for it
                 var nestedModelInstance = prop.GetValue(model);
-
                 var nestedDescriptor = new ConfigurationPropertyDescriptor
                 {
                     DisplayName = displayName,
@@ -71,7 +76,6 @@ public class SettingsViewModel : ViewModelBase
                     ParentDescriptor = parentDescriptor,
                     GroupName = groupName
                 };
-
                 // Recurse into the nested model
                 LoadPropertiesFromModel(nestedModelInstance, nestedDescriptor, groupName);
             }
@@ -85,17 +89,12 @@ public class SettingsViewModel : ViewModelBase
                     ParentDescriptor = parentDescriptor,
                     GroupName = groupName
                 };
-
                 // Set initial value
                 descriptor.Value = prop.GetValue(model);
 
                 // Handle commands if necessary
-                if (prop.PropertyType == typeof(string) && displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
-                {
-                    descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
-                }
-
-                if (prop.PropertyType == typeof(List<string>))
+                if ((prop.PropertyType == typeof(string) || prop.PropertyType == typeof(List<string>))
+                    && displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
                 {
                     descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
                 }
@@ -107,7 +106,16 @@ public class SettingsViewModel : ViewModelBase
                     Groups.Add(group);
                 }
 
-                group.Properties.Add(descriptor);
+                // Check for duplicates before adding
+                var existingDescriptor = group.Properties.FirstOrDefault(d => d.DisplayName == descriptor.DisplayName);
+                if (existingDescriptor == null)
+                {
+                    group.Properties.Add(descriptor);
+                }
+                else
+                {
+                    Log.Warning("Property '{DisplayName}' is already added to group '{GroupName}'. Skipping duplicate.", descriptor.DisplayName, groupName);
+                }
 
                 // Subscribe to changes and pass descriptor to SaveSettings
                 descriptor.WhenAnyValue(d => d.Value)
@@ -142,9 +150,10 @@ public class SettingsViewModel : ViewModelBase
                 var selectedPaths = await _fileDialogService.OpenFoldersAsync(initialDirectory, $"Select {descriptor.DisplayName}");
                 if (selectedPaths != null && selectedPaths.Any())
                 {
-                    var pathsList = descriptor.Value as List<string> ?? new List<string>();
-                    pathsList.AddRange(selectedPaths);
-                    descriptor.Value = pathsList;
+                    var existingPaths = descriptor.Value as List<string> ?? new List<string>();
+                    var newPathsList = new List<string>(existingPaths);
+                    newPathsList.AddRange(selectedPaths);
+                    descriptor.Value = newPathsList;
                 }
             }
         }
@@ -180,10 +189,11 @@ public class SettingsViewModel : ViewModelBase
                 WebSocketMessageStatus.InProgress,
                 $"Configuration changed: {propertyPath}"
             );
+
             message.Type = WebSocketMessageType.ConfigurationChange;
             message.Message = JsonConvert.SerializeObject(configurationChange);
 
-// Send the message to the background worker on the /config endpoint
+            // Send the message to the background worker on the /config endpoint
             _ = _webSocketClient.SendMessageAsync(message, "/config").ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -196,8 +206,8 @@ public class SettingsViewModel : ViewModelBase
     {
         var propertyPath = GetPropertyPath(descriptor);
         var properties = propertyPath.Split('.');
-
         object currentObject = config;
+
         for (int i = 0; i < properties.Length; i++)
         {
             var propertyName = properties[i];

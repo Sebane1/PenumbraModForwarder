@@ -2,6 +2,6 @@
 
 public interface IFileWatcherService : IDisposable
 {
-    void Start();
+    Task Start();
     void Stop();
 }

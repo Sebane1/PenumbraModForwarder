@@ -13,6 +13,4 @@ public class CommonConfigurationModel
     public bool StartOnBoot { get; set; }
     [Display(Name = "Enable Beta Builds", GroupName = "Updates")]
     public bool IncludePrereleases { get; set; }
-    [Display(Name = "Enable Debug Logs", GroupName = "Mod Forwarder")]
-    public bool EnableDebugLogs { get; set; }
 }

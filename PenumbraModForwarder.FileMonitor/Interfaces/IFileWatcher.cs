@@ -4,7 +4,7 @@ namespace PenumbraModForwarder.FileMonitor.Interfaces;
 
 public interface IFileWatcher : IDisposable
 {
-    Task StartWatchingAsync(IEnumerable<string> paths, CancellationToken cancellationToken);
+    Task StartWatchingAsync(IEnumerable<string> paths);
     event EventHandler<FileMovedEvent> FileMoved;
     Task PersistStateAsync();
     Task LoadStateAsync();

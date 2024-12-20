@@ -59,9 +59,15 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
     {
         if (Value is List<string> paths && paths.Contains(pathItem.Path))
         {
-            paths.Remove(pathItem.Path);
+            // Create a new list without the item to be removed
+            var newPaths = new List<string>(paths);
+            newPaths.Remove(pathItem.Path);
+
+            // Assign the new list to Value to trigger change notifications
+            Value = newPaths;
+
+            // Update the PathItems collection
             PathItems.Remove(pathItem);
-            this.RaisePropertyChanged(nameof(Value));
         }
     }
 

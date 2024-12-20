@@ -11,22 +11,24 @@ namespace PenumbraModForwarder.BackgroundWorker.Services;
 public class FileWatcherService : IFileWatcherService
 {
     private readonly IConfigurationService _configurationService;
-    private readonly IFileWatcher _fileWatcher;
     private readonly IWebSocketServer _webSocketServer;
-    private CancellationTokenSource _cancellationTokenSource;
+    private readonly IServiceProvider _serviceProvider;
+    private IFileWatcher _fileWatcher;
 
-    public FileWatcherService(IConfigurationService configurationService, IFileWatcher fileWatcher, IWebSocketServer webSocketServer)
+    public FileWatcherService(
+        IConfigurationService configurationService,
+        IWebSocketServer webSocketServer,
+        IServiceProvider serviceProvider)
     {
         _configurationService = configurationService;
-        _configurationService.ConfigurationChanged += OnConfigurationChanged;
-        _fileWatcher = fileWatcher;
         _webSocketServer = webSocketServer;
-        _fileWatcher.FileMoved += OnFileMoved;
+        _serviceProvider = serviceProvider;
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
     }
 
-    public void Start()
+    public async Task Start()
     {
-        InitializeFileWatcher();
+        await InitializeFileWatcherAsync();
     }
 
     public void Stop()
@@ -34,56 +36,82 @@ public class FileWatcherService : IFileWatcherService
         DisposeFileWatcher();
     }
 
-    private async void InitializeFileWatcher()
+    private async Task InitializeFileWatcherAsync()
     {
-        var downloadPaths = _configurationService.ReturnConfigValue(config => config.BackgroundWorker.DownloadPath) as List<string>;
+        Log.Debug("Initializing FileWatcher...");
+        var downloadPaths = _configurationService.ReturnConfigValue(
+            config => config.BackgroundWorker.DownloadPath
+        ) as List<string>;
 
         if (downloadPaths == null || downloadPaths.Count == 0)
         {
             Log.Warning("No download paths specified. FileWatcher will not be initialized.");
             return;
         }
-        
-        _cancellationTokenSource = new CancellationTokenSource();
 
         try
         {
-            await _fileWatcher.StartWatchingAsync(downloadPaths, _cancellationTokenSource.Token);
+            Log.Debug("Resolving new IFileWatcher instance...");
+            _fileWatcher = _serviceProvider.GetRequiredService<IFileWatcher>();
+            _fileWatcher.FileMoved += OnFileMoved;
+            Log.Debug("IFileWatcher instance resolved and event handler attached.");
+
+            Log.Debug("Starting watchers for the following paths:");
+            foreach (var downloadPath in downloadPaths)
+            {
+                Log.Debug(" - {DownloadPath}", downloadPath);
+            }
+
+            await _fileWatcher.StartWatchingAsync(downloadPaths);
+            Log.Debug("FileWatcher started successfully.");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "An error occured while initializing the file watcher.");
-        }
-    }
-    
-    private void OnFileMoved(object? sender, FileMovedEvent e)
-    {
-        Log.Information($"File moved: {e.DestinationPath}");
-        var taskId = Guid.NewGuid().ToString();
-        var message = WebSocketMessage.CreateStatus(taskId, "Found File", $"Found File: {e.FileName}");
-        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
-    }
-    
-    private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
-    {
-        Log.Debug($"Configuration: {e.PropertyName} changed to: {e.NewValue}");
-        if (e.PropertyName == nameof(ConfigurationModel.BackgroundWorker.DownloadPath))
-        {
-            Log.Information("Configuration changed. Restarting FileWatcher");
-            RestartFileWatcher();
+            Log.Error(ex, "An error occurred while initializing the file watcher.");
         }
     }
 
-    private void RestartFileWatcher()
+    private async Task RestartFileWatcherAsync()
     {
+        Log.Debug("Restarting FileWatcher...");
         DisposeFileWatcher();
-        InitializeFileWatcher();
+        await InitializeFileWatcherAsync();
+        Log.Debug("FileWatcher restarted successfully.");
     }
 
     private void DisposeFileWatcher()
     {
-        _cancellationTokenSource.Cancel();
-        _fileWatcher.Dispose();
+        if (_fileWatcher != null)
+        {
+            _fileWatcher.FileMoved -= OnFileMoved;
+            _fileWatcher.Dispose();
+            _fileWatcher = null;
+        }
+    }
+
+    private async void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
+    {
+        try
+        {
+            Log.Debug("Configuration: {PropertyName} changed to: {NewValue}", e.PropertyName, e.NewValue);
+            if (e.PropertyName == "BackgroundWorker.DownloadPath")
+            {
+                Log.Information("Configuration changed. Restarting FileWatcher");
+                await RestartFileWatcherAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occurred in OnConfigurationChanged.");
+        }
+    }
+
+    private void OnFileMoved(object? sender, FileMovedEvent e)
+    {
+        Log.Information("File moved: {DestinationPath}", e.DestinationPath);
+        var taskId = Guid.NewGuid().ToString();
+        var message = WebSocketMessage.CreateStatus(taskId, "Found File", $"Found File: {e.FileName}");
+        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
     }
 
     public void Dispose()

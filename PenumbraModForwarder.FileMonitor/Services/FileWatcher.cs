@@ -17,6 +17,8 @@ public class FileWatcher : IFileWatcher, IDisposable
     private readonly string _destDirectory = ConfigurationConsts.ModsPath;
     private readonly string _stateFilePath = "fileQueueState.json";
     private bool _disposed;
+    private CancellationTokenSource _cancellationTokenSource;
+    private Task _processingTask;
 
     public FileWatcher(IFileStorage fileStorage)
     {
@@ -27,29 +29,38 @@ public class FileWatcher : IFileWatcher, IDisposable
 
     public event EventHandler<FileMovedEvent> FileMoved;
 
-    public async Task StartWatchingAsync(IEnumerable<string> paths, CancellationToken cancellationToken)
+    public async Task StartWatchingAsync(IEnumerable<string> paths)
     {
-        await LoadStateAsync();
-
-        foreach (var path in paths)
+        try
         {
-            var watcher = new FileSystemWatcher(path)
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-                EnableRaisingEvents = true,
-            };
+            await LoadStateAsync();
 
-            foreach (var extension in FileExtensionsConsts.AllowedExtensions)
+            foreach (var path in paths)
             {
-                watcher.Filters.Add($"*{extension}");
+                var watcher = new FileSystemWatcher(path)
+                {
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+                    EnableRaisingEvents = true,
+                };
+
+                foreach (var extension in FileExtensionsConsts.AllowedExtensions)
+                {
+                    watcher.Filters.Add($"*{extension}");
+                }
+
+                watcher.Created += OnCreated;
+                _watchers.Add(watcher);
+                Log.Information("Started watching directory: {Path}", path);
             }
 
-            watcher.Created += OnCreated;
-            _watchers.Add(watcher);
-            Log.Information("Started watching directory: {Path}", path);
+            _cancellationTokenSource = new CancellationTokenSource();
+            _processingTask = ProcessQueueAsync(_cancellationTokenSource.Token);
         }
-
-        await Task.Run(() => ProcessQueueAsync(cancellationToken), cancellationToken);
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occurred in StartWatchingAsync.");
+            throw;
+        }
     }
 
     private void OnCreated(object sender, FileSystemEventArgs e)
@@ -60,23 +71,37 @@ public class FileWatcher : IFileWatcher, IDisposable
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            var filesToProcess = _fileQueue.Keys.ToList();
-
-            foreach (var filePath in filesToProcess)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (IsFileReady(filePath))
-                {
-                    await ProcessFileAsync(filePath, cancellationToken);
-                }
-                else if (DateTime.UtcNow - _fileQueue[filePath] > TimeSpan.FromSeconds(5))
-                {
-                    Log.Information("File is not ready for processing, will retry: {FullPath}", filePath);
-                }
-            }
+                var filesToProcess = _fileQueue.Keys.ToList();
 
-            await Task.Delay(500, cancellationToken);
+                foreach (var filePath in filesToProcess)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    if (IsFileReady(filePath))
+                    {
+                        await ProcessFileAsync(filePath, cancellationToken);
+                    }
+                    else if (DateTime.UtcNow - _fileQueue[filePath] > TimeSpan.FromSeconds(5))
+                    {
+                        Log.Information("File is not ready for processing, will retry: {FullPath}", filePath);
+                    }
+                }
+
+                await Task.Delay(500, cancellationToken);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            Log.Information("Processing queue was canceled.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occurred in ProcessQueueAsync.");
         }
     }
 
@@ -157,11 +182,9 @@ public class FileWatcher : IFileWatcher, IDisposable
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
-
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
         File.Move(filePath, destinationPath);
         _fileQueue.TryRemove(filePath, out _);
-
         FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath, fileNameWithoutExtension));
         Log.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
     }
@@ -201,7 +224,6 @@ public class FileWatcher : IFileWatcher, IDisposable
             {
                 var serializedQueue = await File.ReadAllTextAsync(_stateFilePath);
                 var deserializedQueue = JsonConvert.DeserializeObject<ConcurrentDictionary<string, DateTime>>(serializedQueue);
-
                 if (deserializedQueue != null)
                 {
                     foreach (var item in deserializedQueue)
@@ -209,7 +231,6 @@ public class FileWatcher : IFileWatcher, IDisposable
                         _fileQueue.TryAdd(item.Key, item.Value);
                     }
                 }
-
                 Log.Information("File queue state loaded.");
             }
         }
@@ -228,7 +249,6 @@ public class FileWatcher : IFileWatcher, IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
-
         if (disposing)
         {
             foreach (var watcher in _watchers)
@@ -236,10 +256,29 @@ public class FileWatcher : IFileWatcher, IDisposable
                 watcher.EnableRaisingEvents = false;
                 watcher.Dispose();
             }
-
+            _watchers.Clear();
             Log.Information("All FileWatchers disposed.");
-        }
 
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+            }
+
+            if (_processingTask != null)
+            {
+                try
+                {
+                    _processingTask.Wait();
+                }
+                catch (AggregateException ae)
+                {
+                    ae.Handle(ex => ex is TaskCanceledException);
+                }
+                _processingTask = null;
+            }
+        }
         _disposed = true;
     }
 }

@@ -10,4 +10,6 @@ public class AdvancedConfigurationModel
     public int PenumbraTimeOutInSeconds { get; set; } = 60;
     [Display(Name = "Show Watchdog Window", GroupName = "Mod Forwarder")]
     public bool ShowWatchDogWindow { get; set; } = false;
+    [Display(Name = "Enable Debug Logs", GroupName = "Mod Forwarder")]
+    public bool EnableDebugLogs { get; set; }
 }
