@@ -12,6 +12,7 @@ public static class Logging
         Directory.CreateDirectory(ConfigurationConsts.LogsPath);
         
         Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
             .WriteTo.Console()
             .WriteTo.File(ConfigurationConsts.LogsPath + $"\\{applicationName}.log", 
                 rollingInterval: RollingInterval.Day, 

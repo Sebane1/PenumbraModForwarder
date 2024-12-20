@@ -1,4 +1,5 @@
-﻿using KellermanSoftware.CompareNetObjects;
+﻿using System.Reflection;
+using KellermanSoftware.CompareNetObjects;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Events;
@@ -101,27 +102,54 @@ public class ConfigurationService : IConfigurationService
         return propertySelector(_config);
     }
 
-    public void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater)
+    public void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater, string changedPropertyPath, object newValue)
     {
         if (propertyUpdater == null)
         {
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
         }
 
-        var originalConfig = _config.DeepClone();
-
         propertyUpdater(_config);
 
-        var changes = GetChanges(originalConfig, _config);
-        if (changes.Any())
-        {
-            foreach (var change in changes)
-            {
-                ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change.Key, change.Value));
-            }
-        }
+        Log.Debug($"Raising ConfigurationChanged event for {changedPropertyPath} with new value: {newValue}");
+        ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(changedPropertyPath, newValue));
 
         SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
+    }
+    
+    public void UpdateConfigFromExternal(string propertyPath, object newValue)
+    {
+        SetPropertyValue(_config, propertyPath, newValue);
+
+        ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(propertyPath, newValue));
+
+        SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
+    }
+
+    private void SetPropertyValue(object obj, string propertyPath, object newValue)
+    {
+        var properties = propertyPath.Split('.');
+        object currentObject = obj;
+        PropertyInfo propertyInfo = null;
+
+        for (int i = 0; i < properties.Length; i++)
+        {
+            var propertyName = properties[i];
+            propertyInfo = currentObject.GetType().GetProperty(propertyName);
+            if (propertyInfo == null)
+                throw new Exception($"Property '{propertyName}' not found on type '{currentObject.GetType().Name}'");
+
+            if (i == properties.Length - 1)
+            {
+                // Convert the new value to the correct type
+                var convertedValue = Convert.ChangeType(newValue, propertyInfo.PropertyType);
+                propertyInfo.SetValue(currentObject, convertedValue);
+            }
+            else
+            {
+                currentObject = propertyInfo.GetValue(currentObject);
+            }
+        }
     }
 
     private Dictionary<string, object> GetChanges(ConfigurationModel original, ConfigurationModel updated)
@@ -138,7 +166,8 @@ public class ConfigurationService : IConfigurationService
                 CompareProperties = true,
                 ComparePrivateFields = false,
                 ComparePrivateProperties = false,
-                IgnoreCollectionOrder = false
+                IgnoreCollectionOrder = false,
+                Caching = false
             }
         };
 
@@ -151,9 +180,16 @@ public class ConfigurationService : IConfigurationService
                 var propertyName = difference.PropertyName.TrimStart('.');
                 
                 var newValue = difference.Object2;
-                
+
                 changes[propertyName] = newValue;
+                
+                Log.Debug("Detected change in property '{0}': Original Value = '{1}', New Value = '{2}'", 
+                    propertyName, difference.Object1, difference.Object2);
             }
+        }
+        else
+        {
+            Log.Debug("No differences detected between original and updated configurations.");
         }
 
         return changes;

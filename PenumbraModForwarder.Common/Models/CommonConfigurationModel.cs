@@ -11,11 +11,8 @@ public class CommonConfigurationModel
     public bool FileLinkingEnabled { get; set; }
     [Display(Name = "Start on Boot", GroupName = "General")]
     public bool StartOnBoot { get; set; }
-    
-    [ExcludeFromSettingsUI]
-    public string GitHubOwner { get; set; } = "Sebane1";
-    [ExcludeFromSettingsUI]
-    public string GitHubRepo { get; set; } = "PenumbraModForwarder";
     [Display(Name = "Enable Beta Builds", GroupName = "Updates")]
     public bool IncludePrereleases { get; set; }
+    [Display(Name = "Enable Debug Logs", GroupName = "Mod Forwarder")]
+    public bool EnableDebugLogs { get; set; }
 }

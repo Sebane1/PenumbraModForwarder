@@ -1,25 +1,28 @@
 ﻿using System.Net.WebSockets;
+using System.Text;
+using Newtonsoft.Json;
+using PenumbraModForwarder.Common.Models;
+using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
 
 namespace PenumbraModForwarder.BackgroundWorker.Tests.Extensions;
 
 public class MockWebSocket : WebSocket
 {
-    private readonly TaskCompletionSource<bool> _receiveComplete = new();
-    private bool _shouldClose;
-    public List<byte[]> SentMessages { get; } = new();
+    public List<byte[]> SentMessages { get; } = new List<byte[]>();
     public bool CloseAsyncCalled { get; private set; }
-    public override WebSocketState State => _shouldClose ? WebSocketState.Closed : WebSocketState.Open;
-    public override string? SubProtocol { get; }
-    public override WebSocketCloseStatus? CloseStatus { get; }
-    public override string? CloseStatusDescription { get; }
 
-    public void CompleteReceive(bool shouldClose = true)
+    private TaskCompletionSource<WebSocketReceiveResult> _receiveTcs = new();
+    private ArraySegment<byte> _receiveBuffer;
+
+    public override WebSocketCloseStatus? CloseStatus => WebSocketCloseStatus.NormalClosure;
+    public override string CloseStatusDescription => "Closed";
+    public override WebSocketState State => WebSocketState.Open;
+    public override string SubProtocol => null;
+
+    public override void Abort()
     {
-        _shouldClose = shouldClose;
-        _receiveComplete.TrySetResult(true);
+        // No-op
     }
-
-    public override void Abort() { }
 
     public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
     {
@@ -32,19 +35,39 @@ public class MockWebSocket : WebSocket
         return Task.CompletedTask;
     }
 
-    public override void Dispose() { }
+    public override void Dispose()
+    {
+        // No-op
+    }
+
+    public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
+    {
+        _receiveBuffer = buffer;
+        return _receiveTcs.Task;
+    }
 
     public override Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
     {
-        var messageBytes = new byte[buffer.Count];
-        Buffer.BlockCopy(buffer.Array!, buffer.Offset, messageBytes, 0, buffer.Count);
-        SentMessages.Add(messageBytes);
+        SentMessages.Add(buffer.ToArray());
         return Task.CompletedTask;
     }
 
-    public override async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
+    /// <summary>
+    /// Simulates receiving a message from the client.
+    /// </summary>
+    public void SimulateReceive(WebSocketMessage message)
     {
-        await _receiveComplete.Task;
-        return new WebSocketReceiveResult(0, _shouldClose ? WebSocketMessageType.Close : WebSocketMessageType.Text, true);
+        var messageBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+        Array.Copy(messageBytes, 0, _receiveBuffer.Array, _receiveBuffer.Offset, messageBytes.Length);
+        _receiveTcs.SetResult(new WebSocketReceiveResult(messageBytes.Length, WebSocketMessageType.Text, true));
+        _receiveTcs = new TaskCompletionSource<WebSocketReceiveResult>(); // Prepare for next message
+    }
+
+    /// <summary>
+    /// Completes the receive loop to end the connection.
+    /// </summary>
+    public void CompleteReceive()
+    {
+        _receiveTcs.SetResult(new WebSocketReceiveResult(0, WebSocketMessageType.Close, true));
     }
 }

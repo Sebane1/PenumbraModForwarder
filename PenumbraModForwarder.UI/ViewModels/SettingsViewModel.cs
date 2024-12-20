@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Attributes;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
@@ -20,13 +21,15 @@ public class SettingsViewModel : ViewModelBase
 {
     private readonly IConfigurationService _configurationService;
     private readonly IFileDialogService _fileDialogService;
+    private readonly IWebSocketClient _webSocketClient;
 
     public ObservableCollection<ConfigurationGroup> Groups { get; } = new();
 
-    public SettingsViewModel(IConfigurationService configurationService, IFileDialogService fileDialogService)
+    public SettingsViewModel(IConfigurationService configurationService, IFileDialogService fileDialogService, IWebSocketClient webSocketClient)
     {
         _configurationService = configurationService;
         _fileDialogService = fileDialogService;
+        _webSocketClient = webSocketClient;
 
         LoadConfigurationSettings();
     }
@@ -155,10 +158,33 @@ public class SettingsViewModel : ViewModelBase
     {
         try
         {
-            _configurationService.UpdateConfigValue(config =>
+            var propertyPath = GetPropertyPath(descriptor);
+
+            // Update the configuration locally
+            _configurationService.UpdateConfigValue(
+                config => SetNestedPropertyValue(config, descriptor),
+                propertyPath,
+                descriptor.Value
+            );
+
+            var taskId = Guid.NewGuid().ToString();
+
+            var configurationChange = new
             {
-                SetNestedPropertyValue(config, descriptor);
-            });
+                PropertyPath = propertyPath,
+                NewValue = descriptor.Value
+            };
+
+            var message = WebSocketMessage.CreateStatus(
+                taskId,
+                WebSocketMessageStatus.InProgress,
+                $"Configuration changed: {propertyPath}"
+            );
+            message.Type = WebSocketMessageType.ConfigurationChange;
+            message.Message = JsonConvert.SerializeObject(configurationChange);
+
+// Send the message to the background worker on the /config endpoint
+            _ = _webSocketClient.SendMessageAsync(message, "/config").ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -172,12 +198,10 @@ public class SettingsViewModel : ViewModelBase
         var properties = propertyPath.Split('.');
 
         object currentObject = config;
-        PropertyInfo propertyInfo = null;
-
         for (int i = 0; i < properties.Length; i++)
         {
             var propertyName = properties[i];
-            propertyInfo = currentObject.GetType().GetProperty(propertyName);
+            var propertyInfo = currentObject.GetType().GetProperty(propertyName);
             if (propertyInfo == null)
             {
                 throw new Exception($"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'");
@@ -187,6 +211,7 @@ public class SettingsViewModel : ViewModelBase
             {
                 // Last property - set the value
                 propertyInfo.SetValue(currentObject, descriptor.Value);
+                Log.Debug("Set value of property '{0}' to '{1}'", propertyPath, descriptor.Value);
             }
             else
             {

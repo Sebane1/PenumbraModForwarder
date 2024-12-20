@@ -66,6 +66,7 @@ public class FileWatcherService : IFileWatcherService
     
     private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
+        Log.Debug($"Configuration: {e.PropertyName} changed to: {e.NewValue}");
         if (e.PropertyName == nameof(ConfigurationModel.BackgroundWorker.DownloadPath))
         {
             Log.Information("Configuration changed. Restarting FileWatcher");

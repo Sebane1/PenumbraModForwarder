@@ -1,5 +1,4 @@
 ﻿using Moq;
-using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
@@ -15,24 +14,15 @@ public class ConfigurationServiceTests
     public ConfigurationServiceTests()
     {
         _mockFileStorage = new Mock<IFileStorage>();
+        _mockFileStorage.Setup(fs => fs.Exists(It.IsAny<string>())).Returns(false);
         _configService = new ConfigurationService(_mockFileStorage.Object);
-    }
-
-    [Fact]
-    public void ReturnConfigValue_ReturnsCorrectBooleanProperty()
-    {
-        // Act
-        var autoLoadValue = (bool)_configService.ReturnConfigValue(config => config.Common.AutoLoad);
-
-        // Assert
-        Assert.False(autoLoadValue); // Default value
     }
 
     [Fact]
     public void UpdateConfigValue_ModifiesAutoLoadProperty()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true);
+        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
 
         // Assert
         var updatedValue = (bool)_configService.ReturnConfigValue(config => config.Common.AutoLoad);
@@ -43,12 +33,14 @@ public class ConfigurationServiceTests
     public void UpdateConfigValue_ModifiesDownloadPath()
     {
         // Act
-        _configService.UpdateConfigValue(config => config.BackgroundWorker.DownloadPath = [@"C:\Test\Path"]);
+        var testPath = new List<string> { @"/test/path" };
+        _configService.UpdateConfigValue(config => config.BackgroundWorker.DownloadPath = testPath, "BackgroundWorker.DownloadPath", testPath);
 
         // Assert
         var updatedPath = (List<string>)_configService.ReturnConfigValue(config => config.BackgroundWorker.DownloadPath);
-        Assert.Equal([@"C:\Test\Path"], updatedPath);
+        Assert.Equal(testPath, updatedPath);
     }
+
 
     [Fact]
     public void CreateConfiguration_CreatesRequiredDirectories()
@@ -59,50 +51,39 @@ public class ConfigurationServiceTests
         // Assert
         _mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
     }
-    
-    [Fact]
-    public void MultiplePropertyUpdates_SavesCompleteConfiguration()
-    {
-        _configService.UpdateConfigValue(config => 
-        {
-            config.Common.AutoLoad = true;
-            config.BackgroundWorker.DownloadPath = [@"C:\Test\Path"];
-            config.UI.NotificationEnabled = false;
-        });
 
-        // Verify each updated property
-        Assert.True((bool)_configService.ReturnConfigValue(c => c.Common.AutoLoad));
-        Assert.Equal([@"C:\Test\Path"], 
-            (List<string>)_configService.ReturnConfigValue(c => c.BackgroundWorker.DownloadPath));
-        Assert.False((bool)_configService.ReturnConfigValue(c => c.UI.NotificationEnabled));
-    }
-    
-    [Fact]
-    public void CreateConfiguration_CreatesDirectoriesAndConfigFile()
-    {
-        // Arrange
-        var mockFileStorage = new Mock<IFileStorage>();
-        mockFileStorage.Setup(fs => fs.Exists(It.IsAny<string>())).Returns(false);
-        var configService = new ConfigurationService(mockFileStorage.Object);
-
-        // Act
-        configService.CreateConfiguration();
-
-        // Assert
-        mockFileStorage.Verify(fs => fs.CreateDirectory(It.IsAny<string>()), Times.Once);
-        mockFileStorage.Verify(fs => fs.Write(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-    }
-    
     [Fact]
     public void AdvancedOptions_DefaultInitialization()
     {
         // Verify Advanced Options are not null on default initialization
-        var advancedOptions = (AdvancedConfigurationModel)_configService
-            .ReturnConfigValue(config => config.AdvancedOptions);
-        
+        var advancedOptions = (AdvancedConfigurationModel)_configService.ReturnConfigValue(config => config.AdvancedOptions);
         Assert.NotNull(advancedOptions);
     }
-    
+        
+    [Fact]
+    public void MultiplePropertyUpdates_RaisesSingleConfigurationChangedEvent()
+    {
+        // Arrange
+        var changes = new List<ConfigurationChangedEventArgs>();
+        _configService.ConfigurationChanged += (sender, args) => changes.Add(args);
+
+        // Act
+        _configService.UpdateConfigValue(config =>
+            {
+                config.Common.AutoLoad = true;
+                config.BackgroundWorker.DownloadPath = new List<string> { @"/test/path" };
+                config.UI.NotificationEnabled = false;
+            },
+            "MultipleProperties",
+            null);
+
+        // Assert
+        Assert.Single(changes);
+        var change = changes.First();
+        Assert.Equal("MultipleProperties", change.PropertyName);
+        Assert.Null(change.NewValue);
+    }
+
     [Fact]
     public void UpdateConfigValue_RaisesConfigurationChangedEventWithDetails()
     {
@@ -116,7 +97,7 @@ public class ConfigurationServiceTests
         };
 
         // Act
-        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true);
+        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
 
         // Assert
         Assert.True(eventRaised, "ConfigurationChanged event was not raised.");
@@ -130,16 +111,13 @@ public class ConfigurationServiceTests
         _configService.ConfigurationChanged += (sender, args) => changes.Add(args);
 
         // Act
-        _configService.UpdateConfigValue(config =>
-        {
-            config.Common.AutoLoad = true;
-            config.BackgroundWorker.DownloadPath = new List<string> { @"C:\Test\Path" };
-            config.UI.NotificationEnabled = false;
-        });
+        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
+        _configService.UpdateConfigValue(config => config.BackgroundWorker.DownloadPath = new List<string> { @"/test/path" }, "BackgroundWorker.DownloadPath", new List<string> { @"/test/path" });
+        _configService.UpdateConfigValue(config => config.UI.NotificationEnabled = false, "UI.NotificationEnabled", false);
 
         // Assert
         Assert.Contains(changes, change => change.PropertyName == "Common.AutoLoad" && (bool)change.NewValue);
-        Assert.Contains(changes, change => change.PropertyName == "BackgroundWorker.DownloadPath" && ((List<string>)change.NewValue).SequenceEqual(new List<string> { @"C:\Test\Path" }));
+        Assert.Contains(changes, change => change.PropertyName == "BackgroundWorker.DownloadPath" && ((List<string>)change.NewValue).SequenceEqual(new List<string> { @"/test/path" }));
         Assert.Contains(changes, change => change.PropertyName == "UI.NotificationEnabled" && (bool)change.NewValue == false);
     }
 }

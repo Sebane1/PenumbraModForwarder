@@ -1,65 +1,102 @@
-﻿using PenumbraModForwarder.Common.Enums;
+﻿using System;
+using System.IO;
+using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
 
-namespace PenumbraModForwarder.Common.Services;
-
-public class TexToolsHelper : ITexToolsHelper
+namespace PenumbraModForwarder.Common.Services
 {
-    private readonly IRegistryHelper _registryHelper;
-    private readonly IConfigurationService _configurationService;
-
-    public TexToolsHelper(IRegistryHelper registryHelper, IConfigurationService configurationService)
+    public class TexToolsHelper : ITexToolsHelper
     {
-        _registryHelper = registryHelper;
-        _configurationService = configurationService;
-    }
+        private readonly IRegistryHelper _registryHelper;
+        private readonly IConfigurationService _configurationService;
+        private readonly IFileSystemHelper _fileSystemHelper;
 
-    /// <summary>
-    /// Sets or retrieves the TexTools console path in the configuration
-    /// </summary>
-    /// <returns>
-    /// TexToolsStatus indicating the result:
-    /// - AlreadyConfigured: Path already exists in configuration
-    /// - Found: Successfully found and configured new path
-    /// - NotFound: ConsoleTools.exe not found at expected location
-    /// - NotInstalled: TexTools installation not found in registry
-    /// </returns>
-    /// <remarks>
-    /// Checks configuration first, then registry for TexTools installation.
-    /// If found, validates ConsoleTools.exe exists and updates configuration.
-    /// </remarks>
-    public TexToolsStatus SetTexToolConsolePath()
-    {
-        if ((string)_configurationService.ReturnConfigValue(model => model.BackgroundWorker.TexToolPath) != string.Empty)
+        public TexToolsHelper(IRegistryHelper registryHelper, IConfigurationService configurationService, IFileSystemHelper fileSystemHelper)
         {
-            Log.Information("TexTools path already configured");
-            return TexToolsStatus.AlreadyConfigured;
+            _registryHelper = registryHelper;
+            _configurationService = configurationService;
+            _fileSystemHelper = fileSystemHelper;
         }
 
-        var path = _registryHelper.GetTexToolRegistryValue();
-        if (string.IsNullOrEmpty(path))
+        /// <summary>
+        /// Sets or retrieves the TexTools console path in the configuration.
+        /// Works on Windows, Linux, and macOS.
+        /// </summary>
+        /// <returns>
+        /// TexToolsStatus indicating the result:
+        /// - AlreadyConfigured: Path already exists in configuration
+        /// - Found: Successfully found and configured new path
+        /// - NotFound: ConsoleTools executable not found at expected location
+        /// - NotInstalled: TexTools installation not found
+        /// </returns>
+        /// <remarks>
+        /// Checks configuration first, then standard installation paths based on OS.
+        /// If found, validates ConsoleTools executable exists and updates configuration.
+        /// </remarks>
+        public TexToolsStatus SetTexToolConsolePath()
         {
-            Log.Warning("TexTools installation not found in registry");
-            return TexToolsStatus.NotInstalled;
-        }
-    
-        // Strip the path of ""
-        if (path.StartsWith("\"") && path.EndsWith("\""))
-        {
-            path = path[1..^1];
-        }
-    
-        var combinedPath = Path.Combine(path, "FFXIV_TexTools", "ConsoleTools.exe");
+            // Check if the TexTool path is already configured and valid
+            var configuredPath = (string)_configurationService.ReturnConfigValue(model => model.BackgroundWorker.TexToolPath);
+            if (!string.IsNullOrEmpty(configuredPath) && _fileSystemHelper.FileExists(configuredPath))
+            {
+                Log.Information("TexTools path already configured: {Path}", configuredPath);
+                return TexToolsStatus.AlreadyConfigured;
+            }
 
-        if (!File.Exists(combinedPath))
-        {
-            Log.Warning("ConsoleTools.exe not found at: {Path}", combinedPath);
-            return TexToolsStatus.NotFound;
+            // Attempt to find TexTools installation
+            var consoleToolPath = FindTexToolsConsolePath();
+
+            if (string.IsNullOrEmpty(consoleToolPath))
+            {
+                Log.Warning("TexTools installation not found");
+                return TexToolsStatus.NotInstalled;
+            }
+
+            if (!_fileSystemHelper.FileExists(consoleToolPath))
+            {
+                Log.Warning("ConsoleTools executable not found at: {Path}", consoleToolPath);
+                return TexToolsStatus.NotFound;
+            }
+
+            // Update configuration with the found path
+            _configurationService.UpdateConfigValue(config => config.BackgroundWorker.TexToolPath = consoleToolPath, "BackgroundWorker.TexToolPath", consoleToolPath);
+            Log.Information("Successfully configured TexTools path: {Path}", consoleToolPath);
+            return TexToolsStatus.Found;
         }
 
-        _configurationService.UpdateConfigValue(config => config.BackgroundWorker.TexToolPath = combinedPath);
-        Log.Information("Successfully configured TexTools path: {Path}", combinedPath);
-        return TexToolsStatus.Found;
+        private string FindTexToolsConsolePath()
+        {
+            string consoleToolPath = null;
+
+            if (_registryHelper.IsRegistrySupported)
+            {
+                // Try to get the path from the registry (Windows)
+                var path = _registryHelper.GetTexToolRegistryValue();
+                if (!string.IsNullOrEmpty(path))
+                {
+                    // Remove surrounding quotes if present
+                    path = path.Trim('"');
+                    consoleToolPath = Path.Combine(path, "FFXIV_TexTools", "ConsoleTools.exe");
+                    if (_fileSystemHelper.FileExists(consoleToolPath))
+                    {
+                        return consoleToolPath;
+                    }
+                }
+            }
+
+            // Check standard installation paths based on OS
+            var standardPaths = _fileSystemHelper.GetStandardTexToolsPaths();
+            foreach (var standardPath in standardPaths)
+            {
+                if (_fileSystemHelper.FileExists(standardPath))
+                {
+                    return standardPath;
+                }
+            }
+
+            // TexTools not found
+            return null;
+        }
     }
 }

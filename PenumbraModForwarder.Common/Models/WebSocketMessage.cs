@@ -7,6 +7,7 @@ public static class WebSocketMessageType
     public const string Progress = "progress_update";
     public const string Error = "error";
     public const string Status = "status";
+    public const string ConfigurationChange = "configuration_change";
 }
 
 public static class WebSocketMessageStatus

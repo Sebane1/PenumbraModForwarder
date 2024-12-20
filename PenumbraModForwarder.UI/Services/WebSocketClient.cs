@@ -11,22 +11,22 @@ using Serilog;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
 using CustomWebSocketMessageType = PenumbraModForwarder.Common.Models.WebSocketMessageType;
 
-namespace PenumbraModForwarder.UI.Services;
-
-public class WebSocketClient : IWebSocketClient, IDisposable
+namespace PenumbraModForwarder.UI.Services
 {
-    private readonly Dictionary<string, ClientWebSocket> _webSockets;
-    private readonly INotificationService _notificationService;
-    private readonly CancellationTokenSource _cts = new();
-    private readonly string[] _endpoints = { "/status", "/currentTask" };
-    private bool _isReconnecting;
-    private int _retryCount = 0;
-
-    public WebSocketClient(INotificationService notificationService)
+    public class WebSocketClient : IWebSocketClient, IDisposable
     {
-        _webSockets = new Dictionary<string, ClientWebSocket>();
-        _notificationService = notificationService;
-    }
+        private readonly Dictionary<string, ClientWebSocket> _webSockets;
+        private readonly INotificationService _notificationService;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly string[] _endpoints = { "/status", "/currentTask", "/config" }; // Added "/config"
+        private bool _isReconnecting;
+        private int _retryCount = 0;
+
+        public WebSocketClient(INotificationService notificationService)
+        {
+            _webSockets = new Dictionary<string, ClientWebSocket>();
+            _notificationService = notificationService;
+        }
 
         public async Task ConnectAsync(int port)
         {
@@ -76,7 +76,16 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                             _cts.Token
                         );
 
-                        _ = ReceiveMessagesAsync(webSocket, endpoint);
+                        if (endpoint == "/config")
+                        {
+                            // For the /config endpoint, we may not need to start receiving messages if only sending
+                            // If you expect to receive messages on /config, uncomment the following line:
+                            // _ = ReceiveMessagesAsync(webSocket, endpoint);
+                        }
+                        else
+                        {
+                            _ = ReceiveMessagesAsync(webSocket, endpoint);
+                        }
 
                         if (_isReconnecting)
                         {
@@ -101,87 +110,122 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             }
         }
 
-
-    private async Task DisconnectWebSocketAsync(ClientWebSocket webSocket)
-    {
-        try
+        public async Task SendMessageAsync(WebSocketMessage message, string endpoint)
         {
-            if (webSocket.State == WebSocketState.Open)
+            if (_webSockets.TryGetValue(endpoint, out var webSocket))
             {
-                await webSocket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Disconnecting for reconnection",
-                    _cts.Token
-                );
-            }
-            webSocket.Dispose();
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error during WebSocket disconnect");
-            await _notificationService.ShowNotification("Error disconnecting WebSocket connection");
-        }
-    }
-
-    private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
-    {
-        var buffer = new byte[1024 * 4];
-
-        try
-        {
-            while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
-            {
-                var result = await webSocket.ReceiveAsync(
-                    new ArraySegment<byte>(buffer), 
-                    _cts.Token
-                );
-
-                if (result.MessageType == WebSocketMessageType.Text)
+                if (webSocket.State == WebSocketState.Open)
                 {
-                    var message = JsonConvert.DeserializeObject<WebSocketMessage>(
-                        Encoding.UTF8.GetString(buffer, 0, result.Count)
+                    var json = JsonConvert.SerializeObject(message);
+                    var bytes = Encoding.UTF8.GetBytes(json);
+
+                    try
+                    {
+                        await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts.Token);
+                        Log.Debug("Sent message to endpoint {Endpoint}: {Message}", endpoint, json);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Error sending WebSocket message to {Endpoint}", endpoint);
+                    }
+                }
+                else
+                {
+                    Log.Warning("WebSocket to {Endpoint} is not open", endpoint);
+                }
+            }
+            else
+            {
+                Log.Warning("No WebSocket connection found for endpoint {Endpoint}", endpoint);
+            }
+        }
+
+        private async Task DisconnectWebSocketAsync(ClientWebSocket webSocket)
+        {
+            try
+            {
+                if (webSocket.State == WebSocketState.Open)
+                {
+                    await webSocket.CloseAsync(
+                        WebSocketCloseStatus.NormalClosure,
+                        "Disconnecting for reconnection",
+                        _cts.Token
+                    );
+                }
+                webSocket.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during WebSocket disconnect");
+                await _notificationService.ShowNotification("Error disconnecting WebSocket connection");
+            }
+        }
+
+        private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
+        {
+            var buffer = new byte[1024 * 4];
+
+            try
+            {
+                while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
+                {
+                    var result = await webSocket.ReceiveAsync(
+                        new ArraySegment<byte>(buffer),
+                        _cts.Token
                     );
 
-                    Log.Information("Received message from {Endpoint}: {Message}", endpoint, message);
-
-                    if (message.Type == CustomWebSocketMessageType.Status || 
-                        message.Type == CustomWebSocketMessageType.Progress)
+                    if (result.MessageType == WebSocketMessageType.Text)
                     {
-                        if (message.Progress > 0)
+                        var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
+
+                        Log.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+
+                        if (message.Type == CustomWebSocketMessageType.Status ||
+                            message.Type == CustomWebSocketMessageType.Progress)
                         {
-                            _notificationService.UpdateProgress(
-                                message.TaskId,
-                                message.Message,
-                                message.Progress
-                            );
+                            if (message.Progress > 0)
+                            {
+                                _notificationService.UpdateProgress(
+                                    message.TaskId,
+                                    message.Message,
+                                    message.Progress
+                                );
+                            }
+                            else
+                            {
+                                await _notificationService.ShowNotification(message.Message);
+                            }
                         }
-                        else
-                        {
-                            await _notificationService.ShowNotification(message.Message);
-                        }
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await DisconnectWebSocketAsync(webSocket);
+                        break;
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
-            if (!_isReconnecting)
+            catch (Exception ex)
             {
-                await _notificationService.ShowNotification(
-                    $"Lost connection to {endpoint}. Attempting to reconnect..."
-                );
+                Log.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+                if (!_isReconnecting)
+                {
+                    await _notificationService.ShowNotification(
+                        $"Lost connection to {endpoint}. Attempting to reconnect..."
+                    );
+                    _isReconnecting = true;
+                }
             }
         }
-    }
 
-    public void Dispose()
-    {
-        _cts.Cancel();
-        foreach (var webSocket in _webSockets.Values)
+        public void Dispose()
         {
-            DisconnectWebSocketAsync(webSocket).Wait();
+            _cts.Cancel();
+            foreach (var webSocket in _webSockets.Values)
+            {
+                DisconnectWebSocketAsync(webSocket).Wait();
+            }
+            _cts.Dispose();
         }
-        _cts.Dispose();
     }
 }
