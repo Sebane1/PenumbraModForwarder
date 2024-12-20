@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using PenumbraModForwarder.Common.Consts;
 using Serilog;
+using Serilog.Events;
 
 namespace PenumbraModForwarder.Common.Extensions;
 
@@ -10,17 +11,20 @@ public static class Logging
     public static void ConfigureLogging(IServiceCollection serviceCollection, string applicationName)
     {
         Directory.CreateDirectory(ConfigurationConsts.LogsPath);
-        
+
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            .MinimumLevel.Verbose()
             .WriteTo.Console()
-            .WriteTo.File(ConfigurationConsts.LogsPath + $"\\{applicationName}.log", 
-                rollingInterval: RollingInterval.Day, 
+            .WriteTo.File(
+                path: Path.Combine(ConfigurationConsts.LogsPath, $"{applicationName}.log"),
+                rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 7,
-                fileSizeLimitBytes: 10 * 1024 * 1024,  
-                rollOnFileSizeLimit: true )
+                fileSizeLimitBytes: 10 * 1024 * 1024,
+                rollOnFileSizeLimit: true,
+                restrictedToMinimumLevel: LogEventLevel.Information
+            )
             .CreateLogger();
-        
+
         serviceCollection.AddLogging(builder =>
         {
             builder.ClearProviders();
