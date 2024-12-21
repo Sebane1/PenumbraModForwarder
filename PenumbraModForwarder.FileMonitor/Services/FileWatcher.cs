@@ -183,7 +183,7 @@ public class FileWatcher : IFileWatcher, IDisposable
         var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
-        File.Move(filePath, destinationPath);
+        File.Move(filePath, destinationPath, overwrite: true);
         _fileQueue.TryRemove(filePath, out _);
         FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath, fileNameWithoutExtension));
         Log.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);

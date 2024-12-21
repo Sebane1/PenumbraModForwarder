@@ -11,15 +11,15 @@ public static class DefaultDownloadPath
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            downloadPath = Path.Combine(homePath, "Downloads");
+            downloadPath = Path.Combine(homePath, @"Downloads\");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            downloadPath = Path.Combine(homePath, "Downloads");
+            downloadPath = Path.Combine(homePath, @"Downloads\");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            downloadPath = Path.Combine(homePath, "Downloads");
+            downloadPath = Path.Combine(homePath, @"Downloads\");
         }
         else
         {
