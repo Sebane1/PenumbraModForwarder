@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
 using ReactiveUI;
@@ -47,7 +48,8 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
         PathItems.Clear();
         if (Value is List<string> paths)
         {
-            foreach (var path in paths)
+            var uniquePaths = paths.Distinct().ToList();
+            foreach (var path in uniquePaths)
             {
                 var pathItem = new PathItemViewModel(path, this);
                 PathItems.Add(pathItem);

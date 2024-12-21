@@ -56,15 +56,10 @@ public class SettingsViewModel : ViewModelBase
 
             var propertyType = prop.PropertyType;
 
-            // Add logging
-            Log.Debug("Processing property '{PropertyName}' of type '{PropertyType}' in group '{GroupName}'", prop.Name, prop.PropertyType.Name, groupName);
+            Log.Debug("Processing property '{PropertyName}' of type '{PropertyType}' in group '{GroupName}'",
+                prop.Name, prop.PropertyType.Name, groupName);
 
-            if (propertyType.Namespace == "PenumbraModForwarder.Common.Models"
-                && propertyType.IsClass
-                && !propertyType.IsPrimitive
-                && !propertyType.IsEnum
-                && propertyType != typeof(string)
-                && !typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
+            if (IsNestedModel(propertyType))
             {
                 // Nested model, create a descriptor for it
                 var nestedModelInstance = prop.GetValue(model);
@@ -106,15 +101,16 @@ public class SettingsViewModel : ViewModelBase
                     Groups.Add(group);
                 }
 
-                // Check for duplicates before adding
-                var existingDescriptor = group.Properties.FirstOrDefault(d => d.DisplayName == descriptor.DisplayName);
+                // Check for duplicates using PropertyInfo.Name
+                var existingDescriptor = group.Properties.FirstOrDefault(d => d.PropertyInfo.Name == descriptor.PropertyInfo.Name);
                 if (existingDescriptor == null)
                 {
                     group.Properties.Add(descriptor);
                 }
                 else
                 {
-                    Log.Warning("Property '{DisplayName}' is already added to group '{GroupName}'. Skipping duplicate.", descriptor.DisplayName, groupName);
+                    Log.Warning("Property '{PropertyName}' is already added to group '{GroupName}'. Skipping duplicate.",
+                        descriptor.PropertyInfo.Name, groupName);
                 }
 
                 // Subscribe to changes and pass descriptor to SaveSettings
@@ -127,6 +123,16 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    private bool IsNestedModel(Type type)
+    {
+        return type.Namespace == "PenumbraModForwarder.Common.Models"
+            && type.IsClass
+            && !type.IsPrimitive
+            && !type.IsEnum
+            && type != typeof(string)
+            && !typeof(System.Collections.IEnumerable).IsAssignableFrom(type);
+    }
+
     private async Task ExecuteBrowseCommand(ConfigurationPropertyDescriptor descriptor)
     {
         try
@@ -135,6 +141,10 @@ public class SettingsViewModel : ViewModelBase
             if (descriptor.Value is string path && !string.IsNullOrEmpty(path))
             {
                 initialDirectory = System.IO.Path.GetDirectoryName(path);
+            }
+            else if (descriptor.Value is List<string> paths && paths.Any())
+            {
+                initialDirectory = System.IO.Path.GetDirectoryName(paths.Last());
             }
 
             if (descriptor.PropertyInfo.PropertyType == typeof(string))
@@ -151,8 +161,10 @@ public class SettingsViewModel : ViewModelBase
                 if (selectedPaths != null && selectedPaths.Any())
                 {
                     var existingPaths = descriptor.Value as List<string> ?? new List<string>();
-                    var newPathsList = new List<string>(existingPaths);
-                    newPathsList.AddRange(selectedPaths);
+
+                    // Use Union to prevent duplicates
+                    var newPathsList = existingPaths.Union(selectedPaths).ToList();
+
                     descriptor.Value = newPathsList;
                 }
             }
