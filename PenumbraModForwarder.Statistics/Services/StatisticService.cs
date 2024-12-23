@@ -14,9 +14,9 @@ public class StatisticService : IStatisticService
     private readonly IFileStorage _fileStorage;
     private readonly ILogger _logger;
 
-    public StatisticService(IFileStorage fileStorage, string databasePath = "UserStats.db")
+    public StatisticService(IFileStorage fileStorage, string? databasePath = null)
     {
-        _databasePath = databasePath;
+        _databasePath = databasePath ?? $@"{Common.Consts.ConfigurationConsts.ConfigurationPath}\userstats.db";
         _fileStorage = fileStorage;
         _logger = Log.ForContext<StatisticService>();
     }
@@ -77,6 +77,65 @@ public class StatisticService : IStatisticService
             return 0;
         }
     }
+    public async Task RecordModInstallationAsync(string modName)
+    {
+        try
+        {
+            EnsureDatabaseExists();
+            using (var db = new LiteDatabase(_databasePath))
+            {
+                var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+                var installationRecord = new ModInstallationRecord
+                {
+                    ModName = modName,
+                    InstallationTime = DateTime.UtcNow
+                };
+
+                modInstallations.Insert(installationRecord);
+                
+                await IncrementStatAsync(Stat.ModsInstalled);
+
+                _logger.Information("Recorded installation of mod `{ModName}` at {InstallationTime}.", modName, installationRecord.InstallationTime);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to record installation of mod `{ModName}`.", modName);
+        }
+    }
+
+    public async Task<ModInstallationRecord?> GetMostRecentModInstallationAsync()
+    {
+        try
+        {
+            EnsureDatabaseExists();
+            using (var db = new LiteDatabase(_databasePath))
+            {
+                var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+                var mostRecentInstallation = modInstallations
+                    .FindAll()
+                    .OrderByDescending(m => m.InstallationTime)
+                    .FirstOrDefault();
+
+                if (mostRecentInstallation != null)
+                {
+                    _logger.Information("Retrieved most recent mod installation: `{ModName}` at {InstallationTime}.",
+                        mostRecentInstallation.ModName, mostRecentInstallation.InstallationTime);
+                    return mostRecentInstallation;
+                }
+                else
+                {
+                    _logger.Warning("No mod installations found.");
+                    return null;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to retrieve the most recent mod installation.");
+            return null;
+        }
+    }
 
     private void EnsureDatabaseExists()
     {
@@ -84,9 +143,9 @@ public class StatisticService : IStatisticService
         {
             using (var db = new LiteDatabase(_databasePath))
             {
-                // Initialize the database if needed
+                // Initialization logic if needed
             }
-            _logger.Information("Database file created.");
+            _logger.Information("Database file created at `{DatabasePath}`.", _databasePath);
         }
     }
 }
