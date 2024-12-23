@@ -12,10 +12,12 @@ public class ModInstallService : IModInstallService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly IStatisticService _statisticService;
 
-    public ModInstallService(HttpClient httpClient)
+    public ModInstallService(HttpClient httpClient, IStatisticService statisticService)
     {
         _httpClient = httpClient;
+        _statisticService = statisticService;
         _logger = Log.ForContext<ModInstallService>();
     }
 
@@ -30,6 +32,8 @@ public class ModInstallService : IModInstallService
             var response = await _httpClient.PostAsync("installmod", content);
             response.EnsureSuccessStatusCode();
             _logger.Information("Mod installed successfully from path '{Path}'", path);
+            var fileName = Path.GetFileName(path);
+            await _statisticService.RecordModInstallationAsync(fileName);
             return true;
         }
         catch (HttpRequestException ex)

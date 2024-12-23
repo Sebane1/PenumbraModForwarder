@@ -1,7 +1,6 @@
 ﻿using Moq;
+using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
-using PenumbraModForwarder.Statistics.Enums;
-using PenumbraModForwarder.Statistics.Interfaces;
 using PenumbraModForwarder.Statistics.Services;
 
 namespace PenumbraModForwarder.Statistics.Tests.Services;

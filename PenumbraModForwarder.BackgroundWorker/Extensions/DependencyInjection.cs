@@ -6,6 +6,7 @@ using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Services;
+using PenumbraModForwarder.Statistics.Services;
 
 namespace PenumbraModForwarder.BackgroundWorker.Extensions;
 
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddTransient<IFileWatcher, FileWatcher>();
         services.AddSingleton<IFileSystemHelper, FileSystemHelper>();
         services.AddSingleton<IModHandlerService, ModHandlerService>();
+        services.AddSingleton<IStatisticService, StatisticService>();
         services.AddHttpClient<IModInstallService, ModInstallService>(client =>
         {
             client.BaseAddress = new Uri(ApiConsts.BaseApiUrl);
