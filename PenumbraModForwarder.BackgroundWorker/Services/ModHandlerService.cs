@@ -2,6 +2,7 @@
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
@@ -10,9 +11,13 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
     public class ModHandlerService : IModHandlerService
     {
         private readonly ILogger _logger;
+        private readonly IModInstallService _modInstallService;
+        private readonly IWebSocketServer _webSocketServer;
 
-        public ModHandlerService()
+        public ModHandlerService(IModInstallService modInstallService, IWebSocketServer webSocketServer)
         {
+            _modInstallService = modInstallService;
+            _webSocketServer = webSocketServer;
             _logger = Log.ForContext<ModHandlerService>();
         }
 
@@ -49,6 +54,14 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
         private async Task HandleModFileAsync(string filePath)
         {
             _logger.Information("Handling file: {FilePath}", filePath);
+            if (await _modInstallService.InstallModAsync(filePath))
+            {
+                _logger.Information("Successfully installed mod: {FilePath}", filePath);
+                var fileName = Path.GetFileName(filePath);
+                var taskId = Guid.NewGuid().ToString();
+                var message = WebSocketMessage.CreateStatus(taskId, "Installed File", $"Installed mod: {fileName}");
+                _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+            }
         }
     }
 }

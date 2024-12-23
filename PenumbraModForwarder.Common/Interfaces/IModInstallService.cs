@@ -8,5 +8,5 @@ public interface IModInstallService
     /// <param name="path">The path of the mod to install.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ModInstallException">Thrown when the mod installation fails.</exception>
-    Task InstallModAsync(string path);
+    Task<bool> InstallModAsync(string path);
 }
