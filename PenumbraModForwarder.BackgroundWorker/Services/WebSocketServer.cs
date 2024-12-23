@@ -54,26 +54,43 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
 
         private async Task StartListenerAsync()
         {
-            while (_isStarted && !_cancellationTokenSource.Token.IsCancellationRequested)
+            try
             {
-                try
+                while (_isStarted && !_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    var context = await _httpListener.GetContextAsync();
-                    if (context.Request.IsWebSocketRequest)
+                    try
                     {
-                        var webSocketContext = await context.AcceptWebSocketAsync(null);
-                        _ = HandleConnectionAsync(webSocketContext.WebSocket, context.Request.RawUrl);
+                        var context = await _httpListener.GetContextAsync();
+                        if (context.Request.IsWebSocketRequest)
+                        {
+                            var webSocketContext = await context.AcceptWebSocketAsync(null);
+                            _ = HandleConnectionAsync(webSocketContext.WebSocket, context.Request.RawUrl);
+                        }
+                        else
+                        {
+                            context.Response.StatusCode = 400;
+                            context.Response.Close();
+                        }
                     }
-                    else
+                    catch (HttpListenerException ex) when (_cancellationTokenSource.IsCancellationRequested)
                     {
-                        context.Response.StatusCode = 400;
-                        context.Response.Close();
+                        // Listener is stopped, exit gracefully
+                        break;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Expected during shutdown
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error in WebSocket listener");
                     }
                 }
-                catch (Exception ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
-                {
-                    _logger.Error(ex, "Error in WebSocket listener");
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error in StartListenerAsync");
             }
         }
 
@@ -120,6 +137,16 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 {
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown, no need to log
+                    break;
+                }
+                catch (WebSocketException ex) when (ex.InnerException is HttpListenerException httpEx && httpEx.ErrorCode == 995)
+                {
+                    // Expected when HttpListener is stopped, no need to log
+                    break;
+                }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
@@ -152,6 +179,16 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 try
                 {
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown, no need to log
+                    break;
+                }
+                catch (WebSocketException ex) when (ex.InnerException is HttpListenerException httpEx && httpEx.ErrorCode == 995)
+                {
+                    // Expected when HttpListener is stopped, no need to log
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -300,16 +337,17 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
         {
             try
             {
+                _isStarted = false;
                 _cancellationTokenSource.Cancel();
 
-                // Close all active connections first
+                // Close all active connections
                 var closeTasks = _endpoints
                     .SelectMany(endpoint => endpoint.Value.Select(async connection => await CloseWebSocketAsync(connection.Key)))
                     .ToList();
 
                 Task.WhenAll(closeTasks).Wait(TimeSpan.FromSeconds(5));
-                _httpListener.Stop();
-                _isStarted = false;
+
+                _httpListener.Close();
             }
             catch (Exception ex)
             {
