@@ -6,6 +6,4 @@ public interface IFileWatcher : IDisposable
 {
     Task StartWatchingAsync(IEnumerable<string> paths);
     event EventHandler<FileMovedEvent> FileMoved;
-    Task PersistStateAsync();
-    Task LoadStateAsync();
 }

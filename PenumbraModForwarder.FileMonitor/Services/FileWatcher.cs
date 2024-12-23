@@ -9,7 +9,7 @@ using SevenZipExtractor;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
 
-public class FileWatcher : IFileWatcher, IDisposable
+public sealed class FileWatcher : IFileWatcher, IDisposable
 {
     private readonly List<FileSystemWatcher> _watchers;
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
@@ -19,6 +19,7 @@ public class FileWatcher : IFileWatcher, IDisposable
     private bool _disposed;
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
+    private Timer _persistenceTimer;
 
     public FileWatcher(IFileStorage fileStorage)
     {
@@ -55,6 +56,9 @@ public class FileWatcher : IFileWatcher, IDisposable
 
             _cancellationTokenSource = new CancellationTokenSource();
             _processingTask = ProcessQueueAsync(_cancellationTokenSource.Token);
+
+            // Initialize the persistence timer to save the queue state every minute
+            _persistenceTimer = new Timer(_ => PersistState(), null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
         catch (Exception ex)
         {
@@ -113,19 +117,23 @@ public class FileWatcher : IFileWatcher, IDisposable
             {
                 var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
 
-                if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+                if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension) ||
+                    FileExtensionsConsts.ModFileTypes.Contains(extension))
                 {
-                    await ProcessArchiveFileAsync(filePath, cancellationToken);
-                }
-                else if (FileExtensionsConsts.ModFileTypes.Contains(extension))
-                {
-                    MoveFile(filePath);
+                    var movedFilePath = MoveFile(filePath);
                     _fileQueue.TryRemove(filePath, out _);
+                    PersistState();
+
+                    if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+                    {
+                        await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
+                    }
                 }
                 else
                 {
                     Log.Warning("Unhandled file type: {FullPath}", filePath);
                     _fileQueue.TryRemove(filePath, out _);
+                    PersistState();
                 }
             }
             else
@@ -136,6 +144,7 @@ public class FileWatcher : IFileWatcher, IDisposable
         else
         {
             _fileQueue.TryRemove(filePath, out _);
+            PersistState();
             Log.Warning("File no longer exists: {FullPath}", filePath);
         }
     }
@@ -154,14 +163,12 @@ public class FileWatcher : IFileWatcher, IDisposable
 
                 if (containsModFile)
                 {
-                    MoveFile(archivePath);
-                    _fileQueue.TryRemove(archivePath, out _);
-                    Log.Information("Archive moved: {ArchivePath}", archivePath);
+                    Log.Information("Archive contains mod files: {ArchivePath}", archivePath);
+                    // Perform additional processing if necessary
                 }
                 else
                 {
                     Log.Information("Archive does not contain mod files: {ArchivePath}", archivePath);
-                    _fileQueue.TryRemove(archivePath, out _);
                 }
             }
         }
@@ -177,23 +184,50 @@ public class FileWatcher : IFileWatcher, IDisposable
         await Task.CompletedTask;
     }
 
-    private void MoveFile(string filePath)
+    private string MoveFile(string filePath)
     {
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
-        File.Move(filePath, destinationPath, overwrite: true);
-        _fileQueue.TryRemove(filePath, out _);
+
+        // Copy and delete to simulate move
+        _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
+
+        // Retry deletion in case of transient errors
+        DeleteFileWithRetry(filePath);
+
         FileMoved?.Invoke(this, new FileMovedEvent(filePath, destinationPath, fileNameWithoutExtension));
         Log.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
+
+        return destinationPath;
+    }
+
+    private void DeleteFileWithRetry(string filePath, int maxAttempts = 3, int delayMilliseconds = 500)
+    {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                _fileStorage.Delete(filePath);
+                return;
+            }
+            catch (IOException ex) when (attempt < maxAttempts)
+            {
+                Log.Warning("Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...", attempt, filePath, delayMilliseconds);
+                Thread.Sleep(delayMilliseconds);
+            }
+        }
+
+        // Final attempt
+        _fileStorage.Delete(filePath);
     }
 
     private bool IsFileReady(string filePath)
     {
         try
         {
-            using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
             return true;
         }
         catch (IOException)
@@ -202,12 +236,12 @@ public class FileWatcher : IFileWatcher, IDisposable
         }
     }
 
-    public async Task PersistStateAsync()
+    private void PersistState()
     {
         try
         {
             var serializedQueue = JsonConvert.SerializeObject(_fileQueue);
-            await File.WriteAllTextAsync(_stateFilePath, serializedQueue);
+            _fileStorage.Write(_stateFilePath, serializedQueue);
             Log.Information("File queue state persisted.");
         }
         catch (Exception ex)
@@ -216,19 +250,26 @@ public class FileWatcher : IFileWatcher, IDisposable
         }
     }
 
-    public async Task LoadStateAsync()
+    private async Task LoadStateAsync()
     {
         try
         {
-            if (File.Exists(_stateFilePath))
+            if (_fileStorage.Exists(_stateFilePath))
             {
-                var serializedQueue = await File.ReadAllTextAsync(_stateFilePath);
+                var serializedQueue = _fileStorage.Read(_stateFilePath);
                 var deserializedQueue = JsonConvert.DeserializeObject<ConcurrentDictionary<string, DateTime>>(serializedQueue);
                 if (deserializedQueue != null)
                 {
                     foreach (var item in deserializedQueue)
                     {
-                        _fileQueue.TryAdd(item.Key, item.Value);
+                        if (_fileStorage.Exists(item.Key))
+                        {
+                            _fileQueue.TryAdd(item.Key, item.Value);
+                        }
+                        else
+                        {
+                            Log.Warning("File from saved state no longer exists: {FullPath}", item.Key);
+                        }
                     }
                 }
                 Log.Information("File queue state loaded.");
@@ -238,6 +279,8 @@ public class FileWatcher : IFileWatcher, IDisposable
         {
             Log.Error(ex, "Failed to load file queue state.");
         }
+
+        await Task.CompletedTask;
     }
 
     public void Dispose()
@@ -246,11 +289,22 @@ public class FileWatcher : IFileWatcher, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (_disposed) return;
         if (disposing)
         {
+            try
+            {
+                PersistState();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "An error occurred while persisting state during disposal.");
+            }
+
+            _persistenceTimer?.Dispose();
+
             foreach (var watcher in _watchers)
             {
                 watcher.EnableRaisingEvents = false;
