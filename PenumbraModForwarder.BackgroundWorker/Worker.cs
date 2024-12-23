@@ -1,11 +1,13 @@
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.BackgroundWorker;
 
 public class Worker : BackgroundService
 {
+    private readonly ILogger _logger;
     private readonly IWebSocketServer _webSocketServer;
     private readonly IStartupService _startupService;
     private readonly int _port;
@@ -13,6 +15,7 @@ public class Worker : BackgroundService
 
     public Worker(IWebSocketServer webSocketServer, IStartupService startupService, int port)
     {
+        _logger = Log.ForContext<Worker>();
         _webSocketServer = webSocketServer;
         _startupService = startupService;
         _port = port;
@@ -20,11 +23,11 @@ public class Worker : BackgroundService
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        Log.Information("Starting WebSocket Server...");
+        _logger.Information("Starting WebSocket Server...");
         _webSocketServer.Start(_port);
-        
-        Log.Information("Starting FileWatcher...");
-        
+
+        _logger.Information("Starting FileWatcher...");
+
         await base.StartAsync(cancellationToken);
     }
 
@@ -44,11 +47,11 @@ public class Worker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            Log.Information("Worker stopping...");
+            _logger.Information("Worker stopping...");
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error occurred in worker");
+            _logger.Error(ex, "Error occurred in worker");
             throw;
         }
     }

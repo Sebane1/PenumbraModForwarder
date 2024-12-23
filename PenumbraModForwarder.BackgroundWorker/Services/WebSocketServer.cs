@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Interfaces;
@@ -13,11 +9,13 @@ using PenumbraModForwarder.Common.Models;
 using Serilog;
 using CustomWebSocketMessageType = PenumbraModForwarder.Common.Models.WebSocketMessageType;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services
 {
     public class WebSocketServer : IWebSocketServer, IDisposable
     {
+        private readonly ILogger _logger;
         private readonly IConfigurationService _configurationService;
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<WebSocket, ConnectionInfo>> _endpoints;
         private readonly CancellationTokenSource _cancellationTokenSource;
@@ -28,6 +26,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
 
         public WebSocketServer(IConfigurationService configurationService)
         {
+            _logger = Log.ForContext<WebSocketServer>();
             _configurationService = configurationService;
             _endpoints = new ConcurrentDictionary<string, ConcurrentDictionary<WebSocket, ConnectionInfo>>();
             _cancellationTokenSource = new CancellationTokenSource();
@@ -43,12 +42,12 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 _httpListener.Prefixes.Add($"http://localhost:{_port}/");
                 _httpListener.Start();
                 _isStarted = true;
-                Log.Information("WebSocket server started successfully on port {Port}", _port);
+                _logger.Information("WebSocket server started successfully on port {Port}", _port);
                 _listenerTask = StartListenerAsync();
             }
             catch (HttpListenerException ex)
             {
-                Log.Error(ex, "Failed to start WebSocket server");
+                _logger.Error(ex, "Failed to start WebSocket server");
                 throw;
             }
         }
@@ -73,7 +72,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 }
                 catch (Exception ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    Log.Error(ex, "Error in WebSocket listener");
+                    _logger.Error(ex, "Error in WebSocket listener");
                 }
             }
         }
@@ -83,7 +82,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
             var connections = _endpoints.GetOrAdd(endpoint, _ => new ConcurrentDictionary<WebSocket, ConnectionInfo>());
             var connectionInfo = new ConnectionInfo { LastPing = DateTime.UtcNow };
             connections.TryAdd(webSocket, connectionInfo);
-            Log.Information("Client connected to endpoint {Endpoint}", endpoint);
+            _logger.Information("Client connected to endpoint {Endpoint}", endpoint);
 
             try
             {
@@ -98,11 +97,11 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
             }
             catch (WebSocketException ex) when (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
-                Log.Error(ex, "WebSocket error for endpoint {Endpoint}", endpoint);
+                _logger.Error(ex, "WebSocket error for endpoint {Endpoint}", endpoint);
             }
             catch (OperationCanceledException)
             {
-                Log.Debug("WebSocket connection closed during shutdown for endpoint {Endpoint}", endpoint);
+                _logger.Debug("WebSocket connection closed during shutdown for endpoint {Endpoint}", endpoint);
             }
             finally
             {
@@ -123,7 +122,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+                    _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
                     break;
                 }
 
@@ -131,8 +130,8 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 {
                     var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
-                    Log.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
-                    
+                    _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+
                     // For now, this server primarily sends messages to clients and may not expect messages on these endpoints
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
@@ -156,7 +155,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+                    _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
                     break;
                 }
 
@@ -164,15 +163,14 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 {
                     var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
-                    Log.Information("Received configuration message from {Endpoint}: {Message}", endpoint, messageJson);
-
+                    _logger.Information("Received configuration message from {Endpoint}: {Message}", endpoint, messageJson);
                     if (message.Type == CustomWebSocketMessageType.ConfigurationChange)
                     {
                         HandleConfigurationChange(message);
                     }
                     else
                     {
-                        Log.Warning("Unexpected message type received on {Endpoint}: {Type}", endpoint, message.Type);
+                        _logger.Warning("Unexpected message type received on {Endpoint}: {Type}", endpoint, message.Type);
                     }
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
@@ -202,12 +200,11 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
 
                 // Update the configuration
                 _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
-
-                Log.Information("Configuration updated from external source: {PropertyPath} = {NewValue}", propertyPath, newValue);
+                _logger.Information("Configuration updated from external source: {PropertyPath} = {NewValue}", propertyPath, newValue);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to handle configuration change");
+                _logger.Error(ex, "Failed to handle configuration change");
             }
         }
 
@@ -215,16 +212,13 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
         {
             var properties = propertyPath.Split('.');
             Type currentType = obj.GetType();
-
             foreach (var propertyName in properties)
             {
                 var propertyInfo = currentType.GetProperty(propertyName);
                 if (propertyInfo == null)
                     throw new Exception($"Property '{propertyName}' not found on type '{currentType.Name}'");
-
                 currentType = propertyInfo.PropertyType;
             }
-
             return currentType;
         }
 
@@ -238,7 +232,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 }
                 catch (Exception ex)
                 {
-                    Log.Debug(ex, "Error during WebSocket closure");
+                    _logger.Debug(ex, "Error during WebSocket closure");
                 }
             }
         }
@@ -247,7 +241,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
         {
             if (!_endpoints.TryGetValue(endpoint, out var connections) || !connections.Any())
             {
-                Log.Debug("No clients connected to endpoint {Endpoint}, message queued", endpoint);
+                _logger.Debug("No clients connected to endpoint {Endpoint}, message queued", endpoint);
                 return;
             }
 
@@ -261,7 +255,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 {
                     if (socket.State == WebSocketState.Open)
                     {
-                        Log.Information("Sending message to endpoint {Endpoint}: {Message}", endpoint, json);
+                        _logger.Information("Sending message to endpoint {Endpoint}: {Message}", endpoint, json);
                         await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
                     }
                     else
@@ -271,7 +265,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error broadcasting to client");
+                    _logger.Error(ex, "Error broadcasting to client");
                     deadSockets.Add(socket);
                 }
             }
@@ -310,18 +304,16 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
 
                 // Close all active connections first
                 var closeTasks = _endpoints
-                    .SelectMany(endpoint => endpoint.Value.Select(async connection =>
-                        await CloseWebSocketAsync(connection.Key)))
+                    .SelectMany(endpoint => endpoint.Value.Select(async connection => await CloseWebSocketAsync(connection.Key)))
                     .ToList();
 
                 Task.WhenAll(closeTasks).Wait(TimeSpan.FromSeconds(5));
-
                 _httpListener.Stop();
                 _isStarted = false;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error during WebSocket server disposal");
+                _logger.Error(ex, "Error during WebSocket server disposal");
             }
         }
     }
