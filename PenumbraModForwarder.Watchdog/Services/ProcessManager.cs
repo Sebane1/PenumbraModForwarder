@@ -17,6 +17,8 @@ namespace PenumbraModForwarder.Watchdog.Services
         private Process _backgroundServiceProcess;
         private bool _isShuttingDown = false;
         private readonly ILogger _logger;
+        private readonly int _maxRestartAttempts = 3;
+        private int _backgroundServiceRestartCount = 0;
 
         public ProcessManager()
         {
@@ -26,6 +28,10 @@ namespace PenumbraModForwarder.Watchdog.Services
             {
                 _solutionDirectory = GetSolutionDirectory();
                 _logger.Information("Solution Directory: {SolutionDirectory}", _solutionDirectory);
+            }
+            else
+            {
+                _solutionDirectory = AppContext.BaseDirectory;
             }
             _logger.Information("Running in {Mode} mode.", _isDevMode ? "DEV" : "PROD");
 
@@ -45,16 +51,25 @@ namespace PenumbraModForwarder.Watchdog.Services
             catch (Exception ex)
             {
                 _logger.Fatal(ex, "Failed to start Penumbra Mod Forwarder");
+                ShutdownChildProcesses();
+                Environment.Exit(1);
             }
+
             MonitorProcesses(_uiProcess, _backgroundServiceProcess);
         }
 
         private int FindRandomAvailablePort()
         {
-            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+            try
             {
+                using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socket.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, 0));
                 return ((System.Net.IPEndPoint)socket.LocalEndPoint).Port;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to find an available port");
+                throw;
             }
         }
 
@@ -120,11 +135,19 @@ namespace PenumbraModForwarder.Watchdog.Services
                 _logger.Information("{ProjectName} exited with code {ExitCode}", projectName, process.ExitCode);
             };
 
-            process.Start();
+            try
+            {
+                process.Start();
 
-            // Begin reading the output streams
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+                // Begin reading the output streams
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to start {ProjectName}", projectName);
+                throw;
+            }
 
             return process;
         }
@@ -133,7 +156,6 @@ namespace PenumbraModForwarder.Watchdog.Services
         {
             string executablePath = Path.Combine(AppContext.BaseDirectory, executableName);
             string executableDir = Path.GetDirectoryName(executablePath);
-
             _logger.Information("Executing executable in PROD Mode: {ExecutablePath}", executablePath);
 
             if (!File.Exists(executablePath))
@@ -149,8 +171,8 @@ namespace PenumbraModForwarder.Watchdog.Services
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WorkingDirectory = executableDir,
-                RedirectStandardOutput = false,
-                RedirectStandardError = false
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             };
 
             startInfo.EnvironmentVariables["WATCHDOG_INITIALIZED"] = "true";
@@ -158,14 +180,43 @@ namespace PenumbraModForwarder.Watchdog.Services
             var process = new Process { StartInfo = startInfo };
             process.EnableRaisingEvents = true;
 
+            // Attach event handlers to capture output and error streams
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    // Log the output from the child process
+                    _logger.Debug("[{ExecutableName} STDOUT]: {Data}", executableName, e.Data);
+                }
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    // Log the error output from the child process
+                    _logger.Error("[{ExecutableName} STDERR]: {Data}", executableName, e.Data);
+                }
+            };
+
             process.Exited += (sender, e) =>
             {
                 _logger.Information("{ExecutableName} exited with code {ExitCode}", executableName, process.ExitCode);
             };
 
-            process.Start();
+            try
+            {
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
-            _logger.Information("Started {ExecutableName} (PID: {ProcessId})", executableName, process.Id);
+                _logger.Information("Started {ExecutableName} (PID: {ProcessId})", executableName, process.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to start {ExecutableName}", executableName);
+                throw;
+            }
 
             return process;
         }
@@ -188,7 +239,6 @@ namespace PenumbraModForwarder.Watchdog.Services
         {
             if (_isShuttingDown) return;
             _isShuttingDown = true;
-
             _logger.Information("Initiating graceful shutdown of child processes...");
 
             try
@@ -196,13 +246,25 @@ namespace PenumbraModForwarder.Watchdog.Services
                 if (_uiProcess != null && !_uiProcess.HasExited)
                 {
                     _logger.Information("Closing UI Process (PID: {ProcessId})", _uiProcess.Id);
-                    _uiProcess.Kill();
+                    _uiProcess.CloseMainWindow();
+                    _uiProcess.WaitForExit(5000);
+                    if (!_uiProcess.HasExited)
+                    {
+                        _logger.Warning("UI Process did not exit gracefully, killing process.");
+                        _uiProcess.Kill();
+                    }
                 }
 
                 if (_backgroundServiceProcess != null && !_backgroundServiceProcess.HasExited)
                 {
                     _logger.Information("Closing Background Worker Process (PID: {ProcessId})", _backgroundServiceProcess.Id);
-                    _backgroundServiceProcess.Kill();
+                    _backgroundServiceProcess.CloseMainWindow();
+                    _backgroundServiceProcess.WaitForExit(5000);
+                    if (!_backgroundServiceProcess.HasExited)
+                    {
+                        _logger.Warning("Background Worker Process did not exit gracefully, killing process.");
+                        _backgroundServiceProcess.Kill();
+                    }
                 }
             }
             catch (Exception ex)
@@ -211,6 +273,8 @@ namespace PenumbraModForwarder.Watchdog.Services
             }
             finally
             {
+                _uiProcess?.Dispose();
+                _backgroundServiceProcess?.Dispose();
                 _logger.Information("Shutting down Penumbra Mod Forwarder");
                 Environment.Exit(0);
             }
@@ -226,17 +290,28 @@ namespace PenumbraModForwarder.Watchdog.Services
                     if (backgroundServiceProcess != null && !backgroundServiceProcess.HasExited)
                     {
                         _logger.Information("Terminating Background Service (PID: {ProcessId}) due to UI exit", backgroundServiceProcess.Id);
-                        backgroundServiceProcess.Kill();
+                        ShutdownChildProcesses();
                     }
-                    ShutdownChildProcesses();
                     break;
                 }
 
                 if (backgroundServiceProcess.HasExited)
                 {
-                    _logger.Information("Background Service exited unexpectedly!");
+                    _logger.Warning("Background Service exited unexpectedly!");
+
+                    if (_backgroundServiceRestartCount >= _maxRestartAttempts)
+                    {
+                        _logger.Error("Maximum restart attempts reached for Background Service. Shutting down.");
+                        ShutdownChildProcesses();
+                        break;
+                    }
+
+                    _backgroundServiceRestartCount++;
+                    _logger.Information("Restarting Background Service (Attempt {Attempt}/{MaxAttempts})", _backgroundServiceRestartCount, _maxRestartAttempts);
                     backgroundServiceProcess = StartProcess("PenumbraModForwarder.BackgroundWorker", _port.ToString());
+                    _backgroundServiceProcess = backgroundServiceProcess;
                 }
+
                 Thread.Sleep(1000);
             }
         }
@@ -253,7 +328,7 @@ namespace PenumbraModForwarder.Watchdog.Services
                 }
                 currentDir = Directory.GetParent(currentDir)?.FullName;
             }
-            throw new Exception("Could not find solution directory");
+            throw new InvalidOperationException("Could not find solution directory");
         }
 
         public void Dispose()
