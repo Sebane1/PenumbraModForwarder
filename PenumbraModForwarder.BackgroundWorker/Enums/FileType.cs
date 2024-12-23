@@ -2,6 +2,5 @@
 
 public enum FileType
 {
-    Archive,
     ModFile
 }

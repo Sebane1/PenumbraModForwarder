@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddTransient<IFileWatcher, FileWatcher>();
         services.AddSingleton<IArchiveExtractionService, ArchiveExtractionService>();
         services.AddSingleton<IFileSystemHelper, FileSystemHelper>();
+        services.AddSingleton<IModHandlerService, ModHandlerService>();
         services.SetupLogging();
         return services;
     }

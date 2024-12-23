@@ -13,16 +13,21 @@ public class FileWatcherService : IFileWatcherService
     private readonly IConfigurationService _configurationService;
     private readonly IWebSocketServer _webSocketServer;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IModHandlerService _modHandlerService;
     private IFileWatcher _fileWatcher;
+    
+    private bool _eventsSubscribed = false;
 
     public FileWatcherService(
         IConfigurationService configurationService,
         IWebSocketServer webSocketServer,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IModHandlerService modHandlerService)
     {
         _configurationService = configurationService;
         _webSocketServer = webSocketServer;
         _serviceProvider = serviceProvider;
+        _modHandlerService = modHandlerService;
         _configurationService.ConfigurationChanged += OnConfigurationChanged;
     }
 
@@ -39,9 +44,9 @@ public class FileWatcherService : IFileWatcherService
     private async Task InitializeFileWatcherAsync()
     {
         Log.Debug("Initializing FileWatcher...");
-        var downloadPaths = _configurationService.ReturnConfigValue(
+        var downloadPaths = (_configurationService.ReturnConfigValue(
             config => config.BackgroundWorker.DownloadPath
-        ) as List<string>;
+        ) as List<string>)?.Distinct().ToList();
 
         if (downloadPaths == null || downloadPaths.Count == 0)
         {
@@ -53,8 +58,13 @@ public class FileWatcherService : IFileWatcherService
         {
             Log.Debug("Resolving new IFileWatcher instance...");
             _fileWatcher = _serviceProvider.GetRequiredService<IFileWatcher>();
-            _fileWatcher.FileMoved += OnFileMoved;
-            Log.Debug("IFileWatcher instance resolved and event handler attached.");
+            if (!_eventsSubscribed)
+            {
+                _fileWatcher.FileMoved += OnFileMoved;
+                _fileWatcher.FilesExtracted += OnFilesExtracted;
+                _eventsSubscribed = true;
+                Log.Debug("Event handlers attached.");
+            }
 
             Log.Debug("Starting watchers for the following paths:");
             foreach (var downloadPath in downloadPaths)
@@ -83,7 +93,12 @@ public class FileWatcherService : IFileWatcherService
     {
         if (_fileWatcher != null)
         {
-            _fileWatcher.FileMoved -= OnFileMoved;
+            if (_eventsSubscribed)
+            {
+                _fileWatcher.FileMoved -= OnFileMoved;
+                _fileWatcher.FilesExtracted -= OnFilesExtracted;
+                _eventsSubscribed = false;
+            }
             _fileWatcher.Dispose();
             _fileWatcher = null;
         }
@@ -112,6 +127,22 @@ public class FileWatcherService : IFileWatcherService
         var taskId = Guid.NewGuid().ToString();
         var message = WebSocketMessage.CreateStatus(taskId, "Found File", $"Found File: {e.FileName}");
         _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+        _modHandlerService.HandleFileAsync(e.DestinationPath).GetAwaiter().GetResult();
+    }
+
+    private void OnFilesExtracted(object? sender, FilesExtractedEventArgs e)
+    {
+        Log.Information("Files extracted from archive: {ArchiveFileName}", e.ArchiveFileName);
+
+        var taskId = Guid.NewGuid().ToString();
+        var message = WebSocketMessage.CreateStatus(taskId, "Extracted Files", $"Extracted {e.ExtractedFilePaths.Count} files from {e.ArchiveFileName}");
+        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+
+        foreach (var filePath in e.ExtractedFilePaths)
+        {
+            Log.Information("Processing extracted file: {FilePath}", filePath);
+            _modHandlerService.HandleFileAsync(filePath).GetAwaiter().GetResult();
+        }
     }
 
     public void Dispose()

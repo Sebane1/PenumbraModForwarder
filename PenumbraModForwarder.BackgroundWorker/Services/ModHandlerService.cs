@@ -2,16 +2,14 @@
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
+using Serilog;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services;
 
 public class ModHandlerService : IModHandlerService
 {
-    private readonly IArchiveExtractionService _archiveExtractionService;
-
-    public ModHandlerService(IArchiveExtractionService archiveExtractionService)
+    public ModHandlerService()
     {
-        _archiveExtractionService = archiveExtractionService;
     }
 
     public async Task HandleFileAsync(string filePath)
@@ -28,9 +26,6 @@ public class ModHandlerService : IModHandlerService
             case FileType.ModFile:
                 await HandleModFileAsync(filePath);
                 break;
-            case FileType.Archive:
-                await HandleArchiveFileAsync(filePath);
-                break;
             default:
                 throw new InvalidOperationException($"Unhandled file type: {fileType}");
         }
@@ -45,21 +40,11 @@ public class ModHandlerService : IModHandlerService
             return FileType.ModFile;
         }
 
-        if (FileExtensionsConsts.ArchiveFileTypes.Contains(fileExtension))
-        {
-            return FileType.Archive;
-        }
-
         throw new NotSupportedException($"Unsupported file extension: {fileExtension}");
     }
 
     private async Task HandleModFileAsync(string filePath)
     {
-        throw new NotImplementedException();
-    }
-
-    private async Task HandleArchiveFileAsync(string filePath)
-    {
-        throw new NotImplementedException();
+        Log.Information($"Handling file: {filePath}");
     }
 }
