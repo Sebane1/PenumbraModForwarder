@@ -15,7 +15,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
     private readonly IFileStorage _fileStorage;
     private readonly string _destDirectory = ConfigurationConsts.ModsPath;
-    private readonly string _stateFilePath = "fileQueueState.json";
+    private readonly string _stateFilePath = $@"{ConfigurationConsts.ConfigurationPath}\fileQueueState.json";
     private bool _disposed;
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
