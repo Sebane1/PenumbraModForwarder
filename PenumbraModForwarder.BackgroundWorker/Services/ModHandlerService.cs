@@ -3,48 +3,52 @@ using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
-namespace PenumbraModForwarder.BackgroundWorker.Services;
-
-public class ModHandlerService : IModHandlerService
+namespace PenumbraModForwarder.BackgroundWorker.Services
 {
-    public ModHandlerService()
+    public class ModHandlerService : IModHandlerService
     {
-    }
+        private readonly ILogger _logger;
 
-    public async Task HandleFileAsync(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
+        public ModHandlerService()
         {
-            throw new ArgumentException("File path must not be null or whitespace.", nameof(filePath));
+            _logger = Log.ForContext<ModHandlerService>();
         }
 
-        var fileType = GetFileType(filePath);
-
-        switch (fileType)
+        public async Task HandleFileAsync(string filePath)
         {
-            case FileType.ModFile:
-                await HandleModFileAsync(filePath);
-                break;
-            default:
-                throw new InvalidOperationException($"Unhandled file type: {fileType}");
-        }
-    }
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("File path must not be null or whitespace.", nameof(filePath));
+            }
 
-    private FileType GetFileType(string filePath)
-    {
-        var fileExtension = Path.GetExtension(filePath)?.ToLowerInvariant();
+            var fileType = GetFileType(filePath);
 
-        if (FileExtensionsConsts.ModFileTypes.Contains(fileExtension))
-        {
-            return FileType.ModFile;
+            switch (fileType)
+            {
+                case FileType.ModFile:
+                    await HandleModFileAsync(filePath);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unhandled file type: {fileType}");
+            }
         }
 
-        throw new NotSupportedException($"Unsupported file extension: {fileExtension}");
-    }
+        private FileType GetFileType(string filePath)
+        {
+            var fileExtension = Path.GetExtension(filePath)?.ToLowerInvariant();
+            if (FileExtensionsConsts.ModFileTypes.Contains(fileExtension))
+            {
+                return FileType.ModFile;
+            }
 
-    private async Task HandleModFileAsync(string filePath)
-    {
-        Log.Information($"Handling file: {filePath}");
+            throw new NotSupportedException($"Unsupported file extension: {fileExtension}");
+        }
+
+        private async Task HandleModFileAsync(string filePath)
+        {
+            _logger.Information("Handling file: {FilePath}", filePath);
+        }
     }
 }

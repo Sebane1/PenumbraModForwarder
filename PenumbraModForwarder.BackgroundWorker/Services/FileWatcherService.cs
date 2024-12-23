@@ -143,12 +143,8 @@ public class FileWatcherService : IFileWatcherService, IDisposable
             $"Extracted {e.ExtractedFilePaths.Count} files from {e.ArchiveFileName}"
         );
         _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
-
-        foreach (var filePath in e.ExtractedFilePaths)
-        {
-            _logger.Information("Processing extracted file: {FilePath}", filePath);
-            _modHandlerService.HandleFileAsync(filePath).GetAwaiter().GetResult();
-        }
+        
+        //TODO: User confirmation if they want to extract all or only certain ones
     }
 
     public void Dispose()

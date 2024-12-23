@@ -1,21 +1,25 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using PenumbraModForwarder.Common.Interfaces;
+﻿using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Watchdog.Interfaces;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
-namespace PenumbraModForwarder.Watchdog.Services;
-
-public class ConfigurationSetup : IConfigurationSetup
+namespace PenumbraModForwarder.Watchdog.Services
 {
-    private readonly IConfigurationService _configurationService;
-    public ConfigurationSetup(IConfigurationService configurationService)
+    public class ConfigurationSetup : IConfigurationSetup
     {
-        _configurationService = configurationService;
-    }
+        private readonly IConfigurationService _configurationService;
+        private readonly ILogger _logger;
 
-    public void CreateFiles()
-    {
-        Log.Information("Creating configuration files");
-        _configurationService.CreateConfiguration();
+        public ConfigurationSetup(IConfigurationService configurationService)
+        {
+            _configurationService = configurationService;
+            _logger = Log.ForContext<ConfigurationSetup>();
+        }
+
+        public void CreateFiles()
+        {
+            _logger.Information("Creating configuration files");
+            _configurationService.CreateConfiguration();
+        }
     }
 }

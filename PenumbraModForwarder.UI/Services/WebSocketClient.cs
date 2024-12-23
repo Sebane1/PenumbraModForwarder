@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Interfaces;
 using Serilog;
+using ILogger = Serilog.ILogger;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
 using CustomWebSocketMessageType = PenumbraModForwarder.Common.Models.WebSocketMessageType;
 
@@ -18,7 +19,8 @@ namespace PenumbraModForwarder.UI.Services
         private readonly Dictionary<string, ClientWebSocket> _webSockets;
         private readonly INotificationService _notificationService;
         private readonly CancellationTokenSource _cts = new();
-        private readonly string[] _endpoints = { "/status", "/currentTask", "/config" }; // Added "/config"
+        private readonly string[] _endpoints = { "/status", "/currentTask", "/config" };
+        private readonly ILogger _logger;
         private bool _isReconnecting;
         private int _retryCount = 0;
 
@@ -26,6 +28,7 @@ namespace PenumbraModForwarder.UI.Services
         {
             _webSockets = new Dictionary<string, ClientWebSocket>();
             _notificationService = notificationService;
+            _logger = Log.ForContext<WebSocketClient>();
         }
 
         public async Task ConnectAsync(int port)
@@ -45,7 +48,7 @@ namespace PenumbraModForwarder.UI.Services
                 catch (Exception ex)
                 {
                     _retryCount++;
-                    Log.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
+                    _logger.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
                     await _notificationService.ShowNotification(
                         $"Connection failed. Retrying in 5 seconds... (Attempt {_retryCount})",
                         5
@@ -98,7 +101,7 @@ namespace PenumbraModForwarder.UI.Services
                 {
                     if (!_isReconnecting)
                     {
-                        Log.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
+                        _logger.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
                         await _notificationService.ShowNotification(
                             $"Connection to {endpoint} lost. Attempting to reconnect...",
                             5
@@ -122,21 +125,21 @@ namespace PenumbraModForwarder.UI.Services
                     try
                     {
                         await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts.Token);
-                        Log.Debug("Sent message to endpoint {Endpoint}: {Message}", endpoint, json);
+                        _logger.Debug("Sent message to endpoint {Endpoint}: {Message}", endpoint, json);
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "Error sending WebSocket message to {Endpoint}", endpoint);
+                        _logger.Error(ex, "Error sending WebSocket message to {Endpoint}", endpoint);
                     }
                 }
                 else
                 {
-                    Log.Warning("WebSocket to {Endpoint} is not open", endpoint);
+                    _logger.Warning("WebSocket to {Endpoint} is not open", endpoint);
                 }
             }
             else
             {
-                Log.Warning("No WebSocket connection found for endpoint {Endpoint}", endpoint);
+                _logger.Warning("No WebSocket connection found for endpoint {Endpoint}", endpoint);
             }
         }
 
@@ -156,7 +159,7 @@ namespace PenumbraModForwarder.UI.Services
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error during WebSocket disconnect");
+                _logger.Error(ex, "Error during WebSocket disconnect");
                 await _notificationService.ShowNotification("Error disconnecting WebSocket connection");
             }
         }
@@ -179,7 +182,7 @@ namespace PenumbraModForwarder.UI.Services
                         var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
                         var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
 
-                        Log.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+                        _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
 
                         if (message.Type == CustomWebSocketMessageType.Status ||
                             message.Type == CustomWebSocketMessageType.Progress)
@@ -207,7 +210,7 @@ namespace PenumbraModForwarder.UI.Services
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+                _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
                 if (!_isReconnecting)
                 {
                     await _notificationService.ShowNotification(

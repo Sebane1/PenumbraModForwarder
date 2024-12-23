@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Reflection;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Attributes;
@@ -14,6 +14,7 @@ using PenumbraModForwarder.UI.Helpers;
 using PenumbraModForwarder.UI.Interfaces;
 using ReactiveUI;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
@@ -22,14 +23,19 @@ public class SettingsViewModel : ViewModelBase
     private readonly IConfigurationService _configurationService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IWebSocketClient _webSocketClient;
+    private readonly ILogger _logger;
 
     public ObservableCollection<ConfigurationGroup> Groups { get; } = new();
 
-    public SettingsViewModel(IConfigurationService configurationService, IFileDialogService fileDialogService, IWebSocketClient webSocketClient)
+    public SettingsViewModel(
+        IConfigurationService configurationService,
+        IFileDialogService fileDialogService,
+        IWebSocketClient webSocketClient)
     {
         _configurationService = configurationService;
         _fileDialogService = fileDialogService;
         _webSocketClient = webSocketClient;
+        _logger = Log.ForContext<SettingsViewModel>();
 
         LoadConfigurationSettings();
     }
@@ -41,7 +47,10 @@ public class SettingsViewModel : ViewModelBase
         LoadPropertiesFromModel(configurationModel);
     }
 
-    private void LoadPropertiesFromModel(object model, ConfigurationPropertyDescriptor parentDescriptor = null, string parentGroupName = null)
+    private void LoadPropertiesFromModel(
+        object model,
+        ConfigurationPropertyDescriptor parentDescriptor = null,
+        string parentGroupName = null)
     {
         var properties = model.GetType().GetProperties();
         foreach (var prop in properties)
@@ -56,7 +65,8 @@ public class SettingsViewModel : ViewModelBase
 
             var propertyType = prop.PropertyType;
 
-            Log.Debug("Processing property '{PropertyName}' of type '{PropertyType}' in group '{GroupName}'",
+            _logger.Debug(
+                "Processing property '{PropertyName}' of type '{PropertyType}' in group '{GroupName}'",
                 prop.Name, prop.PropertyType.Name, groupName);
 
             if (IsNestedModel(propertyType))
@@ -91,7 +101,8 @@ public class SettingsViewModel : ViewModelBase
                 if ((prop.PropertyType == typeof(string) || prop.PropertyType == typeof(List<string>))
                     && displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
                 {
-                    descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(() => ExecuteBrowseCommand(descriptor));
+                    descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(
+                        () => ExecuteBrowseCommand(descriptor));
                 }
 
                 var group = Groups.FirstOrDefault(g => g.GroupName == groupName);
@@ -102,14 +113,16 @@ public class SettingsViewModel : ViewModelBase
                 }
 
                 // Check for duplicates using PropertyInfo.Name
-                var existingDescriptor = group.Properties.FirstOrDefault(d => d.PropertyInfo.Name == descriptor.PropertyInfo.Name);
+                var existingDescriptor = group.Properties.FirstOrDefault(
+                    d => d.PropertyInfo.Name == descriptor.PropertyInfo.Name);
                 if (existingDescriptor == null)
                 {
                     group.Properties.Add(descriptor);
                 }
                 else
                 {
-                    Log.Warning("Property '{PropertyName}' is already added to group '{GroupName}'. Skipping duplicate.",
+                    _logger.Warning(
+                        "Property '{PropertyName}' is already added to group '{GroupName}'. Skipping duplicate.",
                         descriptor.PropertyInfo.Name, groupName);
                 }
 
@@ -149,7 +162,8 @@ public class SettingsViewModel : ViewModelBase
 
             if (descriptor.PropertyInfo.PropertyType == typeof(string))
             {
-                var selectedPath = await _fileDialogService.OpenFolderAsync(initialDirectory, $"Select {descriptor.DisplayName}");
+                var selectedPath = await _fileDialogService.OpenFolderAsync(
+                    initialDirectory, $"Select {descriptor.DisplayName}");
                 if (!string.IsNullOrEmpty(selectedPath))
                 {
                     descriptor.Value = selectedPath;
@@ -157,7 +171,8 @@ public class SettingsViewModel : ViewModelBase
             }
             else if (descriptor.PropertyInfo.PropertyType == typeof(List<string>))
             {
-                var selectedPaths = await _fileDialogService.OpenFoldersAsync(initialDirectory, $"Select {descriptor.DisplayName}");
+                var selectedPaths = await _fileDialogService.OpenFoldersAsync(
+                    initialDirectory, $"Select {descriptor.DisplayName}");
                 if (selectedPaths != null && selectedPaths.Any())
                 {
                     var existingPaths = descriptor.Value as List<string> ?? new List<string>();
@@ -171,7 +186,7 @@ public class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error executing browse command for {DisplayName}", descriptor.DisplayName);
+            _logger.Error(ex, "Error executing browse command for {DisplayName}", descriptor.DisplayName);
         }
     }
 
@@ -210,7 +225,7 @@ public class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error saving settings");
+            _logger.Error(ex, "Error saving settings");
         }
     }
 
@@ -226,14 +241,15 @@ public class SettingsViewModel : ViewModelBase
             var propertyInfo = currentObject.GetType().GetProperty(propertyName);
             if (propertyInfo == null)
             {
-                throw new Exception($"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'");
+                throw new Exception(
+                    $"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'");
             }
 
             if (i == properties.Length - 1)
             {
                 // Last property - set the value
                 propertyInfo.SetValue(currentObject, descriptor.Value);
-                Log.Debug("Set value of property '{0}' to '{1}'", propertyPath, descriptor.Value);
+                _logger.Debug("Set value of property '{PropertyPath}' to '{Value}'", propertyPath, descriptor.Value);
             }
             else
             {

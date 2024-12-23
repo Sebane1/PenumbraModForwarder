@@ -6,11 +6,14 @@ using System.Reflection;
 using System.Windows.Input;
 using ReactiveUI;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.Helpers;
 
 public class ConfigurationPropertyDescriptor : ReactiveObject
 {
+    private readonly ILogger _logger;
+
     public string DisplayName { get; set; }
     public string GroupName { get; set; }
     public PropertyInfo PropertyInfo { get; set; }
@@ -40,6 +43,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
 
     public ConfigurationPropertyDescriptor()
     {
+        _logger = Log.ForContext<ConfigurationPropertyDescriptor>();
         // Initialize commands if necessary
     }
 
@@ -100,7 +104,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to update model value for property {PropertyName}", PropertyInfo.Name);
+            _logger.Error(ex, "Failed to update model value for property {PropertyName}", PropertyInfo.Name);
         }
     }
 }

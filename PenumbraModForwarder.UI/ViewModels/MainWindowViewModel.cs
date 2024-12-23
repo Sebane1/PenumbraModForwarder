@@ -10,6 +10,7 @@ using PenumbraModForwarder.UI.Models;
 using PenumbraModForwarder.UI.Services;
 using ReactiveUI;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
@@ -18,6 +19,8 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationService _notificationService;
     private readonly IWebSocketClient _webSocketClient;
+    private readonly ILogger _logger;
+
     private ViewModelBase _currentPage = null!;
     private MenuItem _selectedMenuItem = null!;
 
@@ -44,20 +47,27 @@ public class MainWindowViewModel : ViewModelBase
 
     public ICommand NavigateToSettingsCommand { get; }
 
-    public MainWindowViewModel(IServiceProvider serviceProvider, INotificationService notificationService, IWebSocketClient webSocketClient, int port)
+    public MainWindowViewModel(
+        IServiceProvider serviceProvider,
+        INotificationService notificationService,
+        IWebSocketClient webSocketClient,
+        int port)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
         _webSocketClient = webSocketClient;
+        _logger = Log.ForContext<MainWindowViewModel>();
 
         var app = Application.Current;
 
         MenuItems = new ObservableCollection<MenuItem>
         {
-            new MenuItem("Home",
+            new MenuItem(
+                "Home",
                 app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
                 ActivatorUtilities.CreateInstance<HomeViewModel>(_serviceProvider)),
-            new MenuItem("Mods",
+            new MenuItem(
+                "Mods",
                 app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
                 ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider))
         };
@@ -82,7 +92,7 @@ public class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to initialize WebSocket connection");
+            _logger.Error(ex, "Failed to initialize WebSocket connection");
             await _notificationService.ShowNotification("Failed to connect to background service");
         }
     }

@@ -3,6 +3,7 @@ using System.IO;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.Common.Services
 {
@@ -11,12 +12,14 @@ namespace PenumbraModForwarder.Common.Services
         private readonly IRegistryHelper _registryHelper;
         private readonly IConfigurationService _configurationService;
         private readonly IFileSystemHelper _fileSystemHelper;
+        private readonly ILogger _logger;
 
         public TexToolsHelper(IRegistryHelper registryHelper, IConfigurationService configurationService, IFileSystemHelper fileSystemHelper)
         {
             _registryHelper = registryHelper;
             _configurationService = configurationService;
             _fileSystemHelper = fileSystemHelper;
+            _logger = Log.ForContext<TexToolsHelper>();
         }
 
         /// <summary>
@@ -40,28 +43,27 @@ namespace PenumbraModForwarder.Common.Services
             var configuredPath = (string)_configurationService.ReturnConfigValue(model => model.BackgroundWorker.TexToolPath);
             if (!string.IsNullOrEmpty(configuredPath) && _fileSystemHelper.FileExists(configuredPath))
             {
-                Log.Information("TexTools path already configured: {Path}", configuredPath);
+                _logger.Information("TexTools path already configured: {Path}", configuredPath);
                 return TexToolsStatus.AlreadyConfigured;
             }
 
             // Attempt to find TexTools installation
             var consoleToolPath = FindTexToolsConsolePath();
-
             if (string.IsNullOrEmpty(consoleToolPath))
             {
-                Log.Warning("TexTools installation not found");
+                _logger.Warning("TexTools installation not found");
                 return TexToolsStatus.NotInstalled;
             }
 
             if (!_fileSystemHelper.FileExists(consoleToolPath))
             {
-                Log.Warning("ConsoleTools executable not found at: {Path}", consoleToolPath);
+                _logger.Warning("ConsoleTools executable not found at: {Path}", consoleToolPath);
                 return TexToolsStatus.NotFound;
             }
 
             // Update configuration with the found path
             _configurationService.UpdateConfigValue(config => config.BackgroundWorker.TexToolPath = consoleToolPath, "BackgroundWorker.TexToolPath", consoleToolPath);
-            Log.Information("Successfully configured TexTools path: {Path}", consoleToolPath);
+            _logger.Information("Successfully configured TexTools path: {Path}", consoleToolPath);
             return TexToolsStatus.Found;
         }
 

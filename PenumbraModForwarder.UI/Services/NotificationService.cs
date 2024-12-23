@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using PenumbraModForwarder.UI.Interfaces;
-using PenumbraModForwarder.UI.Models;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using PenumbraModForwarder.UI.Interfaces;
+using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.Services;
 
@@ -15,8 +15,14 @@ public class NotificationService : ReactiveObject, INotificationService
     private readonly Dictionary<string, Notification> _progressNotifications = new();
     private const int FadeOutDuration = 500;
     private const int UpdateInterval = 100;
+    private readonly ILogger _logger;
 
     public ObservableCollection<Notification> Notifications { get; } = new();
+
+    public NotificationService()
+    {
+        _logger = Log.ForContext<NotificationService>();
+    }
 
     // TODO: Play sound when Notification is shown
     public async Task ShowNotification(string message, int durationSeconds = 4)
@@ -61,7 +67,7 @@ public class NotificationService : ReactiveObject, INotificationService
 
     public void UpdateProgress(string title, string status, int progress)
     {
-        Log.Debug($"Updating progress for {title} to {status} : Progress: {progress}");
+        _logger.Debug("Updating progress for {Title} to {Status}: Progress: {Progress}", title, status, progress);
         lock (_lock)
         {
             if (!_progressNotifications.ContainsKey(title))

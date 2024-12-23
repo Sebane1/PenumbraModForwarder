@@ -7,15 +7,18 @@ using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI
 {
-     public partial class App : Application
+    public partial class App : Application
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger _logger;
 
         public App()
         {
+            _logger = Log.ForContext<App>();
             try
             {
                 _serviceProvider = Program.ServiceProvider;
@@ -23,7 +26,7 @@ namespace PenumbraModForwarder.UI
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Failed to initialize ServiceProvider");
+                _logger.Fatal(ex, "Failed to initialize ServiceProvider");
                 Environment.Exit(1);
             }
         }
@@ -33,14 +36,14 @@ namespace PenumbraModForwarder.UI
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 bool isInitialized = Environment.GetEnvironmentVariable("WATCHDOG_INITIALIZED") == "true";
-                Log.Information($"Application initialized by watchdog: {isInitialized}");
+                _logger.Debug("Application initialized by watchdog: {IsInitialized}", isInitialized);
 
                 var args = Environment.GetCommandLineArgs();
-                Log.Information($"Command-line arguments: {string.Join(", ", args)}");
+                _logger.Debug("Command-line arguments: {Args}", string.Join(", ", args));
 
                 if (!isInitialized)
                 {
-                    Log.Warning("Application not initialized by watchdog, showing error window");
+                    _logger.Warning("Application not initialized by watchdog, showing error window");
                     desktop.MainWindow = new ErrorWindow
                     {
                         DataContext = ActivatorUtilities.CreateInstance<ErrorWindowViewModel>(_serviceProvider)
@@ -48,16 +51,16 @@ namespace PenumbraModForwarder.UI
                 }
                 else
                 {
-                    Log.Information("Showing main window");
-
+                    _logger.Debug("Showing main window");
                     if (args.Length < 2)
                     {
-                        Log.Fatal("No port specified for the UI.");
+                        _logger.Fatal("No port specified for the UI.");
                         Environment.Exit(1);
                     }
 
                     int port = int.Parse(args[1]);
-                    Log.Information($"Listening on port {port}");
+                    _logger.Information("Listening on port {Port}", port);
+
                     desktop.MainWindow = new MainWindow
                     {
                         DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider, port)
