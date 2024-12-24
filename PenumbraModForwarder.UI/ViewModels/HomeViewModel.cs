@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
@@ -10,10 +12,11 @@ using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
-public class HomeViewModel : ViewModelBase
+public class HomeViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogger _logger;
     private readonly IStatisticService _statisticService;
+    private readonly CompositeDisposable _disposables = new();
 
     private ObservableCollection<InfoItem> _infoItems;
 
@@ -30,14 +33,21 @@ public class HomeViewModel : ViewModelBase
 
         InfoItems = new ObservableCollection<InfoItem>();
 
-        // Asynchronous initialization
-        LoadStatisticsAsync();
+        // Set up polling to load statistics immediately and every 20 seconds
+        Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
+            .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe()
+            .DisposeWith(_disposables);
     }
 
-    private async void LoadStatisticsAsync()
+    private async Task LoadStatisticsAsync()
     {
         try
         {
+            // Clear existing items
+            InfoItems.Clear();
+
             // Retrieve statistics
             var modsInstalledCount = await _statisticService.GetStatCountAsync(Stat.ModsInstalled);
             var uniqueModsInstalledCount = await _statisticService.GetUniqueModsInstalledCountAsync();
@@ -60,5 +70,10 @@ public class HomeViewModel : ViewModelBase
         {
             _logger.Error(ex, "Failed to load statistics in HomeViewModel.");
         }
+    }
+
+    public void Dispose()
+    {
+        _disposables.Dispose();
     }
 }
