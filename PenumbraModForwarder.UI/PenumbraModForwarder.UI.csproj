@@ -27,6 +27,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
+      <ProjectReference Include="..\PenumbraModForwarder.Statistics\PenumbraModForwarder.Statistics.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,13 +1,13 @@
 ﻿namespace PenumbraModForwarder.UI.Models;
 
-    public class InfoItem
-    {
-        public string Text { get; set; }
-        public int Number { get; set; }
+public class InfoItem
+{
+    public string Name { get; set; }
+    public string Value { get; set; }
 
-        public InfoItem(string text, int number)
-        {
-            Text = text;
-            Number = number;
-        }
+    public InfoItem(string name, string value)
+    {
+        Name = name;
+        Value = value;
     }
+}

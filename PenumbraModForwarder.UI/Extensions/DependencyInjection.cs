@@ -6,6 +6,7 @@ using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Common.Services;
+using PenumbraModForwarder.Statistics.Services;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IFileStorage, FileStorage>();
+        services.AddSingleton<IStatisticService, StatisticService>();
         services.AddSingleton<IFileDialogService>(provider =>
         {
             var applicationLifetime = Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;

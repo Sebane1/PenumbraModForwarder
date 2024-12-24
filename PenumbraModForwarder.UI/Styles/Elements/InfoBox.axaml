@@ -27,11 +27,11 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="16,12" MaxWidth="400">
-                                <TextBlock Text="{Binding Text}"
+                                <TextBlock Text="{Binding Name}"
                                            Margin="0,0,0,4"
                                            Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding Number}"
+                                <TextBlock Text="{Binding Value}"
                                            Margin="0,0,0,8"
                                            FontSize="24"
                                            FontWeight="Bold"
