@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
@@ -6,6 +7,7 @@ using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
 using Serilog;
 using SevenZipExtractor;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
 
@@ -14,19 +16,22 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private readonly List<FileSystemWatcher> _watchers;
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
     private readonly IFileStorage _fileStorage;
+    private readonly IConfigurationService _configurationService;
     private readonly string _destDirectory = ConfigurationConsts.ModsPath;
     private readonly string _stateFilePath = $@"{ConfigurationConsts.ConfigurationPath}\fileQueueState.json";
-    private readonly IConfigurationService _configuration;
     private bool _disposed;
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
     private Timer _persistenceTimer;
     private readonly ILogger _logger;
 
-    public FileWatcher(IFileStorage fileStorage, IConfigurationService configuration)
+    // Pre-Dt regex pattern
+    private static readonly Regex PreDtRegex = new(@"\[?(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
+
+    public FileWatcher(IFileStorage fileStorage, IConfigurationService configurationService)
     {
         _fileStorage = fileStorage;
-        _configuration = configuration;
+        _configurationService = configurationService;
         _fileQueue = new ConcurrentDictionary<string, DateTime>();
         _watchers = new List<FileSystemWatcher>();
         _logger = Log.ForContext<FileWatcher>();
@@ -127,7 +132,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     var movedFilePath = MoveFile(filePath);
                     _fileQueue.TryRemove(filePath, out _);
                     PersistState();
-                    
+
                     var fileName = Path.GetFileName(movedFilePath);
                     FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
                 }
@@ -167,10 +172,33 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
             using (var archiveFile = new ArchiveFile(archivePath))
             {
+                var skipPreDt = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.SkipPreDt);
+
                 var modEntries = archiveFile.Entries.Where(entry =>
                 {
                     var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
-                    return FileExtensionsConsts.ModFileTypes.Contains(entryExtension);
+
+                    // Check if the entry is a mod file
+                    if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
+                    {
+                        return false;
+                    }
+
+                    // If SkipPreDt is true, check if the file is under a Pre-Dt folder
+                    if (skipPreDt)
+                    {
+                        var entryPath = entry.FileName;
+                        var directories = entryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (directories.Any(dir => PreDtRegex.IsMatch(dir)))
+                        {
+                            _logger.Information("Skipping file in Pre-Dt folder: {FileName}", entry.FileName);
+                            return false;
+                        }
+                    }
+
+                    return true;
+
                 }).ToList();
 
                 if (modEntries.Any())
@@ -201,16 +229,17 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     _logger.Information("No mod files found in archive: {ArchiveFileName}", Path.GetFileName(archivePath));
                 }
             }
-            
+
             await Task.Delay(100);
-            
+
             if (extractedFiles.Any())
             {
                 var archiveFileName = Path.GetFileName(archivePath);
                 FilesExtracted?.Invoke(this, new FilesExtractedEventArgs(archiveFileName, extractedFiles));
             }
-            
-            var shouldDelete = (bool)_configuration.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
+
+            var shouldDelete = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
+
             if (shouldDelete)
             {
                 DeleteFileWithRetry(archivePath);
@@ -254,7 +283,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 _logger.Information("Deleted file on attempt {Attempt}: {FilePath}", attempt, filePath);
                 return;
             }
-            catch (IOException ex) when (attempt < maxAttempts)
+            catch (IOException) when (attempt < maxAttempts)
             {
                 _logger.Warning("Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...", attempt, filePath, delayMilliseconds);
                 Thread.Sleep(delayMilliseconds);
