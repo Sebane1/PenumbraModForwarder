@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
@@ -28,7 +30,7 @@ public class HomeViewModel : ViewModelBase
 
         InfoItems = new ObservableCollection<InfoItem>();
 
-        // Load statistics asynchronously
+        // Asynchronous initialization
         LoadStatisticsAsync();
     }
 
@@ -38,17 +40,21 @@ public class HomeViewModel : ViewModelBase
         {
             // Retrieve statistics
             var modsInstalledCount = await _statisticService.GetStatCountAsync(Stat.ModsInstalled);
+            var uniqueModsInstalledCount = await _statisticService.GetUniqueModsInstalledCountAsync();
             var lastModInstallation = await _statisticService.GetMostRecentModInstallationAsync();
 
             // Update InfoItems with statistics
-            InfoItems.Add(new InfoItem("Mods Installed", modsInstalledCount.ToString()));
+            InfoItems.Add(new InfoItem("Total Mods Installed", modsInstalledCount.ToString()));
+            InfoItems.Add(new InfoItem("Unique Mods Installed", uniqueModsInstalledCount.ToString()));
 
             if (lastModInstallation != null)
             {
                 InfoItems.Add(new InfoItem("Last Mod Installed", lastModInstallation.ModName));
             }
-
-            // Add more statistics as needed
+            else
+            {
+                InfoItems.Add(new InfoItem("Last Mod Installed", "None"));
+            }
         }
         catch (Exception ex)
         {

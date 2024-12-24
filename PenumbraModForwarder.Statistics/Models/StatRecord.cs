@@ -1,4 +1,4 @@
-﻿namespace PenumbraModForwarder.Common.Models;
+﻿namespace PenumbraModForwarder.Statistics.Models;
 
 public class StatRecord
 {

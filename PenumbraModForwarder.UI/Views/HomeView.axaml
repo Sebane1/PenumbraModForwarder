@@ -12,9 +12,7 @@
         <vm:HomeView/>
     </Design.DataContext>
     
-    <Grid>
-        <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}">
-            
-        </ItemsControl>
-    </Grid>
+    <ScrollViewer>
+        <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}"/>
+    </ScrollViewer>
 </UserControl>
