@@ -7,6 +7,7 @@
         <entry key="PenumbraModForwarder.UI/MainWindow.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/AcrylicMaterials.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Button.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/ButtonStyle.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/ColourResources.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/Button.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/Checkbox.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
@@ -23,7 +24,9 @@
         <entry key="PenumbraModForwarder.UI/Styles/TitleBar.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/ViewModels/ViewModelBase.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/ErrorWindow.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Views/FileSelectionView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/HomeView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Views/InstallView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/MainWindow.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/ModsView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/Settings/SettingsView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />

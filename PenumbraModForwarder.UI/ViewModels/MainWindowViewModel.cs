@@ -27,6 +27,8 @@ public class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MenuItem> MenuItems { get; }
     public ObservableCollection<Notification> Notifications =>
         (_notificationService as NotificationService)?.Notifications ?? new();
+    
+    public InstallViewModel InstallViewModel { get; }
 
     public MenuItem SelectedMenuItem
     {
@@ -80,6 +82,8 @@ public class MainWindowViewModel : ViewModelBase
 
         _selectedMenuItem = MenuItems[0];
         _currentPage = _selectedMenuItem.ViewModel;
+        
+        InstallViewModel = new InstallViewModel(_webSocketClient);
 
         _ = InitializeWebSocketConnection(port);
     }

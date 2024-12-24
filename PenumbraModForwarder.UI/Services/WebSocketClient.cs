@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.UI.Events;
 using PenumbraModForwarder.UI.Interfaces;
 using Serilog;
 using ILogger = Serilog.ILogger;
@@ -23,6 +24,8 @@ namespace PenumbraModForwarder.UI.Services
         private readonly ILogger _logger;
         private bool _isReconnecting;
         private int _retryCount = 0;
+        
+        public event EventHandler<FileSelectionRequestedEventArgs> FileSelectionRequested;
 
         public WebSocketClient(INotificationService notificationService)
         {
@@ -218,27 +221,12 @@ namespace PenumbraModForwarder.UI.Services
         {
             if (message.Type == CustomWebSocketMessageType.Status && message.Status == "select_files")
             {
-                // Log received message
                 _logger.Information("Received 'select_files' message: {Message}", message.Message);
 
-                // Deserialize the list of files
                 var fileList = JsonConvert.DeserializeObject<List<string>>(message.Message);
 
-                // TODO: For now, we will mock the user selection by selecting all files
-                var selectedFiles = fileList; // Mock selection: select all files
-                
-                var responseMessage = new WebSocketMessage
-                {
-                    Type = CustomWebSocketMessageType.Status,
-                    TaskId = message.TaskId,
-                    Status = "user_selection",
-                    Progress = 0,
-                    Message = JsonConvert.SerializeObject(selectedFiles)
-                };
-                
-                await SendMessageAsync(responseMessage, "/install");
-
-                _logger.Information("Sent 'user_selection' message with selected files");
+                // Raise event to notify UI
+                FileSelectionRequested?.Invoke(this, new FileSelectionRequestedEventArgs(fileList, message.TaskId));
             }
             else
             {
