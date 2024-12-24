@@ -19,7 +19,7 @@ namespace PenumbraModForwarder.UI.Services
         private readonly Dictionary<string, ClientWebSocket> _webSockets;
         private readonly INotificationService _notificationService;
         private readonly CancellationTokenSource _cts = new();
-        private readonly string[] _endpoints = { "/status", "/currentTask", "/config" };
+        private readonly string[] _endpoints = { "/status", "/currentTask", "/config", "/install" };
         private readonly ILogger _logger;
         private bool _isReconnecting;
         private int _retryCount = 0;
@@ -81,8 +81,7 @@ namespace PenumbraModForwarder.UI.Services
 
                         if (endpoint == "/config")
                         {
-                            // For the /config endpoint, we may not need to start receiving messages if only sending
-                            // If you expect to receive messages on /config, uncomment the following line:
+                            // If needed, start receiving messages on /config endpoint
                             // _ = ReceiveMessagesAsync(webSocket, endpoint);
                         }
                         else
@@ -184,21 +183,15 @@ namespace PenumbraModForwarder.UI.Services
 
                         _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
 
-                        if (message.Type == CustomWebSocketMessageType.Status ||
-                            message.Type == CustomWebSocketMessageType.Progress)
+                        // Handle messages based on endpoint
+                        switch (endpoint)
                         {
-                            if (message.Progress > 0)
-                            {
-                                _notificationService.UpdateProgress(
-                                    message.TaskId,
-                                    message.Message,
-                                    message.Progress
-                                );
-                            }
-                            else
-                            {
-                                await _notificationService.ShowNotification(message.Message);
-                            }
+                            case "/install":
+                                await HandleInstallMessageAsync(message);
+                                break;
+                            default:
+                                await HandleGeneralMessageAsync(message, endpoint);
+                                break;
                         }
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)
@@ -217,6 +210,58 @@ namespace PenumbraModForwarder.UI.Services
                         $"Lost connection to {endpoint}. Attempting to reconnect..."
                     );
                     _isReconnecting = true;
+                }
+            }
+        }
+
+        private async Task HandleInstallMessageAsync(WebSocketMessage message)
+        {
+            if (message.Type == CustomWebSocketMessageType.Status && message.Status == "select_files")
+            {
+                // Log received message
+                _logger.Information("Received 'select_files' message: {Message}", message.Message);
+
+                // Deserialize the list of files
+                var fileList = JsonConvert.DeserializeObject<List<string>>(message.Message);
+
+                // TODO: For now, we will mock the user selection by selecting all files
+                var selectedFiles = fileList; // Mock selection: select all files
+                
+                var responseMessage = new WebSocketMessage
+                {
+                    Type = CustomWebSocketMessageType.Status,
+                    TaskId = message.TaskId,
+                    Status = "user_selection",
+                    Progress = 0,
+                    Message = JsonConvert.SerializeObject(selectedFiles)
+                };
+                
+                await SendMessageAsync(responseMessage, "/install");
+
+                _logger.Information("Sent 'user_selection' message with selected files");
+            }
+            else
+            {
+                _logger.Warning("Unhandled message type or status on /install endpoint: Type={Type}, Status={Status}", message.Type, message.Status);
+            }
+        }
+
+        private async Task HandleGeneralMessageAsync(WebSocketMessage message, string endpoint)
+        {
+            if (message.Type == CustomWebSocketMessageType.Status ||
+                message.Type == CustomWebSocketMessageType.Progress)
+            {
+                if (message.Progress > 0)
+                {
+                    _notificationService.UpdateProgress(
+                        message.TaskId,
+                        message.Message,
+                        message.Progress
+                    );
+                }
+                else
+                {
+                    await _notificationService.ShowNotification(message.Message);
                 }
             }
         }

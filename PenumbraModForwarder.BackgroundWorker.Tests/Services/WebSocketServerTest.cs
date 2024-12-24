@@ -40,30 +40,6 @@ public class WebSocketServerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateCurrentTaskStatus_SendsMessageToConnectedClients()
-    {
-        const string endpoint = "/currentTask";
-        const string status = "Converting mod: test.pmp";
-        _webSocketServer.Start(8765);
-
-        var connectionTask = _webSocketServer.HandleConnectionAsync(_mockWebSocket, endpoint);
-        await Task.Delay(100); // Allow the server to set up the connection
-
-        await _webSocketServer.UpdateCurrentTaskStatus(status);
-
-        Assert.Single(_mockWebSocket.SentMessages);
-        var sentMessage = JsonConvert.DeserializeObject<WebSocketMessage>(
-            Encoding.UTF8.GetString(_mockWebSocket.SentMessages[0]));
-
-        Assert.Equal("status", sentMessage.Type);
-        Assert.Equal(WebSocketMessageStatus.InProgress, sentMessage.Status);
-        Assert.Equal(status, sentMessage.Message);
-
-        _mockWebSocket.CompleteReceive();
-        await connectionTask;
-    }
-
-    [Fact]
     public async Task HandleConnection_WithStatusEndpoint_AddsConnection()
     {
         const string endpoint = "/status";

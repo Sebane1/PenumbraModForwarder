@@ -6,6 +6,10 @@ using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
 using Serilog;
 using ILogger = Serilog.ILogger;
+using System.Collections.Concurrent;
+using System.Text;
+using Newtonsoft.Json;
+using PenumbraModForwarder.BackgroundWorker.Events;
 
 namespace PenumbraModForwarder.BackgroundWorker.Services;
 
@@ -19,6 +23,9 @@ public class FileWatcherService : IFileWatcherService, IDisposable
     private IFileWatcher _fileWatcher;
     private bool _eventsSubscribed = false;
 
+    // Dictionary to track pending user selections
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<List<string>>> _pendingSelections = new();
+
     public FileWatcherService(
         IConfigurationService configurationService,
         IWebSocketServer webSocketServer,
@@ -31,6 +38,9 @@ public class FileWatcherService : IFileWatcherService, IDisposable
         _serviceProvider = serviceProvider;
         _modHandlerService = modHandlerService;
         _configurationService.ConfigurationChanged += OnConfigurationChanged;
+
+        // Subscribe to incoming messages
+        _webSocketServer.MessageReceived += OnWebSocketMessageReceived;
     }
 
     public async Task Start()
@@ -137,19 +147,120 @@ public class FileWatcherService : IFileWatcherService, IDisposable
         _logger.Information("Files extracted from archive: {ArchiveFileName}", e.ArchiveFileName);
 
         var taskId = Guid.NewGuid().ToString();
-        var message = WebSocketMessage.CreateStatus(
-            taskId,
-            "Extracted Files",
-            $"Extracted {e.ExtractedFilePaths.Count} files from {e.ArchiveFileName}"
-        );
-        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
-        
-        //TODO: User confirmation if they want to extract all or only certain ones
+        var installAll = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.InstallAll);
+
+        if (!installAll)
+        {
+            // Serialize the list of extracted file paths into JSON
+            var extractedFilesJson = JsonConvert.SerializeObject(e.ExtractedFilePaths);
+
+            // Create a message to ask the user which files to install
+            var message = new WebSocketMessage
+            {
+                Type = WebSocketMessageType.Status,
+                TaskId = taskId,
+                Status = "select_files",
+                Progress = 0,
+                Message = extractedFilesJson
+            };
+            
+            _webSocketServer.BroadcastToEndpointAsync("/install", message).GetAwaiter().GetResult();
+
+            // Wait for user's response
+            var selectedFiles = WaitForUserSelection(taskId);
+
+            if (selectedFiles != null && selectedFiles.Any())
+            {
+                foreach (var selectedFile in selectedFiles)
+                {
+                    _modHandlerService.HandleFileAsync(selectedFile).GetAwaiter().GetResult();
+                }
+
+                var completionMessage = WebSocketMessage.CreateStatus(
+                    taskId,
+                    WebSocketMessageStatus.Completed,
+                    "Selected files have been installed."
+                );
+                _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
+            }
+            else
+            {
+                _logger.Information("No files selected for installation.");
+                var completionMessage = WebSocketMessage.CreateStatus(
+                    taskId,
+                    WebSocketMessageStatus.Completed,
+                    "No files were selected for installation."
+                );
+                _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
+            }
+        }
+        else
+        {
+            var message = WebSocketMessage.CreateStatus(
+                taskId,
+                WebSocketMessageStatus.InProgress,
+                $"Installing all extracted files from {e.ArchiveFileName}"
+            );
+            _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+
+            foreach (var extractedFilePath in e.ExtractedFilePaths)
+            {
+                _modHandlerService.HandleFileAsync(extractedFilePath).GetAwaiter().GetResult();
+            }
+
+            var completionMessage = WebSocketMessage.CreateStatus(
+                taskId,
+                WebSocketMessageStatus.Completed,
+                $"All files from {e.ArchiveFileName} have been installed."
+            );
+            _webSocketServer.BroadcastToEndpointAsync("/status", completionMessage).GetAwaiter().GetResult();
+        }
+    }
+
+    private List<string> WaitForUserSelection(string taskId)
+    {
+        var tcs = new TaskCompletionSource<List<string>>();
+
+        // Add the TaskCompletionSource to the dictionary
+        _pendingSelections[taskId] = tcs;
+
+        // Wait for the user's selection or a timeout
+        if (tcs.Task.Wait(TimeSpan.FromMinutes(5)))
+        {
+            _pendingSelections.TryRemove(taskId, out _);
+            return tcs.Task.Result;
+        }
+        else
+        {
+            _logger.Warning("Timeout waiting for user selection for task {TaskId}", taskId);
+            _pendingSelections.TryRemove(taskId, out _);
+            return new List<string>();
+        }
+    }
+
+    private void OnWebSocketMessageReceived(object? sender, WebSocketMessageEventArgs e)
+    {
+        if (e.Endpoint == "/install" && e.Message.Type == WebSocketMessageType.Status && e.Message.Status == "user_selection")
+        {
+            if (_pendingSelections.TryGetValue(e.Message.TaskId, out var tcs))
+            {
+                // Deserialize the user's selection
+                var selectedFiles = JsonConvert.DeserializeObject<List<string>>(e.Message.Message);
+                tcs.SetResult(selectedFiles);
+            }
+            else
+            {
+                _logger.Warning("Received user selection for unknown task {TaskId}", e.Message.TaskId);
+            }
+        }
     }
 
     public void Dispose()
     {
         DisposeFileWatcher();
         _configurationService.ConfigurationChanged -= OnConfigurationChanged;
+
+        // Unsubscribe from WebSocket messages
+        _webSocketServer.MessageReceived -= OnWebSocketMessageReceived;
     }
 }
