@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -42,10 +44,16 @@ public class ModsViewModel : ViewModelBase
     {
         try
         {
-            InstalledMods.Clear();
+            var fetchedMods = await _statisticService.GetAllInstalledModsAsync();
 
-            var allMods = await _statisticService.GetAllInstalledModsAsync();
-            foreach (var mod in allMods)
+            // If the list is exactly the same (including count, names, etc.), skip updates
+            if (AreSame(InstalledMods, fetchedMods))
+            {
+                return;
+            }
+
+            InstalledMods.Clear();
+            foreach (var mod in fetchedMods)
             {
                 _logger.Debug($"Found data for mod {mod.ModName}");
                 InstalledMods.Add(mod);
@@ -55,6 +63,18 @@ public class ModsViewModel : ViewModelBase
         {
             _logger.Error(ex, "Failed to load installed mods in ModsViewModel.");
         }
+    }
+
+    private bool AreSame(
+        ObservableCollection<ModInstallationRecord> current,
+        IEnumerable<ModInstallationRecord> incoming)
+    {
+        var incomingList = incoming as IList<ModInstallationRecord> ?? incoming.ToList();
+
+        if (current.Count != incomingList.Count)
+            return false;
+
+        return !current.Where((t, i) => !string.Equals(t.ModName, incomingList[i].ModName, StringComparison.Ordinal)).Any();
     }
 
     public void Dispose()
