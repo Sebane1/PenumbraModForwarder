@@ -176,6 +176,28 @@ namespace PenumbraModForwarder.Statistics.Services
                 return Task.FromResult(0);
             }
         }
+        
+        public Task<List<ModInstallationRecord>> GetAllInstalledModsAsync()
+        {
+            try
+            {
+                lock (_dbLock)
+                {
+                    using var database = new LiteDatabase(_databasePath);
+                    var modInstallations = database.GetCollection<ModInstallationRecord>("mod_installations");
+                    var allMods = modInstallations.FindAll().OrderByDescending(x => x.InstallationTime).ToList();
+
+                    _logger.Information("Retrieved {Count} mod installations from the database.", allMods.Count);
+
+                    return Task.FromResult(allMods);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to retrieve all installed mods.");
+                return Task.FromResult(new List<ModInstallationRecord>());
+            }
+        }
 
         private void EnsureDatabaseExists()
         {

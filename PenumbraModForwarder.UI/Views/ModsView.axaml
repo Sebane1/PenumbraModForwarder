@@ -2,19 +2,33 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="clr-namespace:PenumbraModForwarder.UI.Views"
+             xmlns:viewModels="clr-namespace:PenumbraModForwarder.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:DataType="vm:ModsView"
+             x:DataType="viewModels:ModsViewModel"
              x:Class="PenumbraModForwarder.UI.Views.ModsView">
     
     <Design.DataContext>
-        <vm:ModsView/>
+        <viewModels:ModsViewModel/>
     </Design.DataContext>
     
     <Grid>
-        <TextBlock Text="This is a mods list"
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header text -->
+        <TextBlock Text="List of all installed mods"
+                   Grid.Row="0"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
-                   Foreground="{DynamicResource TextBrush}"/>
+                   Foreground="{DynamicResource TextBrush}"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   Margin="0,5,0,5"/>
+        
+        <ItemsControl Grid.Row="1"
+                      Classes="modsList"
+                      ItemsSource="{Binding InstalledMods}" />
     </Grid>
 </UserControl>
