@@ -33,6 +33,7 @@ public class ModsViewModel : ViewModelBase
         
         InstalledMods = new ObservableCollection<ModInstallationRecord>();
         
+        // TODO: Make this update in real time (Maybe Websocket firing an event - similar to how we do the file picker)
         Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(10))
             .SelectMany(_ => Observable.FromAsync(LoadInstalledModsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)

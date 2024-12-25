@@ -34,7 +34,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
 
         InfoItems = new ObservableCollection<InfoItem>();
 
-        // Set up polling to load statistics immediately and every 20 seconds
+        // TODO: Make this update in real time (Maybe Websocket firing an event - similar to how we do the file picker)
         Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
             .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
