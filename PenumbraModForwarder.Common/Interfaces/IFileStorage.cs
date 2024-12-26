@@ -10,4 +10,5 @@ public interface IFileStorage
     void DeleteDirectory(string path);
     Stream CreateFile(string path);
     void CopyFile(string sourcePath, string destinationPath, bool overwrite);
+    void WriteAllText(string path, string content);
 }

@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddSingleton<IFileSystemHelper, FileSystemHelper>();
         services.AddSingleton<IModHandlerService, ModHandlerService>();
         services.AddSingleton<IStatisticService, StatisticService>();
+        services.AddSingleton<IPenumbraService, PenumbraService>();
         services.AddHttpClient<IModInstallService, ModInstallService>(client =>
         {
             client.BaseAddress = new Uri(ApiConsts.BaseApiUrl);

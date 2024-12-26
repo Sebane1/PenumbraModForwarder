@@ -54,13 +54,23 @@ namespace PenumbraModForwarder.BackgroundWorker.Services
         private async Task HandleModFileAsync(string filePath)
         {
             _logger.Information("Handling file: {FilePath}", filePath);
-            if (await _modInstallService.InstallModAsync(filePath))
+            try
             {
-                _logger.Information("Successfully installed mod: {FilePath}", filePath);
-                var fileName = Path.GetFileName(filePath);
+                if (await _modInstallService.InstallModAsync(filePath))
+                {
+                    _logger.Information("Successfully installed mod: {FilePath}", filePath);
+                    var fileName = Path.GetFileName(filePath);
+                    var taskId = Guid.NewGuid().ToString();
+                    var message = WebSocketMessage.CreateStatus(taskId, "Installed File", $"Installed mod: {fileName}");
+                    _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to handle file: {FilePath}", filePath);
                 var taskId = Guid.NewGuid().ToString();
-                var message = WebSocketMessage.CreateStatus(taskId, "Installed File", $"Installed mod: {fileName}");
-                _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+                var errorMessage = WebSocketMessage.CreateStatus(taskId, "Failed to handle file", $"Failed to handle file: {filePath}");
+                _webSocketServer.BroadcastToEndpointAsync("/status", errorMessage).GetAwaiter().GetResult();
             }
         }
     }

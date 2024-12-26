@@ -33,6 +33,12 @@ public class FileStorage : IFileStorage
             Directory.CreateDirectory(path);
         }
     }
+    
+    public void WriteAllText(string path, string content)
+    {
+        File.WriteAllText(path, content);
+    }
+
 
     public void Delete(string path)
     {

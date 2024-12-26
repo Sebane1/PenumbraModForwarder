@@ -21,4 +21,6 @@ public class BackgroundWorkerConfigurationModel
     public string TexToolPath { get; set; } = string.Empty;
     [Display(Name = "Skip Endwalker and below mods", GroupName = "General")]
     public bool SkipPreDt  { get; set; } = true;
+    [Display(Name = "Penumbra Mod Folder", GroupName = "Pathing")]
+    public string PenumbraModFolder { get; set; } = string.Empty;
 }
