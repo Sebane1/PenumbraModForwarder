@@ -5,9 +5,9 @@ namespace PenumbraModForwarder.Common.Models;
 
 public class CommonConfigurationModel
 {
-    [Display(Name = "Auto Load", GroupName = "General", Description = "????")]
+    [Display(Name = "Auto Load (What does this even do)", GroupName = "General", Description = "????")]
     public bool AutoLoad { get; set; }
-    [Display(Name = "File Linking", GroupName = "General", Description = "Link double clicking files to running in PMF")]
+    [Display(Name = "Enable Double Click File Support", GroupName = "General", Description = "Link double clicking files to running in PMF")]
     public bool FileLinkingEnabled { get; set; }
     [Display(Name = "Start on Boot", GroupName = "General", Description = "Start on Computer Boot")]
     public bool StartOnBoot { get; set; }

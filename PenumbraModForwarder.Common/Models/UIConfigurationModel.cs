@@ -4,9 +4,9 @@ namespace PenumbraModForwarder.Common.Models;
 
 public class UIConfigurationModel
 {
-    [Display(Name = "Notification Enabled", GroupName = "Notification")]
+    [Display(Name = "Enabled Notifications", GroupName = "Notification", Description = "Display Notifications")]
     public bool NotificationEnabled { get; set; } = true;
 
-    [Display(Name = "Notification Sound", GroupName = "Notification")]
+    [Display(Name = "Enable Notification Sound", GroupName = "Notification", Description = "Sound for Notifications")]
     public bool NotificationSoundEnabled { get; set; } 
 }

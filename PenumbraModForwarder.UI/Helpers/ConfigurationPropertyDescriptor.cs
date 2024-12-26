@@ -14,7 +14,15 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
 {
     private readonly ILogger _logger;
 
+    public ConfigurationPropertyDescriptor()
+    {
+        _logger = Log.ForContext<ConfigurationPropertyDescriptor>();
+    }
+
     public string DisplayName { get; set; }
+        
+    public string Description { get; set; }
+
     public string GroupName { get; set; }
     public PropertyInfo PropertyInfo { get; set; }
     public object ModelInstance { get; set; }
@@ -29,7 +37,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
             this.RaiseAndSetIfChanged(ref _value, value);
             UpdateModelValue(value);
 
-            if (PropertyInfo.PropertyType == typeof(List<string>))
+            if (PropertyInfo?.PropertyType == typeof(List<string>))
             {
                 UpdatePathItems();
             }
@@ -38,14 +46,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
 
     public ICommand BrowseCommand { get; set; }
 
-    // Collection of PathItemViewModel for binding in the view
     public ObservableCollection<PathItemViewModel> PathItems { get; } = new();
-
-    public ConfigurationPropertyDescriptor()
-    {
-        _logger = Log.ForContext<ConfigurationPropertyDescriptor>();
-        // Initialize commands if necessary
-    }
 
     private void UpdatePathItems()
     {
@@ -65,14 +66,9 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
     {
         if (Value is List<string> paths && paths.Contains(pathItem.Path))
         {
-            // Create a new list without the item to be removed
             var newPaths = new List<string>(paths);
             newPaths.Remove(pathItem.Path);
-
-            // Assign the new list to Value to trigger change notifications
             Value = newPaths;
-
-            // Update the PathItems collection
             PathItems.Remove(pathItem);
         }
     }
@@ -82,29 +78,28 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
         try
         {
             object convertedValue;
-            if (PropertyInfo.PropertyType == typeof(int) && value is decimal decimalValue)
+            if (PropertyInfo?.PropertyType == typeof(int) && value is decimal decimalValue)
             {
                 convertedValue = Convert.ToInt32(decimalValue);
             }
-            else if (PropertyInfo.PropertyType == typeof(string))
+            else if (PropertyInfo?.PropertyType == typeof(string))
             {
                 convertedValue = value?.ToString();
             }
-            else if (PropertyInfo.PropertyType == typeof(List<string>) && value is IEnumerable<string> enumerable)
+            else if (PropertyInfo?.PropertyType == typeof(List<string>) && value is IEnumerable<string> enumerable)
             {
                 convertedValue = new List<string>(enumerable);
             }
             else
             {
-                convertedValue = Convert.ChangeType(value, PropertyInfo.PropertyType);
+                convertedValue = Convert.ChangeType(value, PropertyInfo?.PropertyType ?? typeof(object));
             }
 
-            // Set the converted value to the model property
-            PropertyInfo.SetValue(ModelInstance, convertedValue);
+            PropertyInfo?.SetValue(ModelInstance, convertedValue);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to update model value for property {PropertyName}", PropertyInfo.Name);
+            _logger.Error(ex, "Failed to update value for property {Name}", PropertyInfo?.Name);
         }
     }
 }

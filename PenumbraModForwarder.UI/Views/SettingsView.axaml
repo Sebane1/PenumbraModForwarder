@@ -7,7 +7,9 @@
     xmlns:system="clr-namespace:System;assembly=netstandard"
     x:Class="PenumbraModForwarder.UI.Views.SettingsView"
     x:DataType="vm:SettingsViewModel">
+
     <UserControl.Resources>
+
         <!-- Boolean Template -->
         <DataTemplate x:Key="BooleanTemplate" x:DataType="helpers:ConfigurationPropertyDescriptor">
             <Grid Margin="5">
@@ -16,9 +18,11 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Bind the tooltip here -->
                 <TextBlock Text="{Binding DisplayName}"
                            VerticalAlignment="Center"
-                           Margin="0,0,10,0"/>
+                           Margin="0,0,10,0"
+                           ToolTip.Tip="{Binding Description}"/>
 
                 <CheckBox Grid.Column="1"
                           IsChecked="{Binding Value, Mode=TwoWay}"
@@ -36,8 +40,8 @@
 
                 <TextBlock Text="{Binding DisplayName}"
                            VerticalAlignment="Center"
-                           Margin="0,0,10,0"/>
-
+                           Margin="0,0,10,0"
+                           ToolTip.Tip="{Binding Description}"/>
                 <TextBox Grid.Column="1"
                          Text="{Binding Value, Mode=TwoWay}"
                          VerticalAlignment="Center"/>
@@ -54,8 +58,8 @@
 
                 <TextBlock Text="{Binding DisplayName}"
                            VerticalAlignment="Center"
-                           Margin="0,0,10,0"/>
-
+                           Margin="0,0,10,0"
+                           ToolTip.Tip="{Binding Description}"/>
                 <NumericUpDown Grid.Column="1"
                                Value="{Binding Value, Mode=TwoWay}"
                                VerticalAlignment="Center"
@@ -75,12 +79,11 @@
 
                 <TextBlock Text="{Binding DisplayName}"
                            VerticalAlignment="Center"
-                           Margin="0,0,10,0"/>
-
+                           Margin="0,0,10,0"
+                           ToolTip.Tip="{Binding Description}"/>
                 <TextBox Grid.Column="1"
                          Text="{Binding Value, Mode=TwoWay}"
                          VerticalAlignment="Center"/>
-
                 <Button Grid.Column="2"
                         Content="Browse"
                         Command="{Binding BrowseCommand}"
@@ -94,7 +97,9 @@
             <StackPanel Margin="5">
                 <TextBlock Text="{Binding DisplayName}"
                            FontWeight="Bold"
-                           Margin="0,0,0,5"/>
+                           Margin="0,0,0,5"
+                           ToolTip.Tip="{Binding Description}"/>
+
                 <ItemsControl ItemsSource="{Binding PathItems}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="helpers:PathItemViewModel">
@@ -103,8 +108,9 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"/>
 
+                                <TextBlock Text="{Binding Path}"
+                                           VerticalAlignment="Center"/>
                                 <Button Grid.Column="1"
                                         Content="Remove"
                                         Command="{Binding RemoveCommand}"
@@ -123,11 +129,11 @@
 
         <!-- Converter -->
         <converters:TypeToControlTemplateConverter x:Key="TypeToControlTemplateConverter"
-            BooleanTemplate="{StaticResource BooleanTemplate}"
-            StringTemplate="{StaticResource StringTemplate}"
-            IntegerTemplate="{StaticResource IntegerTemplate}"
-            PathTemplate="{StaticResource PathTemplate}"
-            MultiPathTemplate="{StaticResource MultiPathTemplate}"/>
+                                                   BooleanTemplate="{StaticResource BooleanTemplate}"
+                                                   StringTemplate="{StaticResource StringTemplate}"
+                                                   IntegerTemplate="{StaticResource IntegerTemplate}"
+                                                   PathTemplate="{StaticResource PathTemplate}"
+                                                   MultiPathTemplate="{StaticResource MultiPathTemplate}"/>
     </UserControl.Resources>
 
     <ScrollViewer>
@@ -138,6 +144,7 @@
                     <TextBlock Text="{Binding GroupName}" FontWeight="Bold" Padding="10"/>
                 </DataTemplate>
             </TabControl.ItemTemplate>
+
             <!-- Tab Content -->
             <TabControl.ContentTemplate>
                 <DataTemplate x:DataType="helpers:ConfigurationGroup">
