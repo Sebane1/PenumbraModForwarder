@@ -27,6 +27,8 @@ public static class DependencyInjection
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IXivLauncherService, XivLauncherService>();
+        services.AddSingleton<IConfigurationListener, ConfigurationListener>();
         services.AddSingleton<IFileStorage, FileStorage>();
         services.AddSingleton<IStatisticService, StatisticService>();
         services.AddSingleton<IFileDialogService>(provider =>

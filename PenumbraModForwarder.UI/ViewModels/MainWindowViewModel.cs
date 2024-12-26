@@ -19,6 +19,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationService _notificationService;
     private readonly IWebSocketClient _webSocketClient;
+    private readonly IConfigurationListener _configurationListener; // We just need to start it here
     private readonly ILogger _logger;
 
     private ViewModelBase _currentPage = null!;
@@ -53,11 +54,12 @@ public class MainWindowViewModel : ViewModelBase
         IServiceProvider serviceProvider,
         INotificationService notificationService,
         IWebSocketClient webSocketClient,
-        int port)
+        int port, IConfigurationListener configurationListener)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
         _webSocketClient = webSocketClient;
+        _configurationListener = configurationListener;
         _logger = Log.ForContext<MainWindowViewModel>();
 
         var app = Application.Current;
@@ -86,6 +88,7 @@ public class MainWindowViewModel : ViewModelBase
         InstallViewModel = new InstallViewModel(_webSocketClient);
 
         _ = InitializeWebSocketConnection(port);
+        _configurationListener.StartListening();
     }
 
     private async Task InitializeWebSocketConnection(int port)

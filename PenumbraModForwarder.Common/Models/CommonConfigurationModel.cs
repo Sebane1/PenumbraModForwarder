@@ -13,4 +13,6 @@ public class CommonConfigurationModel
     public bool StartOnBoot { get; set; }
     [Display(Name = "Enable Beta Builds", GroupName = "Updates")]
     public bool IncludePrereleases { get; set; }
+    [Display(Name = "Start on FFXIV Boot", GroupName = "General")]
+    public bool StartOnFfxivBoot { get; set; }
 }
