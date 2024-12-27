@@ -54,14 +54,9 @@ public class HomeViewModel : ViewModelBase, IDisposable
 
             newItems.Add(new InfoItem("Total Mods Installed", modsInstalledCount.ToString()));
             newItems.Add(new InfoItem("Unique Mods Installed", uniqueModsInstalledCount.ToString()));
-            if (lastModInstallation != null)
-            {
-                newItems.Add(new InfoItem("Last Mod Installed", lastModInstallation.ModName));
-            }
-            else
-            {
-                newItems.Add(new InfoItem("Last Mod Installed", "None"));
-            }
+            newItems.Add(lastModInstallation != null
+                ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
+                : new InfoItem("Last Mod Installed", "None"));
 
             // Remove duplicates by name if any happen to appear
             var distinctByName = newItems
