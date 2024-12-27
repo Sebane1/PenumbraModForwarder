@@ -5,6 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using PenumbraModForwarder.BackgroundWorker.Events;
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
+using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using Serilog;
@@ -24,7 +25,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     private Task _listenerTask;
     private bool _isStarted;
     private int _port;
-    
+
     public event EventHandler<WebSocketMessageEventArgs> MessageReceived;
 
     public WebSocketServer(IConfigurationService configurationService)
@@ -34,6 +35,8 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         _endpoints = new ConcurrentDictionary<string, ConcurrentDictionary<WebSocket, ConnectionInfo>>();
         _cancellationTokenSource = new CancellationTokenSource();
         _httpListener = new HttpListener();
+
+        _configurationService.ConfigurationChanged += OnConfigurationChanged;
     }
 
     public void Start(int port)
@@ -100,7 +103,9 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         var connections = _endpoints.GetOrAdd(endpoint, _ => new ConcurrentDictionary<WebSocket, ConnectionInfo>());
         var connectionInfo = new ConnectionInfo { LastPing = DateTime.UtcNow };
         connections.TryAdd(webSocket, connectionInfo);
+
         _logger.Information("Client connected to endpoint {Endpoint}", endpoint);
+
         try
         {
             await ReceiveMessagesAsync(webSocket, endpoint);
@@ -122,6 +127,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     private async Task ReceiveMessagesAsync(WebSocket webSocket, string endpoint)
     {
         var buffer = new byte[1024 * 4];
+
         while (webSocket.State == WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested)
         {
             WebSocketReceiveResult result;
@@ -142,21 +148,99 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             if (result.MessageType == WebSocketMessageType.Text)
             {
                 var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
-                _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+                _logger.Information("Received message from {Endpoint}: {MessageJson}", endpoint, messageJson);
 
-                // Raise the MessageReceived event
-                MessageReceived?.Invoke(this, new WebSocketMessageEventArgs
+                var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
+                if (message == null)
                 {
-                    Endpoint = endpoint,
-                    Message = message
-                });
+                    _logger.Warning("Unable to deserialize WebSocketMessage from {Endpoint}", endpoint);
+                    continue;
+                }
+                    
+                if (message.Type?.Equals("configuration_change", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    _logger.Debug("Handling message type 'configuration_change' from {Endpoint}", endpoint);
+                    HandleConfigurationChange(message);
+                }
+                else if (message.Type == CustomWebSocketMessageType.Status && message.Status == "config_update")
+                {
+                    HandleConfigUpdateMessage(message);
+                }
+                else
+                {
+                    MessageReceived?.Invoke(this, new WebSocketMessageEventArgs
+                    {
+                        Endpoint = endpoint,
+                        Message = message
+                    });
+                }
             }
             else if (result.MessageType == WebSocketMessageType.Close)
             {
                 await CloseWebSocketAsync(webSocket);
                 break;
             }
+        }
+    }
+        
+    private void HandleConfigurationChange(WebSocketMessage message)
+    {
+        _logger.Debug("Message indicates a configuration change: {Message}", message.Message);
+
+        try
+        {
+            var updateData = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.Message);
+            if (updateData == null)
+            {
+                _logger.Warning("configuration_change message had invalid or non-JSON payload.");
+                return;
+            }
+
+            if (!updateData.ContainsKey("PropertyPath") || !updateData.ContainsKey("NewValue"))
+            {
+                _logger.Warning("configuration_change payload missing 'PropertyPath' or 'NewValue'.");
+                return;
+            }
+
+            var propertyPath = updateData["PropertyPath"]?.ToString();
+            var newValue = updateData["NewValue"];
+
+            _logger.Debug("Updating config property '{PropertyPath}' to new value: {NewValue}", propertyPath, newValue);
+            _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
+            _logger.Information("Configuration updated for '{PropertyPath}'", propertyPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error handling configuration_change message");
+        }
+    }
+
+    private void HandleConfigUpdateMessage(WebSocketMessage message)
+    {
+        _logger.Information("Processing config update request: {Data}", message.Message);
+
+        try
+        {
+            var updateData = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.Message);
+            if (updateData != null
+                && updateData.ContainsKey("PropertyPath")
+                && updateData.ContainsKey("Value"))
+            {
+                var propertyPath = updateData["PropertyPath"].ToString();
+                var newValue = updateData["Value"];
+
+                _logger.Debug("Updating config property at path {Path} to new value: {Value}", propertyPath, newValue);
+                _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
+                _logger.Debug("Config update completed for property path {Path}", propertyPath);
+            }
+            else
+            {
+                _logger.Warning("Unable to process config update, required keys not found in message data.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error handling config update message.");
         }
     }
 
@@ -179,12 +263,14 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     {
         if (!_endpoints.TryGetValue(endpoint, out var connections) || !connections.Any())
         {
-            _logger.Debug("No clients connected to endpoint {Endpoint}, message queued", endpoint);
+            _logger.Debug("No clients connected to endpoint {Endpoint}, message not sent", endpoint);
             return;
         }
+
         var json = JsonConvert.SerializeObject(message);
         var bytes = Encoding.UTF8.GetBytes(json);
         var deadSockets = new List<WebSocket>();
+
         foreach (var (socket, _) in connections)
         {
             try
@@ -205,6 +291,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
                 deadSockets.Add(socket);
             }
         }
+
         foreach (var socket in deadSockets)
         {
             await RemoveConnectionAsync(socket, endpoint);
@@ -231,16 +318,48 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         {
             _isStarted = false;
             _cancellationTokenSource.Cancel();
-            // Close all active connections
+
             var closeTasks = _endpoints
-                .SelectMany(endpoint => endpoint.Value.Select(async connection => await CloseWebSocketAsync(connection.Key)))
+                .SelectMany(ep => ep.Value.Select(async connection => await CloseWebSocketAsync(connection.Key)))
                 .ToList();
+
             Task.WhenAll(closeTasks).Wait(TimeSpan.FromSeconds(5));
             _httpListener.Close();
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error during WebSocket server disposal");
+        }
+    }
+
+    private async void OnConfigurationChanged(object sender, ConfigurationChangedEventArgs e)
+    {
+        try
+        {
+            _logger.Debug("OnConfigurationChanged triggered for property {PropertyName} with new value: {NewValue}", e.PropertyName, e.NewValue);
+
+            var updateData = new Dictionary<string, object>
+            {
+                { "PropertyPath", e.PropertyName },
+                { "Value", e.NewValue }
+            };
+
+            var message = new WebSocketMessage
+            {
+                Type = CustomWebSocketMessageType.Status,
+                Status = "config_update",
+                Message = JsonConvert.SerializeObject(updateData)
+            };
+
+            _logger.Debug("Broadcasting config change to /config endpoint: {Payload}", message.Message);
+
+            await BroadcastToEndpointAsync("/config", message);
+
+            _logger.Debug("Config change broadcast completed");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error broadcasting config change");
         }
     }
 }
