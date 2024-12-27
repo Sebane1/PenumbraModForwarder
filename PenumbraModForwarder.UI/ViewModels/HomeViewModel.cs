@@ -46,7 +46,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            // Gather new data first
             var newItems = new ObservableCollection<InfoItem>();
 
             var modsInstalledCount = await _statisticService.GetStatCountAsync(Stat.ModsInstalled);
@@ -55,7 +54,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
 
             newItems.Add(new InfoItem("Total Mods Installed", modsInstalledCount.ToString()));
             newItems.Add(new InfoItem("Unique Mods Installed", uniqueModsInstalledCount.ToString()));
-
             if (lastModInstallation != null)
             {
                 newItems.Add(new InfoItem("Last Mod Installed", lastModInstallation.ModName));
@@ -65,13 +63,23 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 newItems.Add(new InfoItem("Last Mod Installed", "None"));
             }
 
-            // If nothing has changed, skip an update to avoid flicker
+            // Remove duplicates by name if any happen to appear
+            var distinctByName = newItems
+                .GroupBy(item => item.Name)
+                .Select(g => g.First())
+                .ToList();
+
+            newItems.Clear();
+            foreach (var i in distinctByName)
+            {
+                newItems.Add(i);
+            }
+
             if (IsTheSame(InfoItems, newItems))
             {
                 return;
             }
 
-            // Otherwise, update in one pass
             InfoItems.Clear();
             foreach (var item in newItems)
             {
