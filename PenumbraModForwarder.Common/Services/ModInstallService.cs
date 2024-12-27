@@ -13,15 +13,19 @@ public class ModInstallService : IModInstallService
     private readonly ILogger _logger;
     private readonly IStatisticService _statisticService;
     private readonly IPenumbraService _penumbraService;
+    private readonly IConfigurationService _configurationService;
+    private readonly IFileStorage _fileStorage;
 
     public ModInstallService(
         HttpClient httpClient,
         IStatisticService statisticService,
-        IPenumbraService penumbraService)
+        IPenumbraService penumbraService, IConfigurationService configurationService, IFileStorage fileStorage)
     {
         _httpClient = httpClient;
         _statisticService = statisticService;
         _penumbraService = penumbraService;
+        _configurationService = configurationService;
+        _fileStorage = fileStorage;
         _logger = Log.ForContext<ModInstallService>();
     }
 
@@ -44,6 +48,12 @@ public class ModInstallService : IModInstallService
                 
                 var fileName = Path.GetFileName(path);
                 await _statisticService.RecordModInstallationAsync(fileName);
+
+                if ((bool) _configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete))
+                {
+                    _logger.Information($"Deleting mod {path}");
+                    _fileStorage.Delete(path);
+                }
 
                 _logger.Information("Mod installed successfully from path '{Path}' using PenumbraService", path);
                 return true;

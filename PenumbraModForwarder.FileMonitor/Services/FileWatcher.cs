@@ -59,6 +59,8 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 }
 
                 watcher.Created += OnCreated;
+                watcher.Renamed += OnRenamed;
+
                 _watchers.Add(watcher);
                 _logger.Information("Started watching directory: {Path}", path);
             }
@@ -80,6 +82,21 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     {
         _fileQueue.TryAdd(e.FullPath, DateTime.UtcNow);
         _logger.Information("File added to queue: {FullPath}", e.FullPath);
+    }
+        
+    private void OnRenamed(object sender, RenamedEventArgs e)
+    {
+        _logger.Information("File renamed: from {OldFullPath} to {FullPath}", e.OldFullPath, e.FullPath);
+
+        // If the old name was in the queue, remove it and add the new name
+        if (_fileQueue.TryRemove(e.OldFullPath, out var timeAdded))
+        {
+            _fileQueue[e.FullPath] = timeAdded;
+        }
+        else
+        {
+            // _fileQueue.TryAdd(e.FullPath, DateTime.UtcNow);
+        }
     }
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
@@ -177,8 +194,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 var modEntries = archiveFile.Entries.Where(entry =>
                 {
                     var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
-
-                    // Check if the entry is a mod file
+                        
                     if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
                     {
                         return false;
@@ -226,8 +242,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     _logger.Information("No mod files found in archive: {ArchiveFileName}", Path.GetFileName(archivePath));
                 }
             }
-
-            // Give time for the extraction process to complete before any further steps
+                
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
@@ -256,15 +271,13 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
     private string MoveFile(string filePath)
     {
-        // Use the config-based mod path here instead of a fixed directory
         var modPath = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
 
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(modPath, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
-
-        // Copy and delete to simulate a move
+            
         _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
         DeleteFileWithRetry(filePath);
 
