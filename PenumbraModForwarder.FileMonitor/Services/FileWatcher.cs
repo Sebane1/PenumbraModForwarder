@@ -171,7 +171,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             {
                 var skipPreDt = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.SkipPreDt);
 
-                // Obtain the base directory from config, so we can place files there.
+                // Get the base directory from config, so we can place files there.
                 var baseDirectory = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
 
                 var modEntries = archiveFile.Entries.Where(entry =>
