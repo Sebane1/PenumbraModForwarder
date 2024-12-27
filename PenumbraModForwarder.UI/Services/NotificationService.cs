@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
@@ -16,17 +17,21 @@ public class NotificationService : ReactiveObject, INotificationService
     private const int FadeOutDuration = 500;
     private const int UpdateInterval = 100;
     private readonly ILogger _logger;
+    private readonly IConfigurationService _configurationService;
 
     public ObservableCollection<Notification> Notifications { get; } = new();
 
-    public NotificationService()
+    public NotificationService(IConfigurationService configurationService)
     {
+        _configurationService = configurationService;
         _logger = Log.ForContext<NotificationService>();
     }
 
     // TODO: Play sound when Notification is shown
     public async Task ShowNotification(string message, int durationSeconds = 4)
     {
+        if (!(bool) _configurationService.ReturnConfigValue(config => config.UI.NotificationEnabled)) return;
+        
         var notification = new Notification(message, this, showProgress: true);
         
         lock (_lock)
@@ -67,6 +72,7 @@ public class NotificationService : ReactiveObject, INotificationService
 
     public void UpdateProgress(string title, string status, int progress)
     {
+        if (!(bool) _configurationService.ReturnConfigValue(config => config.UI.NotificationEnabled)) return;
         _logger.Debug("Updating progress for {Title} to {Status}: Progress: {Progress}", title, status, progress);
         lock (_lock)
         {
