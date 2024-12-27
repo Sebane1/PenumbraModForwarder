@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using PenumbraModForwarder.Watchdog.Interfaces;
 using Serilog;
 using ILogger = Serilog.ILogger;
@@ -35,7 +38,6 @@ namespace PenumbraModForwarder.Watchdog.Services
             }
             _logger.Information("Running in {Mode} mode.", _isDevMode ? "DEV" : "PROD");
 
-            // Initialize the port once
             _port = FindRandomAvailablePort();
             SetupShutdownHandlers();
         }
@@ -79,6 +81,7 @@ namespace PenumbraModForwarder.Watchdog.Services
             return _isDevMode ? StartDevProcess(projectName, port) : StartProdProcess($"{projectName}.exe", port);
         }
 
+        // CHANGED: Added RedirectStandardInput = true to allow sending a shutdown command.
         private Process StartDevProcess(string projectName, string port)
         {
             string projectDirectory = Path.Combine(_solutionDirectory, projectName);
@@ -98,7 +101,8 @@ namespace PenumbraModForwarder.Watchdog.Services
                 CreateNoWindow = true,
                 WorkingDirectory = projectDirectory,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                RedirectStandardInput = true // CHANGED
             };
 
             foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
@@ -111,12 +115,10 @@ namespace PenumbraModForwarder.Watchdog.Services
             var process = new Process { StartInfo = startInfo };
             process.EnableRaisingEvents = true;
 
-            // Attach event handlers to capture output and error streams
             process.OutputDataReceived += (sender, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    // Log the output from the child process
                     _logger.Debug("[{ProjectName} STDOUT]: {Data}", projectName, e.Data);
                 }
             };
@@ -125,7 +127,6 @@ namespace PenumbraModForwarder.Watchdog.Services
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    // Log the error output from the child process
                     _logger.Error("[{ProjectName} STDERR]: {Data}", projectName, e.Data);
                 }
             };
@@ -138,8 +139,6 @@ namespace PenumbraModForwarder.Watchdog.Services
             try
             {
                 process.Start();
-
-                // Begin reading the output streams
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
             }
@@ -152,6 +151,7 @@ namespace PenumbraModForwarder.Watchdog.Services
             return process;
         }
 
+        // CHANGED: Added RedirectStandardInput = true to allow sending a shutdown command.
         private Process StartProdProcess(string executableName, string port)
         {
             string executablePath = Path.Combine(AppContext.BaseDirectory, executableName);
@@ -172,7 +172,8 @@ namespace PenumbraModForwarder.Watchdog.Services
                 CreateNoWindow = true,
                 WorkingDirectory = executableDir,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                RedirectStandardInput = true // CHANGED
             };
 
             startInfo.EnvironmentVariables["WATCHDOG_INITIALIZED"] = "true";
@@ -180,12 +181,10 @@ namespace PenumbraModForwarder.Watchdog.Services
             var process = new Process { StartInfo = startInfo };
             process.EnableRaisingEvents = true;
 
-            // Attach event handlers to capture output and error streams
             process.OutputDataReceived += (sender, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    // Log the output from the child process
                     _logger.Debug("[{ExecutableName} STDOUT]: {Data}", executableName, e.Data);
                 }
             };
@@ -194,7 +193,6 @@ namespace PenumbraModForwarder.Watchdog.Services
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    // Log the error output from the child process
                     _logger.Error("[{ExecutableName} STDERR]: {Data}", executableName, e.Data);
                 }
             };
@@ -209,7 +207,6 @@ namespace PenumbraModForwarder.Watchdog.Services
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-
                 _logger.Information("Started {ExecutableName} (PID: {ProcessId})", executableName, process.Id);
             }
             catch (Exception ex)
@@ -234,7 +231,7 @@ namespace PenumbraModForwarder.Watchdog.Services
                 ShutdownChildProcesses();
             };
         }
-
+        
         private void ShutdownChildProcesses()
         {
             if (_isShuttingDown) return;
@@ -258,7 +255,25 @@ namespace PenumbraModForwarder.Watchdog.Services
                 if (_backgroundServiceProcess != null && !_backgroundServiceProcess.HasExited)
                 {
                     _logger.Information("Closing Background Worker Process (PID: {ProcessId})", _backgroundServiceProcess.Id);
+
+                    // Attempt a graceful shutdown via standard input
+                    if (_backgroundServiceProcess.StartInfo.RedirectStandardInput)
+                    {
+                        _logger.Information("Sending 'shutdown' command to Background Worker via standard input.");
+                        try
+                        {
+                            _backgroundServiceProcess.StandardInput.WriteLine("shutdown");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Warning(ex, "Unable to send 'shutdown' to Background Worker");
+                        }
+                    }
+
+                    // If there's a main window, we call it too (in case it has one, but usually console won't):
                     _backgroundServiceProcess.CloseMainWindow();
+
+                    // Wait for up to 5 seconds for the process to exit
                     _backgroundServiceProcess.WaitForExit(5000);
                     if (!_backgroundServiceProcess.HasExited)
                     {

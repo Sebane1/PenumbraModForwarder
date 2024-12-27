@@ -1,4 +1,6 @@
-﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.BackgroundWorker.Services;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Extensions;
@@ -17,8 +19,10 @@ public static class DependencyInjection
         services.AddHostedService(provider => new Worker(
             provider.GetRequiredService<IWebSocketServer>(),
             provider.GetRequiredService<IStartupService>(),
-            port
+            port,
+            provider.GetRequiredService<IHostApplicationLifetime>()
         ));
+
         services.AddSingleton<IWebSocketServer, WebSocketServer>();
         services.AddSingleton<IStartupService, StartupService>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();
@@ -31,10 +35,12 @@ public static class DependencyInjection
         services.AddSingleton<IModHandlerService, ModHandlerService>();
         services.AddSingleton<IStatisticService, StatisticService>();
         services.AddSingleton<IPenumbraService, PenumbraService>();
+
         services.AddHttpClient<IModInstallService, ModInstallService>(client =>
         {
             client.BaseAddress = new Uri(ApiConsts.BaseApiUrl);
         });
+
         services.SetupLogging();
         return services;
     }
