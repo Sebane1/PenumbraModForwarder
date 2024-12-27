@@ -31,7 +31,7 @@ public class PenumbraService : IPenumbraService
     public void InitializePenumbraPath()
     {
         var existingPath = _configurationService.ReturnConfigValue(
-            c => c.BackgroundWorker.PenumbraModFolder
+            c => c.BackgroundWorker.PenumbraModFolderPath
         ) as string;
 
         if (!string.IsNullOrWhiteSpace(existingPath))
@@ -61,7 +61,7 @@ public class PenumbraService : IPenumbraService
             throw new ArgumentNullException(nameof(sourceFilePath));
 
         var penumbraPath = _configurationService.ReturnConfigValue(
-            c => c.BackgroundWorker.PenumbraModFolder
+            c => c.BackgroundWorker.PenumbraModFolderPath
         ) as string;
 
         if (string.IsNullOrEmpty(penumbraPath))
@@ -163,7 +163,7 @@ public class PenumbraService : IPenumbraService
     {
         _logger.Information("Setting Penumbra path to {FoundPath}", foundPath);
         _configurationService.UpdateConfigValue(
-            config => config.BackgroundWorker.PenumbraModFolder = foundPath,
+            config => config.BackgroundWorker.PenumbraModFolderPath = foundPath,
             "BackgroundWorker.PenumbraModPath",
             foundPath
         );

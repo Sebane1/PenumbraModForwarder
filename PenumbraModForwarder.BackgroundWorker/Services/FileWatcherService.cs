@@ -142,80 +142,122 @@ public class FileWatcherService : IFileWatcherService, IDisposable
         _modHandlerService.HandleFileAsync(e.DestinationPath).GetAwaiter().GetResult();
     }
 
-    private void OnFilesExtracted(object? sender, FilesExtractedEventArgs e)
+private void OnFilesExtracted(object? sender, FilesExtractedEventArgs e)
+{
+    _logger.Information("Files extracted from archive: {ArchiveFileName}", e.ArchiveFileName);
+
+    var taskId = Guid.NewGuid().ToString();
+    var installAll = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.InstallAll);
+    var deleteUnselected = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
+
+    if (!installAll)
     {
-        _logger.Information("Files extracted from archive: {ArchiveFileName}", e.ArchiveFileName);
+        // Serialize the list of extracted file paths into JSON
+        var extractedFilesJson = JsonConvert.SerializeObject(e.ExtractedFilePaths);
 
-        var taskId = Guid.NewGuid().ToString();
-        var installAll = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.InstallAll);
-
-        if (!installAll)
+        // Create a message to ask the user which files to install
+        var message = new WebSocketMessage
         {
-            // Serialize the list of extracted file paths into JSON
-            var extractedFilesJson = JsonConvert.SerializeObject(e.ExtractedFilePaths);
+            Type = WebSocketMessageType.Status,
+            TaskId = taskId,
+            Status = "select_files",
+            Progress = 0,
+            Message = extractedFilesJson
+        };
+        
+        _webSocketServer.BroadcastToEndpointAsync("/install", message).GetAwaiter().GetResult();
 
-            // Create a message to ask the user which files to install
-            var message = new WebSocketMessage
+        // Wait for user response
+        var selectedFiles = WaitForUserSelection(taskId);
+
+        if (selectedFiles != null && selectedFiles.Any())
+        {
+            foreach (var selectedFile in selectedFiles)
             {
-                Type = WebSocketMessageType.Status,
-                TaskId = taskId,
-                Status = "select_files",
-                Progress = 0,
-                Message = extractedFilesJson
-            };
+                _modHandlerService.HandleFileAsync(selectedFile).GetAwaiter().GetResult();
+            }
             
-            _webSocketServer.BroadcastToEndpointAsync("/install", message).GetAwaiter().GetResult();
-
-            // Wait for user's response
-            var selectedFiles = WaitForUserSelection(taskId);
-
-            if (selectedFiles != null && selectedFiles.Any())
+            if (deleteUnselected)
             {
-                foreach (var selectedFile in selectedFiles)
+                var unselectedFiles = e.ExtractedFilePaths.Except(selectedFiles).ToList();
+                foreach (var unselectedFile in unselectedFiles)
                 {
-                    _modHandlerService.HandleFileAsync(selectedFile).GetAwaiter().GetResult();
+                    try
+                    {
+                        if (File.Exists(unselectedFile))
+                        {
+                            _logger.Information("Deleting unselected file: {Path}", unselectedFile);
+                            File.Delete(unselectedFile);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error deleting unselected file: {Path}", unselectedFile);
+                    }
                 }
-
-                var completionMessage = WebSocketMessage.CreateStatus(
-                    taskId,
-                    WebSocketMessageStatus.Completed,
-                    "Selected files have been installed."
-                );
-                _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
-            }
-            else
-            {
-                _logger.Information("No files selected for installation.");
-                var completionMessage = WebSocketMessage.CreateStatus(
-                    taskId,
-                    WebSocketMessageStatus.Completed,
-                    "No files were selected for installation."
-                );
-                _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
-            }
-        }
-        else
-        {
-            var message = WebSocketMessage.CreateStatus(
-                taskId,
-                WebSocketMessageStatus.InProgress,
-                $"Installing all extracted files from {e.ArchiveFileName}"
-            );
-            _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
-
-            foreach (var extractedFilePath in e.ExtractedFilePaths)
-            {
-                _modHandlerService.HandleFileAsync(extractedFilePath).GetAwaiter().GetResult();
             }
 
             var completionMessage = WebSocketMessage.CreateStatus(
                 taskId,
                 WebSocketMessageStatus.Completed,
-                $"All files from {e.ArchiveFileName} have been installed."
+                "Selected files have been installed."
             );
-            _webSocketServer.BroadcastToEndpointAsync("/status", completionMessage).GetAwaiter().GetResult();
+            _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
+        }
+        else
+        {
+            _logger.Information("No files selected for installation.");
+            
+            if (deleteUnselected)
+            {
+                foreach (var extractedFile in e.ExtractedFilePaths)
+                {
+                    try
+                    {
+                        if (File.Exists(extractedFile))
+                        {
+                            _logger.Information("Deleting unselected file: {Path}", extractedFile);
+                            File.Delete(extractedFile);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Error deleting file: {Path}", extractedFile);
+                    }
+                }
+            }
+
+            var completionMessage = WebSocketMessage.CreateStatus(
+                taskId,
+                WebSocketMessageStatus.Completed,
+                "No files were selected for installation."
+            );
+            _webSocketServer.BroadcastToEndpointAsync("/install", completionMessage).GetAwaiter().GetResult();
         }
     }
+    else
+    {
+        // If InstallAll is true, process all extracted files
+        var message = WebSocketMessage.CreateStatus(
+            taskId,
+            WebSocketMessageStatus.InProgress,
+            $"Installing all extracted files from {e.ArchiveFileName}"
+        );
+        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
+
+        foreach (var extractedFilePath in e.ExtractedFilePaths)
+        {
+            _modHandlerService.HandleFileAsync(extractedFilePath).GetAwaiter().GetResult();
+        }
+
+        var completionMessage = WebSocketMessage.CreateStatus(
+            taskId,
+            WebSocketMessageStatus.Completed,
+            $"All files from {e.ArchiveFileName} have been installed."
+        );
+        _webSocketServer.BroadcastToEndpointAsync("/status", completionMessage).GetAwaiter().GetResult();
+    }
+}
 
     private List<string> WaitForUserSelection(string taskId)
     {
