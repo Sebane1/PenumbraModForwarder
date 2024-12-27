@@ -15,6 +15,9 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 {
     private readonly List<FileSystemWatcher> _watchers;
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
+    
+    private readonly ConcurrentDictionary<string, int> _retryCounts;
+
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
     private readonly string _stateFilePath = $@"{ConfigurationConsts.ConfigurationPath}\fileQueueState.json";
@@ -26,12 +29,17 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private readonly ILogger _logger;
 
     private static readonly Regex PreDtRegex = new(@"\[?(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
+    private const int RetryThreshold = 5;
+    private const int DownloadCheckDelayMs = 1000;
 
     public FileWatcher(IFileStorage fileStorage, IConfigurationService configurationService)
     {
         _fileStorage = fileStorage;
         _configurationService = configurationService;
+
         _fileQueue = new ConcurrentDictionary<string, DateTime>();
+        _retryCounts = new ConcurrentDictionary<string, int>();
+
         _watchers = new List<FileSystemWatcher>();
         _logger = Log.ForContext<FileWatcher>();
     }
@@ -68,7 +76,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             _cancellationTokenSource = new CancellationTokenSource();
             _processingTask = ProcessQueueAsync(_cancellationTokenSource.Token);
 
-            // Initialize the persistence timer to save the queue state every minute
             _persistenceTimer = new Timer(_ => PersistState(), null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
         catch (Exception ex)
@@ -81,6 +88,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private void OnCreated(object sender, FileSystemEventArgs e)
     {
         _fileQueue.TryAdd(e.FullPath, DateTime.UtcNow);
+        _retryCounts[e.FullPath] = 0;
         _logger.Information("File added to queue: {FullPath}", e.FullPath);
     }
         
@@ -88,14 +96,13 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     {
         _logger.Information("File renamed: from {OldFullPath} to {FullPath}", e.OldFullPath, e.FullPath);
 
-        // If the old name was in the queue, remove it and add the new name
         if (_fileQueue.TryRemove(e.OldFullPath, out var timeAdded))
         {
             _fileQueue[e.FullPath] = timeAdded;
-        }
-        else
-        {
-            // _fileQueue.TryAdd(e.FullPath, DateTime.UtcNow);
+            if (_retryCounts.TryRemove(e.OldFullPath, out var oldCount))
+            {
+                _retryCounts[e.FullPath] = oldCount;
+            }
         }
     }
 
@@ -112,13 +119,45 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
+                    // If the file is gone, remove it
+                    if (!_fileStorage.Exists(filePath))
+                    {
+                        _logger.Warning("File does not exist, removing from queue: {FullPath}", filePath);
+                        _fileQueue.TryRemove(filePath, out _);
+                        _retryCounts.TryRemove(filePath, out _);
+                        PersistState();
+                        continue;
+                    }
+
+                    // Check if file is ready (unlocked) and fully downloaded
                     if (IsFileReady(filePath))
                     {
+                        _retryCounts[filePath] = 0;
                         await ProcessFileAsync(filePath, cancellationToken);
                     }
-                    else if (DateTime.UtcNow - _fileQueue[filePath] > TimeSpan.FromSeconds(5))
+                    else
                     {
-                        _logger.Information("File is not ready for processing, will retry: {FullPath}", filePath);
+                        var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, old) => old + 1);
+
+                        if (currentRetry <= RetryThreshold)
+                        {
+                            _logger.Information(
+                                "File not ready (attempt {Attempt}), will retry: {FullPath}",
+                                currentRetry,
+                                filePath
+                            );
+                        }
+                        else
+                        {
+                            _logger.Warning(
+                                "File is still not ready after {Attempt} attempts, removing from queue: {FullPath}",
+                                currentRetry,
+                                filePath
+                            );
+                            _fileQueue.TryRemove(filePath, out _);
+                            _retryCounts.TryRemove(filePath, out _);
+                            PersistState();
+                        }
                     }
                 }
 
@@ -137,14 +176,17 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
     private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
+        // Verify existence again
         if (!_fileStorage.Exists(filePath))
         {
             _fileQueue.TryRemove(filePath, out _);
+            _retryCounts.TryRemove(filePath, out _);
             PersistState();
             _logger.Warning("File no longer exists: {FullPath}", filePath);
             return;
         }
 
+        // Double-check readiness
         if (!IsFileReady(filePath))
         {
             _logger.Information("File is not ready for processing: {FullPath}", filePath);
@@ -157,6 +199,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         {
             var movedFilePath = MoveFile(filePath);
             _fileQueue.TryRemove(filePath, out _);
+            _retryCounts.TryRemove(filePath, out _);
             PersistState();
 
             var fileName = Path.GetFileName(movedFilePath);
@@ -166,6 +209,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         {
             var movedFilePath = MoveFile(filePath);
             _fileQueue.TryRemove(filePath, out _);
+            _retryCounts.TryRemove(filePath, out _);
             PersistState();
 
             await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
@@ -174,6 +218,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         {
             _logger.Warning("Unhandled file type: {FullPath}", filePath);
             _fileQueue.TryRemove(filePath, out _);
+            _retryCounts.TryRemove(filePath, out _);
             PersistState();
         }
     }
@@ -187,20 +232,16 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             using (var archiveFile = new ArchiveFile(archivePath))
             {
                 var skipPreDt = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.SkipPreDt);
-
-                // Get the base directory from config, so we can place files there.
                 var baseDirectory = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
 
                 var modEntries = archiveFile.Entries.Where(entry =>
                 {
                     var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
-                        
                     if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
                     {
                         return false;
                     }
 
-                    // If skipPreDt is true, check if the file is under a Pre-Dt folder
                     if (skipPreDt)
                     {
                         var entryPath = entry.FileName;
@@ -212,7 +253,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                             return false;
                         }
                     }
-
                     return true;
                 }).ToList();
 
@@ -224,7 +264,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        // Extract the mod file to the dynamic mod path
                         var destinationPath = Path.Combine(baseDirectory, entry.FileName);
                         var destinationDir = Path.GetDirectoryName(destinationPath);
                         _fileStorage.CreateDirectory(destinationDir);
@@ -242,7 +281,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     _logger.Information("No mod files found in archive: {ArchiveFileName}", Path.GetFileName(archivePath));
                 }
             }
-                
+            
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
@@ -252,7 +291,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             }
 
             var shouldDelete = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
-
             if (shouldDelete)
             {
                 DeleteFileWithRetry(archivePath);
@@ -272,15 +310,14 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private string MoveFile(string filePath)
     {
         var modPath = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
-
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(modPath, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
-        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
-            
-        _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
-        DeleteFileWithRetry(filePath);
 
+        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
+        _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
+
+        DeleteFileWithRetry(filePath);
         _logger.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
 
         return destinationPath;
@@ -298,7 +335,12 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             }
             catch (IOException) when (attempt < maxAttempts)
             {
-                _logger.Warning("Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...", attempt, filePath, delayMilliseconds);
+                _logger.Warning(
+                    "Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...", 
+                    attempt, 
+                    filePath, 
+                    delayMilliseconds
+                );
                 Thread.Sleep(delayMilliseconds);
             }
             catch (Exception ex)
@@ -308,7 +350,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             }
         }
 
-        // Final attempt
         try
         {
             _fileStorage.Delete(filePath);
@@ -320,16 +361,51 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             throw;
         }
     }
-
+    
     private bool IsFileReady(string filePath)
     {
+        // If the file is still growing in size, it's probably not fully downloaded
+        if (!IsFileFullyDownloaded(filePath))
+        {
+            return false;
+        }
+
         try
         {
+            // Attempt exclusive access
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
             return true;
         }
         catch (IOException)
         {
+            return false;
+        }
+    }
+    
+    private bool IsFileFullyDownloaded(string filePath)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            var initialSize = fileInfo.Length;
+
+            // Wait briefly to see if file size changes, indicating it's still being downloaded
+            Thread.Sleep(DownloadCheckDelayMs);
+
+            fileInfo.Refresh();
+            var currentSize = fileInfo.Length;
+
+            return initialSize == currentSize;
+        }
+        catch (IOException)
+        {
+            // If there's an IO-related issue accessing the file,
+            // consider it not fully downloaded/available
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Unexpected error checking if file is fully downloaded: {FilePath}", filePath);
             return false;
         }
     }
@@ -356,20 +432,23 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             {
                 var serializedQueue = _fileStorage.Read(_stateFilePath);
                 var deserializedQueue = JsonConvert.DeserializeObject<ConcurrentDictionary<string, DateTime>>(serializedQueue);
+
                 if (deserializedQueue != null)
                 {
-                    foreach (var item in deserializedQueue)
+                    foreach (var kvp in deserializedQueue)
                     {
-                        if (_fileStorage.Exists(item.Key))
+                        if (_fileStorage.Exists(kvp.Key))
                         {
-                            _fileQueue.TryAdd(item.Key, item.Value);
+                            _fileQueue.TryAdd(kvp.Key, kvp.Value);
+                            _retryCounts[kvp.Key] = 0; 
                         }
                         else
                         {
-                            _logger.Warning("File from saved state no longer exists: {FullPath}", item.Key);
+                            _logger.Warning("File from saved state no longer exists: {FullPath}", kvp.Key);
                         }
                     }
                 }
+
                 _logger.Information("File queue state loaded.");
             }
         }
@@ -390,6 +469,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private void Dispose(bool disposing)
     {
         if (_disposed) return;
+
         if (disposing)
         {
             try
@@ -431,6 +511,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 _processingTask = null;
             }
         }
+
         _disposed = true;
     }
 }
