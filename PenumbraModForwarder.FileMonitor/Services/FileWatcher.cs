@@ -17,15 +17,14 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
-    private readonly string _destDirectory = ConfigurationConsts.ModsPath;
     private readonly string _stateFilePath = $@"{ConfigurationConsts.ConfigurationPath}\fileQueueState.json";
+
     private bool _disposed;
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
     private Timer _persistenceTimer;
     private readonly ILogger _logger;
 
-    // Pre-Dt regex pattern
     private static readonly Regex PreDtRegex = new(@"\[?(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
 
     public FileWatcher(IFileStorage fileStorage, IConfigurationService configurationService)
@@ -121,46 +120,44 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
     private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (_fileStorage.Exists(filePath))
-        {
-            if (IsFileReady(filePath))
-            {
-                var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
-
-                if (FileExtensionsConsts.ModFileTypes.Contains(extension))
-                {
-                    var movedFilePath = MoveFile(filePath);
-                    _fileQueue.TryRemove(filePath, out _);
-                    PersistState();
-
-                    var fileName = Path.GetFileName(movedFilePath);
-                    FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
-                }
-                else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
-                {
-                    var movedFilePath = MoveFile(filePath);
-                    _fileQueue.TryRemove(filePath, out _);
-                    PersistState();
-
-                    await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
-                }
-                else
-                {
-                    _logger.Warning("Unhandled file type: {FullPath}", filePath);
-                    _fileQueue.TryRemove(filePath, out _);
-                    PersistState();
-                }
-            }
-            else
-            {
-                _logger.Information("File is not ready for processing: {FullPath}", filePath);
-            }
-        }
-        else
+        if (!_fileStorage.Exists(filePath))
         {
             _fileQueue.TryRemove(filePath, out _);
             PersistState();
             _logger.Warning("File no longer exists: {FullPath}", filePath);
+            return;
+        }
+
+        if (!IsFileReady(filePath))
+        {
+            _logger.Information("File is not ready for processing: {FullPath}", filePath);
+            return;
+        }
+
+        var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
+
+        if (FileExtensionsConsts.ModFileTypes.Contains(extension))
+        {
+            var movedFilePath = MoveFile(filePath);
+            _fileQueue.TryRemove(filePath, out _);
+            PersistState();
+
+            var fileName = Path.GetFileName(movedFilePath);
+            FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
+        }
+        else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+        {
+            var movedFilePath = MoveFile(filePath);
+            _fileQueue.TryRemove(filePath, out _);
+            PersistState();
+
+            await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
+        }
+        else
+        {
+            _logger.Warning("Unhandled file type: {FullPath}", filePath);
+            _fileQueue.TryRemove(filePath, out _);
+            PersistState();
         }
     }
 
@@ -174,6 +171,9 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             {
                 var skipPreDt = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.SkipPreDt);
 
+                // Obtain the base directory from config, so we can place files there.
+                var baseDirectory = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
+
                 var modEntries = archiveFile.Entries.Where(entry =>
                 {
                     var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
@@ -184,7 +184,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                         return false;
                     }
 
-                    // If SkipPreDt is true, check if the file is under a Pre-Dt folder
+                    // If skipPreDt is true, check if the file is under a Pre-Dt folder
                     if (skipPreDt)
                     {
                         var entryPath = entry.FileName;
@@ -198,19 +198,17 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     }
 
                     return true;
-
                 }).ToList();
 
                 if (modEntries.Any())
                 {
                     _logger.Information("Archive contains mod files: {ArchiveFileName}", Path.GetFileName(archivePath));
 
-                    var baseDirectory = Path.GetDirectoryName(archivePath);
-
                     foreach (var entry in modEntries)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
+                        // Extract the mod file to the dynamic mod path
                         var destinationPath = Path.Combine(baseDirectory, entry.FileName);
                         var destinationDir = Path.GetDirectoryName(destinationPath);
                         _fileStorage.CreateDirectory(destinationDir);
@@ -218,7 +216,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                         _logger.Information("Extracting mod file: {FileName} to {DestinationPath}", entry.FileName, destinationPath);
 
                         entry.Extract(destinationPath);
-
                         extractedFiles.Add(destinationPath);
 
                         _logger.Information("Extraction complete for: {FileName}", entry.FileName);
@@ -230,7 +227,8 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 }
             }
 
-            await Task.Delay(100);
+            // Give time for the extraction process to complete before any further steps
+            await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
             {
@@ -258,14 +256,16 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
     private string MoveFile(string filePath)
     {
+        // Use the config-based mod path here instead of a fixed directory
+        var modPath = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
+
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-        var destinationFolder = Path.Combine(_destDirectory, fileNameWithoutExtension);
+        var destinationFolder = Path.Combine(modPath, fileNameWithoutExtension);
         _fileStorage.CreateDirectory(destinationFolder);
         var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
 
-        // Copy and delete to simulate move
+        // Copy and delete to simulate a move
         _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
-
         DeleteFileWithRetry(filePath);
 
         _logger.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
