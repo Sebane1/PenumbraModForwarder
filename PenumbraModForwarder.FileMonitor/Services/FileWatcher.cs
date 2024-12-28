@@ -15,13 +15,10 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 {
     private readonly List<FileSystemWatcher> _watchers;
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
-    
     private readonly ConcurrentDictionary<string, int> _retryCounts;
-
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
     private readonly string _stateFilePath = $@"{ConfigurationConsts.ConfigurationPath}\fileQueueState.json";
-
     private bool _disposed;
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
@@ -91,7 +88,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         _retryCounts[e.FullPath] = 0;
         _logger.Information("File added to queue: {FullPath}", e.FullPath);
     }
-        
+
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
         _logger.Information("File renamed: from {OldFullPath} to {FullPath}", e.OldFullPath, e.FullPath);
@@ -119,7 +116,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
-                    // If the file is gone, remove it
                     if (!_fileStorage.Exists(filePath))
                     {
                         _logger.Warning("File does not exist, removing from queue: {FullPath}", filePath);
@@ -129,7 +125,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                         continue;
                     }
 
-                    // Check if file is ready (unlocked) and fully downloaded
                     if (IsFileReady(filePath))
                     {
                         _retryCounts[filePath] = 0;
@@ -138,8 +133,8 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     else
                     {
                         var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, old) => old + 1);
-
-                        if (currentRetry <= RetryThreshold)
+                        
+                        if (currentRetry < RetryThreshold)
                         {
                             _logger.Information(
                                 "File not ready (attempt {Attempt}), will retry: {FullPath}",
@@ -150,13 +145,10 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                         else
                         {
                             _logger.Warning(
-                                "File is still not ready after {Attempt} attempts, removing from queue: {FullPath}",
+                                "File is still not ready after {Attempt} attempts, continuing to wait: {FullPath}",
                                 currentRetry,
                                 filePath
                             );
-                            _fileQueue.TryRemove(filePath, out _);
-                            _retryCounts.TryRemove(filePath, out _);
-                            PersistState();
                         }
                     }
                 }
@@ -176,7 +168,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
     private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        // Verify existence again
         if (!_fileStorage.Exists(filePath))
         {
             _fileQueue.TryRemove(filePath, out _);
@@ -186,7 +177,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             return;
         }
 
-        // Double-check readiness
         if (!IsFileReady(filePath))
         {
             _logger.Information("File is not ready for processing: {FullPath}", filePath);
@@ -281,7 +271,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     _logger.Information("No mod files found in archive: {ArchiveFileName}", Path.GetFileName(archivePath));
                 }
             }
-            
+
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
@@ -296,6 +286,13 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 DeleteFileWithRetry(archivePath);
                 _logger.Information("Deleted archive after extraction: {ArchiveFileName}", Path.GetFileName(archivePath));
             }
+        }
+        catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
+        {
+            _logger.Warning("File is not recognized as a valid archive: {ArchiveFilePath}", archivePath);
+            
+            DeleteFileWithRetry(archivePath);
+            _logger.Information("Deleted invalid archive: {ArchiveFileName}", Path.GetFileName(archivePath));
         }
         catch (OperationCanceledException)
         {
@@ -336,9 +333,9 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             catch (IOException) when (attempt < maxAttempts)
             {
                 _logger.Warning(
-                    "Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...", 
-                    attempt, 
-                    filePath, 
+                    "Attempt {Attempt} to delete file failed: {FilePath}. Retrying in {Delay}ms...",
+                    attempt,
+                    filePath,
                     delayMilliseconds
                 );
                 Thread.Sleep(delayMilliseconds);
@@ -361,10 +358,9 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             throw;
         }
     }
-    
+
     private bool IsFileReady(string filePath)
     {
-        // If the file is still growing in size, it's probably not fully downloaded
         if (!IsFileFullyDownloaded(filePath))
         {
             return false;
@@ -372,7 +368,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
         try
         {
-            // Attempt exclusive access
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
             return true;
         }
@@ -381,12 +376,11 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             return false;
         }
     }
-    
+
     private bool IsFileFullyDownloaded(string filePath)
     {
         try
         {
-            // Check if there's any file matching "<originalFileName>.*.part" in the same directory
             var directory = Path.GetDirectoryName(filePath);
             if (!string.IsNullOrEmpty(directory))
             {
@@ -405,15 +399,25 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 _logger.Warning("Could not determine directory for {FilePath}, skipped part-file check.", filePath);
             }
             
-            var fileInfo = new FileInfo(filePath);
-            var initialSize = fileInfo.Length;
+            const int maxChecks = 3;
+            long lastSize = -1;
 
-            Thread.Sleep(DownloadCheckDelayMs);
+            for (int i = 0; i < maxChecks; i++)
+            {
+                var fileInfo = new FileInfo(filePath);
+                var currentSize = fileInfo.Length;
 
-            fileInfo.Refresh();
-            var currentSize = fileInfo.Length;
+                if (lastSize == currentSize && currentSize != 0)
+                {
+                    // The file size hasn't changed across checks, consider it stable
+                    return true;
+                }
 
-            return initialSize == currentSize;
+                lastSize = currentSize;
+                Thread.Sleep(DownloadCheckDelayMs);
+            }
+
+            return false;
         }
         catch (IOException)
         {
@@ -456,7 +460,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                         if (_fileStorage.Exists(kvp.Key))
                         {
                             _fileQueue.TryAdd(kvp.Key, kvp.Value);
-                            _retryCounts[kvp.Key] = 0; 
+                            _retryCounts[kvp.Key] = 0;
                         }
                         else
                         {
