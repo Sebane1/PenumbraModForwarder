@@ -386,10 +386,29 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     {
         try
         {
+            // Check if there's any file matching "<originalFileName>.*.part" in the same directory
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                var baseFileName = Path.GetFileName(filePath);
+                var searchPattern = baseFileName + ".*.part";
+                var partFiles = Directory.GetFiles(directory, searchPattern, SearchOption.TopDirectoryOnly);
+
+                if (partFiles.Length > 0)
+                {
+                    _logger.Information("Detected one or more part files related to {FilePath}. The file is still downloading.", filePath);
+                    return false;
+                }
+            }
+            else
+            {
+                _logger.Warning("Could not determine directory for {FilePath}, skipped part-file check.", filePath);
+            }
+
+            // Existing size check logic
             var fileInfo = new FileInfo(filePath);
             var initialSize = fileInfo.Length;
 
-            // Wait briefly to see if file size changes, indicating it's still being downloaded
             Thread.Sleep(DownloadCheckDelayMs);
 
             fileInfo.Refresh();
@@ -399,8 +418,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         }
         catch (IOException)
         {
-            // If there's an IO-related issue accessing the file,
-            // consider it not fully downloaded/available
             return false;
         }
         catch (Exception ex)
