@@ -133,7 +133,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     else
                     {
                         var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, old) => old + 1);
-                        
+
                         if (currentRetry < RetryThreshold)
                         {
                             _logger.Information(
@@ -272,25 +272,29 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 }
             }
 
+            // Small delay to prevent immediate re-check in some scenarios
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
             {
                 var archiveFileName = Path.GetFileName(archivePath);
                 FilesExtracted?.Invoke(this, new FilesExtractedEventArgs(archiveFileName, extractedFiles));
-            }
 
-            var shouldDelete = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
-            if (shouldDelete)
+                var shouldDelete = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.AutoDelete);
+                if (shouldDelete)
+                {
+                    DeleteFileWithRetry(archivePath);
+                    _logger.Information("Deleted archive after extraction: {ArchiveFileName}", Path.GetFileName(archivePath));
+                }
+            }
+            else
             {
-                DeleteFileWithRetry(archivePath);
-                _logger.Information("Deleted archive after extraction: {ArchiveFileName}", Path.GetFileName(archivePath));
+                _logger.Information("No mod files found; leaving file intact: {ArchiveFileName}", Path.GetFileName(archivePath));
             }
         }
         catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
         {
             _logger.Warning("File is not recognized as a valid archive: {ArchiveFilePath}", archivePath);
-            
             DeleteFileWithRetry(archivePath);
             _logger.Information("Deleted invalid archive: {ArchiveFileName}", Path.GetFileName(archivePath));
         }
@@ -398,7 +402,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             {
                 _logger.Warning("Could not determine directory for {FilePath}, skipped part-file check.", filePath);
             }
-            
+
             const int maxChecks = 3;
             long lastSize = -1;
 
@@ -409,7 +413,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
 
                 if (lastSize == currentSize && currentSize != 0)
                 {
-                    // The file size hasn't changed across checks, consider it stable
                     return true;
                 }
 
