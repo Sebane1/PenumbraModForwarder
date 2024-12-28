@@ -166,37 +166,42 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         }
     }
 
-    private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
+private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
+{
+    if (!_fileStorage.Exists(filePath))
     {
-        if (!_fileStorage.Exists(filePath))
-        {
-            _fileQueue.TryRemove(filePath, out _);
-            _retryCounts.TryRemove(filePath, out _);
-            PersistState();
-            _logger.Warning("File no longer exists: {FullPath}", filePath);
-            return;
-        }
+        _fileQueue.TryRemove(filePath, out _);
+        _retryCounts.TryRemove(filePath, out _);
+        PersistState();
+        _logger.Warning("File no longer exists: {FullPath}", filePath);
+        return;
+    }
 
-        if (!IsFileReady(filePath))
-        {
-            _logger.Information("File is not ready for processing: {FullPath}", filePath);
-            return;
-        }
+    if (!IsFileReady(filePath))
+    {
+        _logger.Information("File is not ready for processing: {FullPath}", filePath);
+        return;
+    }
 
-        var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
+    var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
 
-        if (FileExtensionsConsts.ModFileTypes.Contains(extension))
-        {
-            var movedFilePath = MoveFile(filePath);
-            _fileQueue.TryRemove(filePath, out _);
-            _retryCounts.TryRemove(filePath, out _);
-            PersistState();
+    if (FileExtensionsConsts.ModFileTypes.Contains(extension))
+    {
+        var movedFilePath = MoveFile(filePath);
+        _fileQueue.TryRemove(filePath, out _);
+        _retryCounts.TryRemove(filePath, out _);
+        PersistState();
 
-            var fileName = Path.GetFileName(movedFilePath);
-            FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
-        }
-        else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+        var fileName = Path.GetFileName(movedFilePath);
+        FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
+    }
+    else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+    {
+        // 1) Check if the archive actually contains mod files
+        if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
         {
+            _logger.Information("Archive {FilePath} contains one or more mod files; proceeding with move and extraction.", filePath);
+
             var movedFilePath = MoveFile(filePath);
             _fileQueue.TryRemove(filePath, out _);
             _retryCounts.TryRemove(filePath, out _);
@@ -206,12 +211,22 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         }
         else
         {
-            _logger.Warning("Unhandled file type: {FullPath}", filePath);
+            _logger.Information("Archive {FilePath} does not contain any mod files; leaving file as-is.", filePath);
+
+            // Remove from queue but do not move or extract
             _fileQueue.TryRemove(filePath, out _);
             _retryCounts.TryRemove(filePath, out _);
             PersistState();
         }
     }
+    else
+    {
+        _logger.Warning("Unhandled file type: {FullPath}", filePath);
+        _fileQueue.TryRemove(filePath, out _);
+        _retryCounts.TryRemove(filePath, out _);
+        PersistState();
+    }
+}
 
     private async Task ProcessArchiveFileAsync(string archivePath, CancellationToken cancellationToken)
     {
@@ -322,6 +337,55 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         _logger.Information("File moved: {SourcePath} to {DestinationPath}", filePath, destinationPath);
 
         return destinationPath;
+    }
+    
+    private async Task<bool> ArchiveContainsModFileAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var archiveFile = new ArchiveFile(filePath);
+            var skipPreDt = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.SkipPreDt);
+
+            var hasModFile = archiveFile.Entries.Any(entry =>
+            {
+                var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
+                if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
+                {
+                    return false;
+                }
+
+                if (skipPreDt && entry.FileName.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Any(dir => PreDtRegex.IsMatch(dir)))
+                {
+                    return false;
+                }
+
+                return true;
+            });
+
+            return hasModFile;
+        }
+        catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
+        {
+            // If it's not recognized as a valid archive, treat it as having no mods
+            _logger.Warning("File {FilePath} is not recognized as a valid archive.", filePath);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Information("Archive check was canceled for {FilePath}.", filePath);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error checking for mod files in {FilePath}.", filePath);
+            return false;
+        }
+        finally
+        {
+            // Small delay can help prevent immediate re-check in certain conditions
+            await Task.Delay(100, cancellationToken);
+        }
     }
 
     private void DeleteFileWithRetry(string filePath, int maxAttempts = 3, int delayMilliseconds = 500)
