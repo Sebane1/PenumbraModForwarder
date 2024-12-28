@@ -26,9 +26,10 @@
                    FontSize="16"
                    FontWeight="Bold"
                    Margin="0,5,0,5"/>
-        
-        <ItemsControl Grid.Row="1"
-                      Classes="modsList"
-                      ItemsSource="{Binding InstalledMods}" />
+        <ScrollViewer Grid.Row="1">
+            <ItemsControl Classes="modsList"
+                          ItemsSource="{Binding InstalledMods}" />
+        </ScrollViewer>
+
     </Grid>
 </UserControl>
