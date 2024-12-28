@@ -404,8 +404,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             {
                 _logger.Warning("Could not determine directory for {FilePath}, skipped part-file check.", filePath);
             }
-
-            // Existing size check logic
+            
             var fileInfo = new FileInfo(filePath);
             var initialSize = fileInfo.Length;
 
