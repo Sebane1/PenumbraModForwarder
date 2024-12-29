@@ -58,14 +58,13 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
-            // Remove duplicates by name if any happen to appear
-            var distinctByName = newItems
-                .GroupBy(item => item.Name)
-                .Select(g => g.First())
+            var distinctByNameAndValue = newItems
+                .GroupBy(item => (item.Name, item.Value))
+                .Select(group => group.First())
                 .ToList();
 
             newItems.Clear();
-            foreach (var i in distinctByName)
+            foreach (var i in distinctByNameAndValue)
             {
                 newItems.Add(i);
             }
