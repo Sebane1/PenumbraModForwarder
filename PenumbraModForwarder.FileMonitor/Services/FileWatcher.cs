@@ -134,21 +134,47 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     {
                         var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, old) => old + 1);
 
+                        // A short explanation of why we do so many attempts:
+                        // We keep re-checking this file to ensure it's fully downloaded.
+                        // This allows large or slow downloads to complete before we move or extract.
                         if (currentRetry < RetryThreshold)
                         {
-                            _logger.Information(
-                                "File not ready (attempt {Attempt}), will retry: {FullPath}",
-                                currentRetry,
-                                filePath
-                            );
+                            if (currentRetry <= 3)
+                            {
+                                _logger.Information(
+                                    "File not ready (attempt {Attempt}), will retry: {FullPath}",
+                                    currentRetry,
+                                    filePath
+                                );
+                            }
+                            else
+                            {
+                                _logger.Debug(
+                                    "File not ready (attempt {Attempt}), will retry: {FullPath}",
+                                    currentRetry,
+                                    filePath
+                                );
+                            }
                         }
                         else
                         {
-                            _logger.Warning(
-                                "File is still not ready after {Attempt} attempts, continuing to wait: {FullPath}",
-                                currentRetry,
-                                filePath
-                            );
+                            if (currentRetry % 5 == 0)
+                            {
+                                _logger.Warning(
+                                    "File is still not ready after {Attempt} attempts, continuing to wait: {FullPath}. " +
+                                    "We continue re-attempting to accommodate slow file transfers and ensure completeness.",
+                                    currentRetry,
+                                    filePath
+                                );
+                            }
+                            else
+                            {
+                                _logger.Debug(
+                                    "File is still not ready after {Attempt} attempts, continuing to wait: {FullPath}",
+                                    currentRetry,
+                                    filePath
+                                );
+                            }
                         }
                     }
                 }
@@ -166,67 +192,65 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
         }
     }
 
-private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
-{
-    if (!_fileStorage.Exists(filePath))
+    private async Task ProcessFileAsync(string filePath, CancellationToken cancellationToken)
     {
-        _fileQueue.TryRemove(filePath, out _);
-        _retryCounts.TryRemove(filePath, out _);
-        PersistState();
-        _logger.Warning("File no longer exists: {FullPath}", filePath);
-        return;
-    }
-
-    if (!IsFileReady(filePath))
-    {
-        _logger.Information("File is not ready for processing: {FullPath}", filePath);
-        return;
-    }
-
-    var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
-
-    if (FileExtensionsConsts.ModFileTypes.Contains(extension))
-    {
-        var movedFilePath = MoveFile(filePath);
-        _fileQueue.TryRemove(filePath, out _);
-        _retryCounts.TryRemove(filePath, out _);
-        PersistState();
-
-        var fileName = Path.GetFileName(movedFilePath);
-        FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
-    }
-    else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
-    {
-        // 1) Check if the archive actually contains mod files
-        if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
+        if (!_fileStorage.Exists(filePath))
         {
-            _logger.Information("Archive {FilePath} contains one or more mod files; proceeding with move and extraction.", filePath);
+            _fileQueue.TryRemove(filePath, out _);
+            _retryCounts.TryRemove(filePath, out _);
+            PersistState();
+            _logger.Warning("File no longer exists: {FullPath}", filePath);
+            return;
+        }
 
+        if (!IsFileReady(filePath))
+        {
+            _logger.Information("File is not ready for processing: {FullPath}", filePath);
+            return;
+        }
+
+        var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
+
+        if (FileExtensionsConsts.ModFileTypes.Contains(extension))
+        {
             var movedFilePath = MoveFile(filePath);
             _fileQueue.TryRemove(filePath, out _);
             _retryCounts.TryRemove(filePath, out _);
             PersistState();
 
-            await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
+            var fileName = Path.GetFileName(movedFilePath);
+            FileMoved?.Invoke(this, new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath)));
+        }
+        else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
+        {
+            if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
+            {
+                _logger.Information("Archive {FilePath} contains one or more mod files; proceeding with move and extraction.", filePath);
+
+                var movedFilePath = MoveFile(filePath);
+                _fileQueue.TryRemove(filePath, out _);
+                _retryCounts.TryRemove(filePath, out _);
+                PersistState();
+
+                await ProcessArchiveFileAsync(movedFilePath, cancellationToken);
+            }
+            else
+            {
+                _logger.Information("Archive {FilePath} does not contain any mod files; leaving file as-is.", filePath);
+
+                _fileQueue.TryRemove(filePath, out _);
+                _retryCounts.TryRemove(filePath, out _);
+                PersistState();
+            }
         }
         else
         {
-            _logger.Information("Archive {FilePath} does not contain any mod files; leaving file as-is.", filePath);
-
-            // Remove from queue but do not move or extract
+            _logger.Warning("Unhandled file type: {FullPath}", filePath);
             _fileQueue.TryRemove(filePath, out _);
             _retryCounts.TryRemove(filePath, out _);
             PersistState();
         }
     }
-    else
-    {
-        _logger.Warning("Unhandled file type: {FullPath}", filePath);
-        _fileQueue.TryRemove(filePath, out _);
-        _retryCounts.TryRemove(filePath, out _);
-        PersistState();
-    }
-}
 
     private async Task ProcessArchiveFileAsync(string archivePath, CancellationToken cancellationToken)
     {
@@ -287,7 +311,6 @@ private async Task ProcessFileAsync(string filePath, CancellationToken cancellat
                 }
             }
 
-            // Small delay to prevent immediate re-check in some scenarios
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
@@ -367,7 +390,6 @@ private async Task ProcessFileAsync(string filePath, CancellationToken cancellat
         }
         catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
         {
-            // If it's not recognized as a valid archive, treat it as having no mods
             _logger.Warning("File {FilePath} is not recognized as a valid archive.", filePath);
             return false;
         }
@@ -383,7 +405,6 @@ private async Task ProcessFileAsync(string filePath, CancellationToken cancellat
         }
         finally
         {
-            // Small delay can help prevent immediate re-check in certain conditions
             await Task.Delay(100, cancellationToken);
         }
     }
@@ -452,13 +473,16 @@ private async Task ProcessFileAsync(string filePath, CancellationToken cancellat
             var directory = Path.GetDirectoryName(filePath);
             if (!string.IsNullOrEmpty(directory))
             {
-                var baseFileName = Path.GetFileName(filePath);
-                var searchPattern = baseFileName + ".*.part";
-                var partFiles = Directory.GetFiles(directory, searchPattern, SearchOption.TopDirectoryOnly);
+                var fileNameNoExtension = Path.GetFileNameWithoutExtension(filePath);
+                var searchPattern = fileNameNoExtension + ".*.part";
 
+                var partFiles = Directory.GetFiles(directory, searchPattern, SearchOption.TopDirectoryOnly);
                 if (partFiles.Length > 0)
                 {
-                    _logger.Information("Detected one or more part files related to {FilePath}. The file is still downloading.", filePath);
+                    _logger.Debug(
+                        "Detected one or more part files related to {FilePath}. The file is still downloading.",
+                        filePath
+                    );
                     return false;
                 }
             }
