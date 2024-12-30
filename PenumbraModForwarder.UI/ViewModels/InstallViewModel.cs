@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO; // Import this namespace
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Threading.Tasks;
@@ -61,6 +61,8 @@ namespace PenumbraModForwarder.UI.ViewModels
 
                 _logger.Information($"Selected {Files.Count} files");
                 IsSelectionVisible = true;
+                // TODO: We need a way to notify users who have the application out of focus
+                // We can just use Impl win32 for this but not sure how to do it on Unix base systems
             });
         }
 
