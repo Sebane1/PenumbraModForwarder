@@ -15,11 +15,6 @@ public static class ConfigurationConsts
     public static readonly string ConfigurationFilePath = ConfigurationPath + @"\config-v3.json"; // Change this to @"\config.json" when ready for prod
     
     /// <summary>
-    /// The folder location for where extracted mods will go
-    /// </summary>
-    public static readonly string ExtractionPath = ConfigurationPath + @"\extraction\";
-    
-    /// <summary>
     /// The folder location where mods will be moved to after found inside the download folder
     /// This is so we can do nice cleanups and users will have a spot to find all mods that have been downloaded
     /// Maybe have a history.json as well?
@@ -27,12 +22,13 @@ public static class ConfigurationConsts
     public static readonly string ModsPath = ConfigurationPath + @"\mods\";
     
     /// <summary>
-    /// The folder location for where mods converted from EndWalker To DawnTrail will be located
-    /// </summary>
-    public static readonly string ConversionPath = ConfigurationPath + @"\conversion\";
-    
-    /// <summary>
     /// The folder location where logs will be found
     /// </summary>
     public static readonly string LogsPath = ConfigurationPath + @"\logs\";
+    
+    /// <summary>
+    /// The user should never be able to set what this is
+    /// This is where we cache the mods for the homeview
+    /// </summary>
+    internal static readonly string CachePath = ConfigurationPath + @"\cache\";
 }

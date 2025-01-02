@@ -36,7 +36,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
         get => _recentMods;
         set => this.RaiseAndSetIfChanged(ref _recentMods, value);
     }
-    
+
     private bool _isLoading;
     public bool IsLoading
     {
@@ -56,8 +56,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
 
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
-        
-        //TODO: This needs to be properly bound - try looking in Settings for examples
+
         OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
         {
             if (!string.IsNullOrEmpty(mod.ModUrl))
@@ -66,7 +65,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 {
                     Process.Start(new ProcessStartInfo(mod.ModUrl)
                     {
-                        UseShellExecute = true 
+                        UseShellExecute = true
                     });
                 }
                 catch (Exception ex)
@@ -77,12 +76,14 @@ public class HomeViewModel : ViewModelBase, IDisposable
         });
 
         // Retrieve and store the recent mods when HomeView starts
-        Observable.FromAsync(RefreshRecentModsAsync)
+        Observable
+            .FromAsync(RefreshRecentModsAsync)
             .Subscribe()
             .DisposeWith(_disposables);
 
         // Periodically load statistics every 20 seconds
-        Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
+        Observable
+            .Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
             .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
@@ -93,7 +94,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            // Indicate loading is in progress
             IsLoading = true;
 
             var mods = await _xmaModDisplay.GetRecentMods();
@@ -116,7 +116,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
         }
         finally
         {
-            // Stop loading indicator
             IsLoading = false;
         }
     }
@@ -137,7 +136,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
-            // Remove duplicates (Name/Value duplicates)
             var distinctByNameAndValue = newItems
                 .GroupBy(item => (item.Name, item.Value))
                 .Select(group => group.First())
@@ -149,7 +147,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 newItems.Add(i);
             }
 
-            // Only update InfoItems if something changed
             if (IsTheSame(InfoItems, newItems))
                 return;
 
@@ -171,7 +168,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
     {
         if (existing.Count != incoming.Count) return false;
 
-        // Compare each pair for a difference in Name or Value
         return !existing
             .Where((t, i) =>
                 !t.Name.Equals(incoming[i].Name, StringComparison.Ordinal)

@@ -1,4 +1,6 @@
 ﻿using HtmlAgilityPack;
+using MessagePack;
+using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using Serilog;
@@ -9,18 +11,37 @@ namespace PenumbraModForwarder.Common.Services;
 public class XmaModDisplay : IXmaModDisplay
 {
     private readonly ILogger _logger;
+    private static readonly string _cacheFilePath = Path.Combine(
+        ConfigurationConsts.CachePath, "xma_mods.cache");
+
+    private static readonly TimeSpan _cacheDuration = TimeSpan.FromHours(2);
 
     public XmaModDisplay()
     {
         _logger = Log.Logger.ForContext<XmaModDisplay>();
+        var directory = Path.GetDirectoryName(_cacheFilePath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
     }
 
     /// <summary>
-    /// Fetches and combines results from page 1 and page 2 of the "time_published" descending search.
+    /// Fetches and combines results from page 1 and page 2 of the "time_published" descending search,
+    /// returning a list of distinct mods by ImageUrl.
     /// </summary>
-    /// <returns>A list of XmaMods containing name, publisher, type, image URL, and link.</returns>
     public async Task<List<XmaMods>> GetRecentMods()
     {
+        var cachedData = LoadCacheFromFile();
+        if (cachedData != null && cachedData.ExpirationTime > DateTimeOffset.Now)
+        {
+            _logger.Debug("Returning persisted cache. Valid until {ExpirationTime}.",
+                cachedData.ExpirationTime.ToString("u"));
+            return cachedData.Mods;
+        }
+
+        _logger.Debug("Cache is empty or expired. Fetching new data...");
+
         var page1Results = await ParsePageAsync(1);
         var page2Results = await ParsePageAsync(2);
 
@@ -30,17 +51,24 @@ public class XmaModDisplay : IXmaModDisplay
             .Select(g => g.First())
             .ToList();
 
+        // Write cache to file with a new expiration time
+        var newCache = new XmaCacheData
+        {
+            Mods = distinctMods,
+            ExpirationTime = DateTimeOffset.Now.Add(_cacheDuration)
+        };
+        SaveCacheToFile(newCache);
+
         return distinctMods;
     }
 
     /// <summary>
-    /// Helper method to parse a single page of mod results.
+    /// Parses a single page of mod results.
     /// </summary>
-    /// <param name="pageNumber">The page number to retrieve (1-based).</param>
     private async Task<List<XmaMods>> ParsePageAsync(int pageNumber)
     {
-        //NOTE: This won't pick up NSFW mods (Should we be looking for them?)
-        string url = $"https://www.xivmodarchive.com/search?sortby=time_published&sortorder=desc&dt_compat=1&page={pageNumber}";
+        string url =
+            $"https://www.xivmodarchive.com/search?sortby=time_published&sortorder=desc&dt_compat=1&page={pageNumber}";
         const string domain = "https://www.xivmodarchive.com";
 
         using var client = new HttpClient();
@@ -63,7 +91,8 @@ public class XmaModDisplay : IXmaModDisplay
             var rawName = nameNode?.InnerText?.Trim() ?? "";
             var normalizedName = NormalizeModName(rawName);
 
-            var publisherNode = modCard.SelectSingleNode(".//p[contains(@class, 'card-text')]/a[@href]");
+            var publisherNode = modCard.SelectSingleNode(
+                ".//p[contains(@class, 'card-text')]/a[@href]");
             var publisherText = publisherNode?.InnerText?.Trim() ?? "";
 
             var typeNode = modCard.SelectNodes(".//code[contains(@class, 'text-light')]")
@@ -75,7 +104,7 @@ public class XmaModDisplay : IXmaModDisplay
 
             _logger.Debug("Mod parsed: Name={Name}, ImageUrl={ImageUrl}", normalizedName, imgUrl);
 
-            // Skip mods with missing or duplicate ImageUrl
+            // Skip mods with missing image URL
             if (string.IsNullOrWhiteSpace(imgUrl))
             {
                 _logger.Warning("Mod skipped due to missing image URL: Name={Name}", normalizedName);
@@ -99,22 +128,53 @@ public class XmaModDisplay : IXmaModDisplay
     /// Normalizes mod names to ensure compatibility with Avalonia.
     /// Decodes HTML-encoded characters, removes non-ASCII characters, trims whitespace, and replaces problematic characters.
     /// </summary>
-    /// <param name="name">The raw mod name.</param>
-    /// <returns>The normalized mod name.</returns>
     private string NormalizeModName(string name)
     {
-        // Decode HTML-encoded characters (e.g., &#39; becomes ')
         var decoded = WebUtility.HtmlDecode(name);
-
-        // Remove non-ASCII characters
         var asciiOnly = string.Concat(decoded.Where(c => c <= 127));
+        var sanitized = asciiOnly
+            .Replace("\n", " ")
+            .Replace("\r", " ")
+            .Replace("\t", " ");
 
-        // Replace problematic characters (e.g., tabs, newlines)
-        var sanitized = asciiOnly.Replace("\n", " ").Replace("\r", " ").Replace("\t", " ");
-
-        // Collapse multiple spaces into one
-        var normalized = System.Text.RegularExpressions.Regex.Replace(sanitized, "\\s+", " ").Trim();
+        var normalized = System.Text.RegularExpressions.Regex
+            .Replace(sanitized, "\\s+", " ")
+            .Trim();
 
         return normalized;
+    }
+
+    private XmaCacheData? LoadCacheFromFile()
+    {
+        try
+        {
+            if (!File.Exists(_cacheFilePath)) return null;
+
+            var bytes = File.ReadAllBytes(_cacheFilePath);
+            return MessagePackSerializer.Deserialize<XmaCacheData>(bytes);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to load cache from file.");
+            return null;
+        }
+    }
+
+    private void SaveCacheToFile(XmaCacheData data)
+    {
+        try
+        {
+            var bytes = MessagePackSerializer.Serialize(data);
+            File.WriteAllBytes(_cacheFilePath, bytes);
+
+            _logger.Debug(
+                "Cache saved to {FilePath}, valid until {ExpirationTime}.",
+                _cacheFilePath,
+                data.ExpirationTime.ToString("u"));
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to save cache to file.");
+        }
     }
 }
