@@ -1,0 +1,16 @@
+﻿name: CI
+
+on:
+    push:
+        branches: [ "main" ]
+    pull_request:
+
+jobs:
+    build:
+        runs-on: windows-latest
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v3
+
+            - name: Build everything
+              uses: ./.github/templates/BuildPlatforms

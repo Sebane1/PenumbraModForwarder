@@ -1,0 +1,130 @@
+﻿name: BuildPlatforms
+description: "Build Watchdog, UI, Console, and BackgroundWorker for Windows & Linux using .NET 9 self-contained without PDBs."
+
+runs:
+    using: composite
+    steps:
+        - name: Set up .NET 9
+          uses: actions/setup-dotnet@v3
+          with:
+              dotnet-version: "9.0.x"
+        
+        #────────────────────────────────────────────────────────
+        # Windows builds (all in one folder) without PDB
+        #────────────────────────────────────────────────────────
+        - name: Publish Watchdog (Windows)
+          run: |
+              dotnet publish PenumbraModForwarder.Watchdog \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r win-x64 \
+                -o ./publish/windows \
+                -f net9.0
+
+        - name: Publish UI (Windows)
+          run: |
+              dotnet publish PenumbraModForwarder.UI \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r win-x64 \
+                -o ./publish/windows \
+                -f net9.0
+
+        - name: Publish Console (Windows)
+          run: |
+              dotnet publish PenumbraModForwarder.ConsoleTooling \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r win-x64 \
+                -o ./publish/windows \
+                -f net9.0
+
+        - name: Publish BackgroundWorker (Windows)
+          run: |
+              dotnet publish PenumbraModForwarder.BackgroundWorker \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r win-x64 \
+                -o ./publish/windows \
+                -f net9.0
+        
+        #────────────────────────────────────────────────────────
+        # Linux builds (all in one folder) without PDB
+        #────────────────────────────────────────────────────────
+        - name: Publish Watchdog (Linux)
+          run: |
+              dotnet publish PenumbraModForwarder.Watchdog \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r linux-x64 \
+                -o ./publish/linux \
+                -f net9.0
+
+        - name: Publish UI (Linux)
+          run: |
+              dotnet publish PenumbraModForwarder.UI \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r linux-x64 \
+                -o ./publish/linux \
+                -f net9.0
+
+        - name: Publish Console (Linux)
+          run: |
+              dotnet publish PenumbraModForwarder.ConsoleTooling \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r linux-x64 \
+                -o ./publish/linux \
+                -f net9.0
+
+        - name: Publish BackgroundWorker (Linux)
+          run: |
+              dotnet publish PenumbraModForwarder.BackgroundWorker \
+                -c Release \
+                -p:PublishSingleFile=true \
+                --self-contained=true \
+                -p:DebugType=None -p:DebugSymbols=false \
+                -r linux-x64 \
+                -o ./publish/linux \
+                -f net9.0
+        
+        #────────────────────────────────────────────────────────
+        # Create separate zip files
+        #────────────────────────────────────────────────────────
+        - name: Create Windows zip
+          run: |
+              Compress-Archive -Path './publish/windows/*' -DestinationPath 'PenumbraModForwarder_Windows.zip'
+
+        - name: Create Linux zip
+          run: |
+              Compress-Archive -Path './publish/linux/*' -DestinationPath 'PenumbraModForwarder_Linux.zip'
+        
+        #────────────────────────────────────────────────────────
+        # Upload artifacts
+        #────────────────────────────────────────────────────────
+        - name: Upload Windows artifact
+          uses: actions/upload-artifact@v3
+          with:
+              name: PenumbraModForwarder_Windows
+              path: PenumbraModForwarder_Windows.zip
+
+        - name: Upload Linux artifact
+          uses: actions/upload-artifact@v3
+          with:
+              name: PenumbraModForwarder_Linux
+              path: PenumbraModForwarder_Linux.zip
