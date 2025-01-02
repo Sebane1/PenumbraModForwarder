@@ -57,6 +57,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
 
+        // TODO: this needs to be bound correctly
         OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
         {
             if (!string.IsNullOrEmpty(mod.ModUrl))
@@ -75,9 +76,10 @@ public class HomeViewModel : ViewModelBase, IDisposable
             }
         });
 
-        // Retrieve and store the recent mods when HomeView starts
         Observable
-            .FromAsync(RefreshRecentModsAsync)
+            .Timer(TimeSpan.Zero, TimeSpan.FromMinutes(30))
+            .SelectMany(_ => Observable.FromAsync(RefreshRecentModsAsync))
+            .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
 
