@@ -1,0 +1,44 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:PenumbraModForwarder.Common.Models;assembly=PenumbraModForwarder.Common"
+        xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia">
+  
+  <Style Selector="ItemsControl.modDisplay">
+    <Setter Property="VerticalAlignment" Value="Top"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="Margin" Value="20,20,0,0"/>
+    
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <StackPanel Spacing="10"/>
+      </ItemsPanelTemplate>
+    </Setter>
+    
+    <Setter Property="ItemTemplate">
+      <DataTemplate x:DataType="models:XmaMods">
+        <Border Margin="5"
+                Padding="10"
+                CornerRadius="4"
+                Background="{StaticResource BackgroundBrush}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <asyncImageLoader:AdvancedImage Source="{Binding ImageUrl}"
+                                            Width="120" Height="120"
+                                            Stretch="UniformToFill"/>
+            
+            <StackPanel Orientation="Vertical">
+              <TextBlock Text="{Binding Name}"
+                         Foreground="{StaticResource TextBrush}"
+                         FontWeight="Bold"
+                         FontSize="14"/>
+              <TextBlock Text="{Binding Publisher}"
+                         Foreground="{StaticResource PrimaryBrush}"
+                         FontStyle="Italic" />
+              <TextBlock Text="{Binding Type}"
+                         Foreground="{StaticResource AccentBrush}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </DataTemplate>
+    </Setter>
+  </Style>
+</Styles>

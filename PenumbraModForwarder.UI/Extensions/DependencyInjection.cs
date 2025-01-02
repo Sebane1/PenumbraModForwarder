@@ -43,6 +43,7 @@ public static class DependencyInjection
 
             return new FileDialogService(mainWindow);
         });
+        services.AddSingleton<IXmaModDisplay, XmaModDisplay>();
 
         // ViewModels
         services.AddTransient<MainWindowViewModel>();

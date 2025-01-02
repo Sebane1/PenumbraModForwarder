@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 using Serilog;
@@ -17,30 +20,89 @@ public class HomeViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogger _logger;
     private readonly IStatisticService _statisticService;
+    private readonly IXmaModDisplay _xmaModDisplay;
     private readonly CompositeDisposable _disposables = new();
 
     private ObservableCollection<InfoItem> _infoItems;
-
     public ObservableCollection<InfoItem> InfoItems
     {
         get => _infoItems;
         set => this.RaiseAndSetIfChanged(ref _infoItems, value);
     }
 
-    public HomeViewModel(IStatisticService statisticService)
+    private ObservableCollection<XmaMods> _recentMods;
+    public ObservableCollection<XmaMods> RecentMods
+    {
+        get => _recentMods;
+        set => this.RaiseAndSetIfChanged(ref _recentMods, value);
+    }
+
+    public ReactiveCommand<XmaMods, Unit> OpenModLinkCommand { get; }
+
+    public HomeViewModel(
+        IStatisticService statisticService,
+        IXmaModDisplay xmaModDisplay)
     {
         _logger = Log.ForContext<HomeViewModel>();
         _statisticService = statisticService;
+        _xmaModDisplay = xmaModDisplay;
 
         InfoItems = new ObservableCollection<InfoItem>();
+        RecentMods = new ObservableCollection<XmaMods>();
+        
+        OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
+        {
+            if (!string.IsNullOrEmpty(mod.ModUrl))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo(mod.ModUrl)
+                    {
+                        UseShellExecute = true 
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to open the browser for: {ModUrl}", mod.ModUrl);
+                }
+            }
+        });
 
-        // TODO: Make this update in real time (Maybe Websocket firing an event - similar to how we do the file picker)
+        // Retrieve and store the recent mods when HomeView starts
+        Observable.FromAsync(RefreshRecentModsAsync)
+            .Subscribe()
+            .DisposeWith(_disposables);
+
+        // Periodically load statistics every 20 seconds
         Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
             .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
     }
+
+    private async Task RefreshRecentModsAsync()
+    {
+        try
+        {
+            var mods = await _xmaModDisplay.GetRecentMods();
+            
+            var distinctMods = mods.GroupBy(mod => mod.ModUrl).Select(g => g.First()).ToList();
+            
+            RecentMods.Clear();
+            foreach (var mod in distinctMods)
+            {
+                RecentMods.Add(mod);
+            }
+
+            _logger.Information("Successfully refreshed recent mods.");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Unable to retrieve or log recent mods");
+        }
+    }
+
 
     private async Task LoadStatisticsAsync()
     {
@@ -58,6 +120,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
+            // Remove duplicates (Name/Value duplicates)
             var distinctByNameAndValue = newItems
                 .GroupBy(item => (item.Name, item.Value))
                 .Select(group => group.First())
@@ -69,10 +132,9 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 newItems.Add(i);
             }
 
+            // Only update InfoItems if something changed
             if (IsTheSame(InfoItems, newItems))
-            {
                 return;
-            }
 
             InfoItems.Clear();
             foreach (var item in newItems)
@@ -90,11 +152,14 @@ public class HomeViewModel : ViewModelBase, IDisposable
         ObservableCollection<InfoItem> existing,
         ObservableCollection<InfoItem> incoming)
     {
-        if (existing.Count != incoming.Count)
-            return false;
+        if (existing.Count != incoming.Count) return false;
 
         // Compare each pair for a difference in Name or Value
-        return !existing.Where((t, i) => !t.Name.Equals(incoming[i].Name, StringComparison.Ordinal) || !t.Value.Equals(incoming[i].Value, StringComparison.Ordinal)).Any();
+        return !existing
+            .Where((t, i) =>
+                !t.Name.Equals(incoming[i].Name, StringComparison.Ordinal)
+                || !t.Value.Equals(incoming[i].Value, StringComparison.Ordinal))
+            .Any();
     }
 
     public void Dispose()

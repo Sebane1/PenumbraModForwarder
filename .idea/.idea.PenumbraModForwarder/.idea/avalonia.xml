@@ -13,9 +13,11 @@
         <entry key="PenumbraModForwarder.UI/Styles/Elements/Checkbox.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/InfoBox.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/InfoDisplay.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/Elements/ModDisplay.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/ModList.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/Navigation.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/Notification.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.UI/Styles/Elements/ScrollingModView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/SettingsStyles.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Elements/TitleBar.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Styles/Icons.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
