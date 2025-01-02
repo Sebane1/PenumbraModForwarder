@@ -73,7 +73,12 @@ public class MainWindowViewModel : ViewModelBase
             new MenuItem(
                 "Mods",
                 app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider))
+                ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider)),
+            
+            new MenuItem(
+                "Download",
+                app?.Resources["DownloadIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
+                ActivatorUtilities.CreateInstance<DownloadViewModel>(_serviceProvider))
         };
 
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
