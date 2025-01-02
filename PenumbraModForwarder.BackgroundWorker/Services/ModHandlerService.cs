@@ -1,6 +1,6 @@
-﻿using PenumbraModForwarder.BackgroundWorker.Enums;
-using PenumbraModForwarder.BackgroundWorker.Interfaces;
+﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.Common.Consts;
+using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using Serilog;

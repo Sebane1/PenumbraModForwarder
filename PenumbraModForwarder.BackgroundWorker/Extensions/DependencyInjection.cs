@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using PenumbraModForwarder.BackgroundWorker.Interfaces;
+﻿using PenumbraModForwarder.BackgroundWorker.Interfaces;
 using PenumbraModForwarder.BackgroundWorker.Services;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Extensions;

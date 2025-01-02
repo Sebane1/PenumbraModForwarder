@@ -27,5 +27,6 @@
 
     <ItemGroup>
       <Folder Include="Consts\" />
+      <Folder Include="Enums\" />
     </ItemGroup>
 </Project>
