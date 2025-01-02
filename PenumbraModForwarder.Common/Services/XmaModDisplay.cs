@@ -39,6 +39,7 @@ public class XmaModDisplay : IXmaModDisplay
     /// <param name="pageNumber">The page number to retrieve (1-based).</param>
     private async Task<List<XmaMods>> ParsePageAsync(int pageNumber)
     {
+        //NOTE: This won't pick up NSFW mods (Should we be looking for them?)
         string url = $"https://www.xivmodarchive.com/search?sortby=time_published&sortorder=desc&dt_compat=1&page={pageNumber}";
         const string domain = "https://www.xivmodarchive.com";
 
