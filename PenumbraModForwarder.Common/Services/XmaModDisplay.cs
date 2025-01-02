@@ -12,7 +12,10 @@ public class XmaModDisplay : IXmaModDisplay
 {
     private readonly ILogger _logger;
     private static readonly string _cacheFilePath = Path.Combine(
-        ConfigurationConsts.CachePath, "xma_mods.cache");
+        ConfigurationConsts.CachePath,
+        "xivmodarchive",
+        "mods.cache"
+    );
 
     private static readonly TimeSpan _cacheDuration = TimeSpan.FromHours(2);
 
