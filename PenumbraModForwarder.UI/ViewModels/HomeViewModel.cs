@@ -36,6 +36,13 @@ public class HomeViewModel : ViewModelBase, IDisposable
         get => _recentMods;
         set => this.RaiseAndSetIfChanged(ref _recentMods, value);
     }
+    
+    private bool _isLoading;
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => this.RaiseAndSetIfChanged(ref _isLoading, value);
+    }
 
     public ReactiveCommand<XmaMods, Unit> OpenModLinkCommand { get; }
 
@@ -50,6 +57,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
         
+        //TODO: This needs to be properly bound - try looking in Settings for examples
         OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
         {
             if (!string.IsNullOrEmpty(mod.ModUrl))
@@ -85,10 +93,15 @@ public class HomeViewModel : ViewModelBase, IDisposable
     {
         try
         {
+            // Indicate loading is in progress
+            IsLoading = true;
+
             var mods = await _xmaModDisplay.GetRecentMods();
-            
-            var distinctMods = mods.GroupBy(mod => mod.ModUrl).Select(g => g.First()).ToList();
-            
+            var distinctMods = mods
+                .GroupBy(mod => mod.ModUrl)
+                .Select(g => g.First())
+                .ToList();
+
             RecentMods.Clear();
             foreach (var mod in distinctMods)
             {
@@ -101,8 +114,12 @@ public class HomeViewModel : ViewModelBase, IDisposable
         {
             _logger.Error(ex, "Unable to retrieve or log recent mods");
         }
+        finally
+        {
+            // Stop loading indicator
+            IsLoading = false;
+        }
     }
-
 
     private async Task LoadStatisticsAsync()
     {

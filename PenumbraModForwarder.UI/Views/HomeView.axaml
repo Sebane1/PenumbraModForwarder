@@ -9,28 +9,33 @@
     mc:Ignorable="d"
     d:DesignWidth="800"
     d:DesignHeight="450">
-    
-    
 
     <Design.DataContext>
         <viewModels:HomeViewModel />
     </Design.DataContext>
 
-    <!-- Grid with three columns: 
-         Column 0 = InfoItems, 
-         Column 1 = spacer (*), 
-         Column 2 = RecentMods -->
     <Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
-
         <!-- LEFT COLUMN: Info Items -->
         <ScrollViewer Grid.Column="0" Margin="5">
             <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}"/>
         </ScrollViewer>
 
+        <!-- (Empty Middle Column) -->
+
         <!-- RIGHT COLUMN: Recent Mods -->
         <ScrollViewer Grid.Column="2" Margin="5">
-            <ItemsControl Classes="modDisplay" ItemsSource="{Binding RecentMods}">
-            </ItemsControl>
+            <StackPanel>
+                <!-- Loading indicator -->
+                <TextBlock
+                    Text="Loading..."
+                    FontSize="18"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding IsLoading}"/>
+
+                <!-- Recent Mods display -->
+                <ItemsControl Classes="modDisplay" ItemsSource="{Binding RecentMods}"/>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>
