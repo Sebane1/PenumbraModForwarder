@@ -261,7 +261,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             using (var archiveFile = new ArchiveFile(archivePath))
             {
                 var skipPreDt = (bool)_configurationService.ReturnConfigValue(config => config.BackgroundWorker.SkipPreDt);
-                var baseDirectory = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
+                var archiveDirectory = Path.GetDirectoryName(archivePath) ?? string.Empty;
 
                 var modEntries = archiveFile.Entries.Where(entry =>
                 {
@@ -275,13 +275,13 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     {
                         var entryPath = entry.FileName;
                         var directories = entryPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-
                         if (directories.Any(dir => PreDtRegex.IsMatch(dir)))
                         {
                             _logger.Information("Skipping file in Pre-Dt folder: {FileName}", entry.FileName);
                             return false;
                         }
                     }
+
                     return true;
                 }).ToList();
 
@@ -292,12 +292,12 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     foreach (var entry in modEntries)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-
-                        var destinationPath = Path.Combine(baseDirectory, entry.FileName);
+                        
+                        var destinationPath = Path.Combine(archiveDirectory, entry.FileName);
                         var destinationDir = Path.GetDirectoryName(destinationPath);
                         _fileStorage.CreateDirectory(destinationDir);
 
-                        _logger.Information("Extracting mod file: {FileName} to {DestinationPath}", entry.FileName, destinationPath);
+                        _logger.Information("Extracting mod file: {EntryFile} to {DestPath}", entry.FileName, destinationPath);
 
                         entry.Extract(destinationPath);
                         extractedFiles.Add(destinationPath);
