@@ -65,9 +65,12 @@ class Program
         var showWindow =
             (bool) _configurationService.ReturnConfigValue(config => config.AdvancedOptions.ShowWatchDogWindow);
 
-        if (showWindow) 
+        if (showWindow)
+        {
+            _logger.Information("Showing watchdog window");
             return;
-
+        }
+        
         var handle = DllImports.GetConsoleWindow();
         if (handle == IntPtr.Zero) 
             return;

@@ -25,7 +25,9 @@ public class WebSocketClient : IWebSocketClient, IDisposable
     private readonly string[] _endpoints = { "/status", "/currentTask", "/config", "/install" };
     private readonly ILogger _logger;
     private bool _isReconnecting;
-    private int _retryCount = 0;
+    private int _retryCount;
+    
+    private readonly string _clientId;
 
     public event EventHandler<FileSelectionRequestedEventArgs> FileSelectionRequested;
 
@@ -35,6 +37,9 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         _notificationService = notificationService;
         _configurationService = configurationService;
         _logger = Log.ForContext<WebSocketClient>();
+
+        // Assign a unique ID to help identify outgoing messages
+        _clientId = Guid.NewGuid().ToString("N");
     }
 
     public async Task ConnectAsync(int port)
@@ -85,7 +90,6 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                         _cts.Token
                     );
 
-                    // Ensure we receive from all endpoints, including "/config"
                     _ = ReceiveMessagesAsync(webSocket, endpoint);
 
                     if (_isReconnecting)
@@ -106,13 +110,15 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                     );
                     _isReconnecting = true;
                 }
-                throw; // Propagate to main loop for retry
+                throw;
             }
         }
     }
 
     public async Task SendMessageAsync(WebSocketMessage message, string endpoint)
     {
+        message.ClientId = _clientId;
+
         if (_webSockets.TryGetValue(endpoint, out var webSocket))
         {
             if (webSocket.State == WebSocketState.Open)
@@ -180,6 +186,13 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                     var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
 
+                    // Ignore messages that match our own client ID
+                    if (message?.ClientId == _clientId)
+                    {
+                        _logger.Debug("Ignored message from this client: {MessageJson}", messageJson);
+                        continue;
+                    }
+
                     _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
 
                     switch (endpoint)
@@ -222,13 +235,15 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             _logger.Information("Received 'select_files' message: {Message}", message.Message);
 
             var fileList = JsonConvert.DeserializeObject<List<string>>(message.Message);
-
-            // Raise event to notify UI
             FileSelectionRequested?.Invoke(this, new FileSelectionRequestedEventArgs(fileList, message.TaskId));
         }
         else
         {
-            _logger.Warning("Unhandled message type or status on /install endpoint: Type={Type}, Status={Status}", message.Type, message.Status);
+            _logger.Warning(
+                "Unhandled message on /install endpoint: Type={Type}, Status={Status}",
+                message.Type,
+                message.Status
+            );
         }
     }
 
@@ -237,7 +252,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         if (message.Type == CustomWebSocketMessageType.Status && message.Status == "config_update")
         {
             _logger.Information("Received config update: {Data}", message.Message);
-                
+
             try
             {
                 var updateData = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.Message);
@@ -247,7 +262,6 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                 {
                     var propertyPath = updateData["PropertyPath"]?.ToString();
                     var newValue = updateData["Value"];
-                        
                     _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
                 }
                 else
@@ -262,7 +276,11 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         }
         else
         {
-            _logger.Warning("Unhandled message type or status on /config endpoint: Type={Type}, Status={Status}", message.Type, message.Status);
+            _logger.Warning(
+                "Unhandled message on /config endpoint: Type={Type}, Status={Status}",
+                message.Type,
+                message.Status
+            );
         }
     }
 

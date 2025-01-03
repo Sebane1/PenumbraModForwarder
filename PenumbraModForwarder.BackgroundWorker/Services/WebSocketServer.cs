@@ -25,6 +25,8 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     private Task _listenerTask;
     private bool _isStarted;
     private int _port;
+    
+    private readonly string _serverId;
 
     public event EventHandler<WebSocketMessageEventArgs> MessageReceived;
 
@@ -35,6 +37,9 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         _endpoints = new ConcurrentDictionary<string, ConcurrentDictionary<WebSocket, ConnectionInfo>>();
         _cancellationTokenSource = new CancellationTokenSource();
         _httpListener = new HttpListener();
+
+        // Assign a unique ID to distinguish messages sent by this WebSocketServer
+        _serverId = Guid.NewGuid().ToString("N");
 
         _configurationService.ConfigurationChanged += OnConfigurationChanged;
     }
@@ -124,72 +129,77 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         }
     }
 
-private async Task ReceiveMessagesAsync(WebSocket webSocket, string endpoint)
-{
-    var buffer = new byte[1024 * 4];
-
-    while (webSocket.State == WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested)
+    private async Task ReceiveMessagesAsync(WebSocket webSocket, string endpoint)
     {
-        WebSocketReceiveResult result;
-        try
-        {
-            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
-        }
-        catch (WebSocketException ex) when (ex.InnerException is HttpListenerException {ErrorCode: 995})
-        {
-            // 995 indicates an I/O abort (often triggered by shutdown or a closed connection).
-            _logger.Debug("WebSocket aborted by HttpListener (995) for endpoint {Endpoint}", endpoint);
-            break;
-        }
-        catch (OperationCanceledException)
-        {
-            // Graceful shutdown or cancellation
-            break;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
-            break;
-        }
+        var buffer = new byte[1024 * 4];
 
-        if (result.MessageType == WebSocketMessageType.Text)
+        while (webSocket.State == WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested)
         {
-            var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            _logger.Information("Received message from {Endpoint}: {MessageJson}", endpoint, messageJson);
-
-            var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
-            if (message == null)
+            WebSocketReceiveResult result;
+            try
             {
-                _logger.Warning("Unable to deserialize WebSocketMessage from {Endpoint}", endpoint);
-                continue;
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+            }
+            catch (WebSocketException ex) when (ex.InnerException is HttpListenerException { ErrorCode: 995 })
+            {
+                _logger.Debug("WebSocket aborted by HttpListener (995) for endpoint {Endpoint}", endpoint);
+                break;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+                break;
             }
 
-            if (message.Type?.Equals("configuration_change", StringComparison.OrdinalIgnoreCase) == true)
+            if (result.MessageType == WebSocketMessageType.Text)
             {
-                _logger.Debug("Handling message type 'configuration_change' from {Endpoint}", endpoint);
-                HandleConfigurationChange(message);
-            }
-            else if (message.Type == CustomWebSocketMessageType.Status && message.Status == "config_update")
-            {
-                HandleConfigUpdateMessage(message);
-            }
-            else
-            {
-                MessageReceived?.Invoke(this, new WebSocketMessageEventArgs
+                var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                _logger.Information("Received message from {Endpoint}: {MessageJson}", endpoint, messageJson);
+
+                var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
+                if (message == null)
                 {
-                    Endpoint = endpoint,
-                    Message = message
-                });
+                    _logger.Warning("Unable to deserialize WebSocketMessage from {Endpoint}", endpoint);
+                    continue;
+                }
+
+                // If this message was sent by the server itself, ignore it
+                if (message.ClientId == _serverId)
+                {
+                    _logger.Debug("Ignoring message from this server: {MessageJson}", messageJson);
+                    continue;
+                }
+
+                if (message.Type?.Equals("configuration_change", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    _logger.Debug("Handling message type 'configuration_change' from {Endpoint}", endpoint);
+                    HandleConfigurationChange(message);
+                }
+                else if (message.Type == CustomWebSocketMessageType.Status && message.Status == "config_update")
+                {
+                    HandleConfigUpdateMessage(message);
+                }
+                else
+                {
+                    MessageReceived?.Invoke(this, new WebSocketMessageEventArgs
+                    {
+                        Endpoint = endpoint,
+                        Message = message
+                    });
+                }
             }
-        }
-        else if (result.MessageType == WebSocketMessageType.Close)
-        {
-            await CloseWebSocketAsync(webSocket);
-            break;
+            else if (result.MessageType == WebSocketMessageType.Close)
+            {
+                await CloseWebSocketAsync(webSocket);
+                break;
+            }
         }
     }
-}
-        
+
     private void HandleConfigurationChange(WebSocketMessage message)
     {
         _logger.Debug("Message indicates a configuration change: {Message}", message.Message);
@@ -268,6 +278,8 @@ private async Task ReceiveMessagesAsync(WebSocket webSocket, string endpoint)
 
     public async Task BroadcastToEndpointAsync(string endpoint, WebSocketMessage message)
     {
+        message.ClientId = _serverId;
+
         if (!_endpoints.TryGetValue(endpoint, out var connections) || !connections.Any())
         {
             _logger.Debug("No clients connected to endpoint {Endpoint}, message not sent", endpoint);
@@ -323,19 +335,18 @@ private async Task ReceiveMessagesAsync(WebSocket webSocket, string endpoint)
     {
         try
         {
-            // Stop listening before canceling operations
             if (_httpListener.IsListening)
             {
                 _httpListener.Stop();
             }
-        
+
             _isStarted = false;
             _cancellationTokenSource.Cancel();
 
             var closeTasks = _endpoints
                 .SelectMany(ep => ep.Value.Select(async connection => await CloseWebSocketAsync(connection.Key)))
                 .ToList();
-            
+
             Task.WhenAll(closeTasks).Wait(TimeSpan.FromSeconds(5));
             _httpListener.Close();
         }

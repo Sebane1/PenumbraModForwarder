@@ -34,6 +34,9 @@ public class WebSocketMessage
     
     [JsonProperty("message")]
     public string Message { get; set; }
+    
+    [JsonProperty("client_id")]
+    public string ClientId { get; set; }
 
     public static WebSocketMessage CreateProgress(string taskId, int progress, string message)
     {
