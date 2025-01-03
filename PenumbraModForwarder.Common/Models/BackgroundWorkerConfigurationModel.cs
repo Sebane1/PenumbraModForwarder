@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using PenumbraModForwarder.Common.Attributes;
-using PenumbraModForwarder.Common.Helpers;
 
 namespace PenumbraModForwarder.Common.Models;
 
@@ -14,9 +13,8 @@ public class BackgroundWorkerConfigurationModel
 
     [Display(Name = "Mod Folder Path", GroupName = "Pathing", Description = "Where to move the mods to for processing")]
     public string ModFolderPath { get; set; } = Consts.ConfigurationConsts.ModsPath;
-    
-    [ExcludeFromSettingsUI]
-    private List<string> _downloadPath = [DefaultDownloadPath.GetDefaultDownloadPath()];
+
+    [ExcludeFromSettingsUI] private List<string> _downloadPath = [];
     
     [Display(Name = "Download Path", GroupName = "Pathing", Description = "The path to check for modded files")]
     public List<string> DownloadPath
