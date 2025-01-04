@@ -57,11 +57,14 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
                     EnableRaisingEvents = true,
                 };
-
+                
                 foreach (var extension in FileExtensionsConsts.AllowedExtensions)
                 {
                     watcher.Filters.Add($"*{extension}");
                 }
+
+                // Also watch Opera's partial extension so we catch creation of *.opdownload
+                watcher.Filters.Add("*.opdownload");
 
                 watcher.Created += OnCreated;
                 watcher.Renamed += OnRenamed;
@@ -101,6 +104,18 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 _retryCounts[e.FullPath] = oldCount;
             }
         }
+        else
+        {
+            // Fallback: If the new file extension is an allowed extension, add it to the queue
+            // Why must you forsake me Opera GX with your crappy download system
+            var extension = Path.GetExtension(e.FullPath)?.ToLowerInvariant();
+            if (FileExtensionsConsts.AllowedExtensions.Contains(extension))
+            {
+                _fileQueue.TryAdd(e.FullPath, DateTime.UtcNow);
+                _retryCounts[e.FullPath] = 0;
+                _logger.Information("File added to queue after rename (unrecognized old path): {FullPath}", e.FullPath);
+            }
+        }
     }
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
@@ -134,9 +149,6 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                     {
                         var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, old) => old + 1);
 
-                        // A short explanation of why we do so many attempts:
-                        // We keep re-checking this file to ensure it's fully downloaded.
-                        // This allows large or slow downloads to complete before we move or extract.
                         if (currentRetry < RetryThreshold)
                         {
                             if (currentRetry <= 3)
