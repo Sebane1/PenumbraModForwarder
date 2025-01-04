@@ -48,9 +48,10 @@ public static class DependencyInjection
         // ViewModels
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<ErrorWindowViewModel>();
-        services.AddTransient<SettingsViewModel>();
-        services.AddTransient<ModsViewModel>();
-        services.AddTransient<HomeViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<ModsViewModel>();
+        services.AddSingleton<HomeViewModel>();
+        services.AddSingleton<DownloadViewModel>();
         
         return services;
     }

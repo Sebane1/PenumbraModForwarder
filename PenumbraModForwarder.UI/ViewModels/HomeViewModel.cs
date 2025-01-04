@@ -82,10 +82,11 @@ public class HomeViewModel : ViewModelBase, IDisposable
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
+        
+        _ = LoadStatisticsAsync();
 
-        // Periodically load statistics every 20 seconds
         Observable
-            .Timer(TimeSpan.Zero, TimeSpan.FromSeconds(20))
+            .Timer(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20))
             .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
@@ -122,6 +123,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
         }
     }
 
+    // TODO: Convert this to an event so we don't need to load every 20 seconds
     private async Task LoadStatisticsAsync()
     {
         try

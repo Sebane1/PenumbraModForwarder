@@ -63,23 +63,29 @@ public class MainWindowViewModel : ViewModelBase
         _logger = Log.ForContext<MainWindowViewModel>();
 
         var app = Application.Current;
+        
+        var homeViewModel = _serviceProvider.GetRequiredService<HomeViewModel>();
+        var modsViewModel = _serviceProvider.GetRequiredService<ModsViewModel>();
+        var downloadViewModel = _serviceProvider.GetRequiredService<DownloadViewModel>();
 
-        MenuItems = new ObservableCollection<MenuItem>
-        {
+
+        MenuItems =
+        [
             new MenuItem(
                 "Home",
                 app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<HomeViewModel>(_serviceProvider)),
+                homeViewModel),
+
             new MenuItem(
                 "Mods",
                 app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<ModsViewModel>(_serviceProvider)),
-            
+                modsViewModel),
+
             new MenuItem(
                 "Download",
                 app?.Resources["DownloadIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                ActivatorUtilities.CreateInstance<DownloadViewModel>(_serviceProvider))
-        };
+                downloadViewModel)
+        ];
 
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
         {
