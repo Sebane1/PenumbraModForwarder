@@ -17,7 +17,7 @@ public class XmaModDisplay : IXmaModDisplay
         "mods.cache"
     );
 
-    private static readonly TimeSpan _cacheDuration = TimeSpan.FromHours(2);
+    private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(30);
 
     public XmaModDisplay()
     {

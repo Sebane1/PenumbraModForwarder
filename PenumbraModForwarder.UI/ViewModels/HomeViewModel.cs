@@ -77,7 +77,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
         });
 
         Observable
-            .Timer(TimeSpan.Zero, TimeSpan.FromMinutes(30))
+            .Timer(TimeSpan.Zero, TimeSpan.FromMinutes(5))
             .SelectMany(_ => Observable.FromAsync(RefreshRecentModsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
