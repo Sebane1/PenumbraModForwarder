@@ -6,205 +6,201 @@ using PenumbraModForwarder.Statistics.Models;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
-namespace PenumbraModForwarder.Statistics.Services
+namespace PenumbraModForwarder.Statistics.Services;
+
+public class StatisticService : IStatisticService
 {
-    public class StatisticService : IStatisticService
-    {
-        private readonly string _databasePath;
-        private readonly IFileStorage _fileStorage;
-        private readonly ILogger _logger;
-        private static readonly object _dbLock = new object();
-
-        public StatisticService(IFileStorage fileStorage, string? databasePath = null)
-        {
-            _fileStorage = fileStorage;
-            _databasePath = databasePath ?? $@"{Common.Consts.ConfigurationConsts.ConfigurationPath}\userstats.db";
-            _logger = Log.ForContext<StatisticService>();
-            EnsureDatabaseExists();
-        }
-
-        public Task IncrementStatAsync(Stat stat)
-        {
-            try
-            {
-                lock (_dbLock)
-                {
-                    using (var database = new LiteDatabase(_databasePath))
-                    {
-                        var stats = database.GetCollection<StatRecord>("stats");
-                        var statRecord = stats.FindOne(x => x.Name == stat.ToString());
-
-                        if (statRecord == null)
-                        {
-                            statRecord = new StatRecord
-                            {
-                                Name = stat.ToString(),
-                                Count = 1
-                            };
-                            stats.Insert(statRecord);
-                            _logger.Information("Inserted new record for statistic `{Stat}`.", stat);
-                        }
-                        else
-                        {
-                            statRecord.Count += 1;
-                            stats.Update(statRecord);
-                            _logger.Information("Updated record for statistic `{Stat}` to count {Count}.", stat, statRecord.Count);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to increment statistic `{Stat}`.", stat);
-            }
-            return Task.CompletedTask;
-        }
-
-        public Task<int> GetStatCountAsync(Stat stat)
-        {
-            try
-            {
-                lock (_dbLock)
-                {
-                    using (var database = new LiteDatabase(_databasePath))
-                    {
-                        var stats = database.GetCollection<StatRecord>("stats");
-                        var statRecord = stats.FindOne(x => x.Name == stat.ToString());
-
-                        if (statRecord == null)
-                        {
-                            _logger.Warning("No records found for statistic `{Stat}`.", stat);
-                            return Task.FromResult(0);
-                        }
-
-                        _logger.Information("Retrieved count for statistic `{Stat}`: {Count}", stat, statRecord.Count);
-                        return Task.FromResult(statRecord.Count);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to retrieve statistic `{Stat}`.", stat);
-                return Task.FromResult(0);
-            }
-        }
-
-        public async Task RecordModInstallationAsync(string modName)
-        {
-            try
-            {
-                lock (_dbLock)
-                {
-                    using (var database = new LiteDatabase(_databasePath))
-                    {
-                        var modInstallations = database.GetCollection<ModInstallationRecord>("mod_installations");
-                        var installationRecord = new ModInstallationRecord
-                        {
-                            ModName = modName,
-                            InstallationTime = DateTime.UtcNow
-                        };
-                        modInstallations.Insert(installationRecord);
-                    }
-                }
-                await IncrementStatAsync(Stat.ModsInstalled);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to record installation of mod `{ModName}`.", modName);
-            }
-        }
-
-        public Task<ModInstallationRecord?> GetMostRecentModInstallationAsync()
-        {
-            try
-            {
-                lock (_dbLock)
-                {
-                    using (var database = new LiteDatabase(_databasePath))
-                    {
-                        var modInstallations = database.GetCollection<ModInstallationRecord>("mod_installations");
-                        var mostRecentInstallation = modInstallations
-                            .FindAll()
-                            .OrderByDescending(m => m.InstallationTime)
-                            .FirstOrDefault();
-
-                        if (mostRecentInstallation != null)
-                        {
-                            _logger.Information("Retrieved most recent mod installation: `{ModName}` at {InstallationTime}.",
-                                mostRecentInstallation.ModName, mostRecentInstallation.InstallationTime);
-                            return Task.FromResult<ModInstallationRecord?>(mostRecentInstallation);
-                        }
-                        else
-                        {
-                            _logger.Warning("No mod installations found.");
-                            return Task.FromResult<ModInstallationRecord?>(null);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to retrieve the most recent mod installation.");
-                return Task.FromResult<ModInstallationRecord?>(null);
-            }
-        }
-
-        public Task<int> GetUniqueModsInstalledCountAsync()
-        {
-            try
-            {
-                lock (_dbLock)
-                {
-                    using (var database = new LiteDatabase(_databasePath))
-                    {
-                        var modInstallations = database.GetCollection<ModInstallationRecord>("mod_installations");
-                        var uniqueModNames = modInstallations
-                            .FindAll()
-                            .Select(x => x.ModName)
-                            .Distinct();
-
-                        var uniqueModCount = uniqueModNames.Count();
-
-                        _logger.Information("Retrieved count of unique mods installed: {Count}", uniqueModCount);
-                        return Task.FromResult(uniqueModCount);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to retrieve count of unique mods installed.");
-                return Task.FromResult(0);
-            }
-        }
+    private readonly string _databasePath;
+    private readonly IFileStorage _fileStorage;
+    private readonly ILogger _logger;
+    private static readonly object _dbLock = new object();
         
-        public Task<List<ModInstallationRecord>> GetAllInstalledModsAsync()
+    public StatisticService(IFileStorage fileStorage, string? databasePath = null)
+    {
+        _fileStorage = fileStorage;
+        _databasePath = databasePath ?? $@"{Common.Consts.ConfigurationConsts.ConfigurationPath}\userstats.db";
+        _logger = Log.ForContext<StatisticService>();
+        EnsureDatabaseExists();
+    }
+    
+    private TResult ExecuteDatabaseAction<TResult>(Func<LiteDatabase, TResult> action, string errorContext, TResult defaultValue = default)
+    {
+        try
         {
-            try
+            lock (_dbLock)
             {
-                lock (_dbLock)
-                {
-                    using var database = new LiteDatabase(_databasePath);
-                    var modInstallations = database.GetCollection<ModInstallationRecord>("mod_installations");
-                    var allMods = modInstallations.FindAll().OrderByDescending(x => x.InstallationTime).ToList();
-
-                    _logger.Information("Retrieved {Count} mod installations from the database.", allMods.Count);
-
-                    return Task.FromResult(allMods);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to retrieve all installed mods.");
-                return Task.FromResult(new List<ModInstallationRecord>());
+                using var database = new LiteDatabase(_databasePath);
+                return action(database);
             }
         }
-
-        private void EnsureDatabaseExists()
+        catch (Exception ex)
         {
-            if (!_fileStorage.Exists(_databasePath))
+            _logger.Error(ex, errorContext);
+            return defaultValue!;
+        }
+    }
+    
+    private void ExecuteDatabaseAction(Action<LiteDatabase> action, string errorContext)
+    {
+        try
+        {
+            lock (_dbLock)
             {
-                _logger.Information("Database will be created at `{DatabasePath}`.", _databasePath);
+                using var database = new LiteDatabase(_databasePath);
+                action(database);
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, errorContext);
+        }
+    }
+
+    public Task IncrementStatAsync(Stat stat)
+    {
+        ExecuteDatabaseAction(db =>
+            {
+                var stats = db.GetCollection<StatRecord>("stats");
+                var statRecord = stats.FindOne(x => x.Name == stat.ToString());
+
+                if (statRecord == null)
+                {
+                    statRecord = new StatRecord
+                    {
+                        Name = stat.ToString(),
+                        Count = 1
+                    };
+                    stats.Insert(statRecord);
+                    _logger.Information("Inserted new record for statistic `{Stat}`.", stat);
+                }
+                else
+                {
+                    statRecord.Count += 1;
+                    stats.Update(statRecord);
+                    _logger.Information("Updated record for statistic `{Stat}` to count {Count}.", stat, statRecord.Count);
+                }
+            }, $"Failed to increment statistic `{stat}`.");
+
+        return Task.CompletedTask;
+    }
+
+    public Task<int> GetStatCountAsync(Stat stat)
+    {
+        var result = ExecuteDatabaseAction(db =>
+            {
+                var stats = db.GetCollection<StatRecord>("stats");
+                var statRecord = stats.FindOne(x => x.Name == stat.ToString());
+
+                if (statRecord == null)
+                {
+                    _logger.Warning("No records found for statistic `{Stat}`.", stat);
+                    return 0;
+                }
+
+                _logger.Information("Retrieved count for statistic `{Stat}`: {Count}", stat, statRecord.Count);
+                return statRecord.Count;
+            }, $"Failed to retrieve statistic `{stat}`.", 0);
+
+        return Task.FromResult(result);
+    }
+
+    public Task<int> GetModsInstalledTodayAsync()
+    {
+        var countToday = ExecuteDatabaseAction(db =>
+        {
+            var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+            var startOfToday = DateTime.UtcNow.Date;
+            var count = modInstallations.Count(x => x.InstallationTime >= startOfToday);
+
+            _logger.Information("Retrieved {Count} mods installed today.", count);
+            return count;
+        }, "Failed to retrieve mods installed today.", 0);
+
+        return Task.FromResult(countToday);
+    }
+
+    public async Task RecordModInstallationAsync(string modName)
+    {
+        ExecuteDatabaseAction(db =>
+            {
+                var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+                var installationRecord = new ModInstallationRecord
+                {
+                    ModName = modName,
+                    InstallationTime = DateTime.UtcNow
+                };
+                modInstallations.Insert(installationRecord);
+            }, $"Failed to record installation of mod `{modName}`.");
+
+        await IncrementStatAsync(Stat.ModsInstalled);
+    }
+
+    public Task<ModInstallationRecord?> GetMostRecentModInstallationAsync()
+    {
+        var mostRecent = ExecuteDatabaseAction(db =>
+        {
+            var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+            var record = modInstallations.FindAll()
+                .OrderByDescending(m => m.InstallationTime)
+                .FirstOrDefault();
+
+            if (record != null)
+            {
+                _logger.Information("Retrieved most recent mod installation: `{ModName}` at {InstallationTime}.",
+                    record.ModName, record.InstallationTime);
+            }
+            else
+            {
+                _logger.Warning("No mod installations found.");
+            }
+
+            return record;
+        }, "Failed to retrieve the most recent mod installation.");
+
+        return Task.FromResult(mostRecent);
+    }
+
+    public Task<int> GetUniqueModsInstalledCountAsync()
+    {
+        var uniqueCount = ExecuteDatabaseAction(db =>
+        {
+            var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+            var uniqueModNames = modInstallations
+                .FindAll()
+                .Select(x => x.ModName)
+                .Distinct();
+
+            var modCount = uniqueModNames.Count();
+
+            _logger.Information("Retrieved count of unique mods installed: {Count}", modCount);
+            return modCount;
+        }, "Failed to retrieve count of unique mods installed.", 0);
+
+        return Task.FromResult(uniqueCount);
+    }
+
+    public Task<List<ModInstallationRecord>> GetAllInstalledModsAsync()
+    {
+        var allMods = ExecuteDatabaseAction(db =>
+        {
+            var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
+            var mods = modInstallations
+                .FindAll()
+                .OrderByDescending(x => x.InstallationTime)
+                .ToList();
+
+            _logger.Information("Retrieved {Count} mod installations from the database.", mods.Count);
+            return mods;
+        }, "Failed to retrieve all installed mods.", new List<ModInstallationRecord>());
+
+        return Task.FromResult(allMods);
+    }
+
+    private void EnsureDatabaseExists()
+    {
+        if (!_fileStorage.Exists(_databasePath))
+        {
+            _logger.Information("Database will be created at `{DatabasePath}`.", _databasePath);
         }
     }
 }

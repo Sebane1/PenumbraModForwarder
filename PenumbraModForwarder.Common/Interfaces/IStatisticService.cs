@@ -11,4 +11,5 @@ public interface IStatisticService
     Task<ModInstallationRecord?> GetMostRecentModInstallationAsync();
     Task<int> GetUniqueModsInstalledCountAsync();
     Task<List<ModInstallationRecord>> GetAllInstalledModsAsync();
+    Task<int> GetModsInstalledTodayAsync();
 }

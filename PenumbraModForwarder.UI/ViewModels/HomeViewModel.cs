@@ -129,9 +129,12 @@ public class HomeViewModel : ViewModelBase, IDisposable
             // Create a new collection
             var newItems = new ObservableCollection<InfoItem>
             {
-                new InfoItem("Total Mods Installed", (await _statisticService.GetStatCountAsync(Stat.ModsInstalled)).ToString()),
-                new InfoItem("Unique Mods Installed", (await _statisticService.GetUniqueModsInstalledCountAsync()).ToString())
+                new("Total Mods Installed", (await _statisticService.GetStatCountAsync(Stat.ModsInstalled)).ToString()),
+                new("Unique Mods Installed", (await _statisticService.GetUniqueModsInstalledCountAsync()).ToString())
             };
+            
+            var modsInstalledToday = await _statisticService.GetModsInstalledTodayAsync();
+            newItems.Add(new InfoItem("Mods Installed Today", modsInstalledToday.ToString()));
 
             var lastModInstallation = await _statisticService.GetMostRecentModInstallationAsync();
             newItems.Add(lastModInstallation != null
