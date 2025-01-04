@@ -29,4 +29,6 @@ public class BackgroundWorkerConfigurationModel
     public bool SkipPreDt  { get; set; } = true;
     [Display(Name = "Penumbra Mod Folder Path", GroupName = "Pathing", Description = "Penumbra Mod Folder")]
     public string PenumbraModFolderPath { get; set; } = string.Empty;
+    [Display(Name = "Relocate Mod/Archive Files", GroupName = "General", Description = "Relocate mod/archive files when they are detected")]
+    public bool RelocateFiles { get; set; } = true;
 }

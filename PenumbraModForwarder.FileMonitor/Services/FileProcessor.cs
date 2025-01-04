@@ -51,28 +51,36 @@ public sealed class FileProcessor : IFileProcessor
     )
     {
         var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
-        
+        var relocateFiles = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.RelocateFiles);
+
         if (FileExtensionsConsts.ModFileTypes.Contains(extension))
         {
-            var movedFilePath = MoveFile(filePath);
-            var fileName = Path.GetFileName(movedFilePath);
-            
+            // Decide whether to physically move the file or just organize it locally
+            var finalFilePath = relocateFiles
+                ? MoveFile(filePath)
+                : OrganizeLocalFile(filePath);
+
+            var fileName = Path.GetFileName(finalFilePath);
             onFileMoved?.Invoke(
                 this,
-                new FileMovedEvent(fileName, movedFilePath, Path.GetFileNameWithoutExtension(movedFilePath))
+                new FileMovedEvent(fileName, finalFilePath, Path.GetFileNameWithoutExtension(finalFilePath))
             );
         }
         else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
         {
             if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
             {
-                var movedFilePath = MoveFile(filePath);
-                await ProcessArchiveFileAsync(movedFilePath, cancellationToken, onFilesExtracted);
+                // Decide whether to physically move the file or just organize it locally
+                var finalFilePath = relocateFiles
+                    ? MoveFile(filePath)
+                    : OrganizeLocalFile(filePath);
+
+                await ProcessArchiveFileAsync(finalFilePath, cancellationToken, onFilesExtracted);
             }
             else
             {
                 _logger.Information(
-                    "Archive {FilePath} doesn’t contain any recognized mod files; leaving file in place.", 
+                    "Archive {FilePath} doesn’t contain any recognized mod files; leaving file in place.",
                     filePath
                 );
             }
@@ -146,7 +154,7 @@ public sealed class FileProcessor : IFileProcessor
         try
         {
             using var archiveFile = new ArchiveFile(filePath);
-            
+
             var skipPreDt = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.SkipPreDt);
 
             var modEntries = GetModEntries(archiveFile, skipPreDt);
@@ -192,6 +200,25 @@ public sealed class FileProcessor : IFileProcessor
 
         return destinationPath;
     }
+    
+    private string OrganizeLocalFile(string filePath)
+    {
+        var originalDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+        var destinationFolder = Path.Combine(originalDirectory, fileNameWithoutExtension);
+
+        // Create a local subdirectory named after the file (minus extension)
+        _fileStorage.CreateDirectory(destinationFolder);
+
+        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
+        _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
+
+        // Clean up the original
+        DeleteFileWithRetry(filePath);
+
+        _logger.Information("File placed in subfolder: {DestinationPath}", destinationPath);
+        return destinationPath;
+    }
 
     private async Task ProcessArchiveFileAsync(
         string archivePath,
@@ -223,7 +250,7 @@ public sealed class FileProcessor : IFileProcessor
                     extractedFiles.Add(destinationPath);
                 }
             }
-            
+
             await Task.Delay(100, cancellationToken);
 
             if (extractedFiles.Any())
@@ -232,7 +259,7 @@ public sealed class FileProcessor : IFileProcessor
                     this,
                     new FilesExtractedEventArgs(Path.GetFileName(archivePath), extractedFiles)
                 );
-                
+
                 var shouldDelete = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.AutoDelete);
                 if (shouldDelete)
                 {
@@ -274,8 +301,8 @@ public sealed class FileProcessor : IFileProcessor
             catch (IOException) when (attempt < maxAttempts)
             {
                 _logger.Warning(
-                    "Attempt {Attempt} to delete file failed: {FilePath}. Retrying...", 
-                    attempt, 
+                    "Attempt {Attempt} to delete file failed: {FilePath}. Retrying...",
+                    attempt,
                     filePath
                 );
                 Thread.Sleep(delayMs);
@@ -300,7 +327,7 @@ public sealed class FileProcessor : IFileProcessor
         }
     }
 
-    private List<Entry> GetModEntries(ArchiveFile archiveFile, bool skipPreDt)
+    private List<Entry?> GetModEntries(ArchiveFile archiveFile, bool skipPreDt)
     {
         return archiveFile.Entries.Where(entry =>
         {
