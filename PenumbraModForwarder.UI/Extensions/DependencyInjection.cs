@@ -10,6 +10,7 @@ using PenumbraModForwarder.Statistics.Services;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
+using PenumbraModForwarder.UI.Views;
 
 namespace PenumbraModForwarder.UI.Extensions;
 
@@ -46,8 +47,16 @@ public static class DependencyInjection
         services.AddSingleton<IXmaModDisplay, XmaModDisplay>();
 
         // ViewModels
-        services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<ErrorWindowViewModel>();
+        services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<ErrorWindowViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<ModsViewModel>();
+        services.AddSingleton<HomeViewModel>();
+        services.AddSingleton<DownloadViewModel>();
+        
+        // Views
+        services.AddSingleton<MainWindow>();
+        services.AddSingleton<ErrorWindowViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();

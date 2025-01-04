@@ -9,11 +9,6 @@
     mc:Ignorable="d"
     d:DesignWidth="800"
     d:DesignHeight="450">
-
-    <Design.DataContext>
-        <viewModels:HomeViewModel />
-    </Design.DataContext>
-
     <Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
         <!-- LEFT COLUMN: Info Items -->
         <ScrollViewer Grid.Column="0" Margin="5">

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
@@ -22,6 +24,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
     private readonly IStatisticService _statisticService;
     private readonly IXmaModDisplay _xmaModDisplay;
     private readonly CompositeDisposable _disposables = new();
+    private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
 
     private ObservableCollection<InfoItem> _infoItems;
     public ObservableCollection<InfoItem> InfoItems
@@ -57,7 +60,8 @@ public class HomeViewModel : ViewModelBase, IDisposable
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
 
-        // TODO: this needs to be bound correctly
+        _ = LoadStatisticsAsync();
+
         OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
         {
             if (!string.IsNullOrEmpty(mod.ModUrl))
@@ -76,18 +80,10 @@ public class HomeViewModel : ViewModelBase, IDisposable
             }
         });
 
-        Observable
-            .Timer(TimeSpan.Zero, TimeSpan.FromMinutes(5))
+        Observable.Timer(TimeSpan.Zero, TimeSpan.FromMinutes(5))
             .SelectMany(_ => Observable.FromAsync(RefreshRecentModsAsync))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe()
-            .DisposeWith(_disposables);
-        
-        _ = LoadStatisticsAsync();
-
-        Observable
-            .Timer(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20))
-            .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync))
+            .Merge(Observable.Timer(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20))
+                .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync)))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
@@ -123,61 +119,38 @@ public class HomeViewModel : ViewModelBase, IDisposable
         }
     }
 
-    // TODO: Convert this to an event so we don't need to load every 20 seconds
     private async Task LoadStatisticsAsync()
     {
+        if (!await _statsSemaphore.WaitAsync(TimeSpan.FromSeconds(10)))
+            return;
+
         try
         {
-            var newItems = new ObservableCollection<InfoItem>();
+            // Create a new collection
+            var newItems = new ObservableCollection<InfoItem>
+            {
+                new InfoItem("Total Mods Installed", (await _statisticService.GetStatCountAsync(Stat.ModsInstalled)).ToString()),
+                new InfoItem("Unique Mods Installed", (await _statisticService.GetUniqueModsInstalledCountAsync()).ToString())
+            };
 
-            var modsInstalledCount = await _statisticService.GetStatCountAsync(Stat.ModsInstalled);
-            var uniqueModsInstalledCount = await _statisticService.GetUniqueModsInstalledCountAsync();
             var lastModInstallation = await _statisticService.GetMostRecentModInstallationAsync();
-
-            newItems.Add(new InfoItem("Total Mods Installed", modsInstalledCount.ToString()));
-            newItems.Add(new InfoItem("Unique Mods Installed", uniqueModsInstalledCount.ToString()));
             newItems.Add(lastModInstallation != null
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
-            var distinctByNameAndValue = newItems
-                .GroupBy(item => (item.Name, item.Value))
-                .Select(group => group.First())
-                .ToList();
-
-            newItems.Clear();
-            foreach (var i in distinctByNameAndValue)
-            {
-                newItems.Add(i);
-            }
-
-            if (IsTheSame(InfoItems, newItems))
-                return;
-
-            InfoItems.Clear();
-            foreach (var item in newItems)
-            {
-                InfoItems.Add(item);
-            }
+            // Replace the old collection
+            InfoItems = newItems;
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to load statistics in HomeViewModel.");
         }
+        finally
+        {
+            _statsSemaphore.Release();
+        }
     }
 
-    private bool IsTheSame(
-        ObservableCollection<InfoItem> existing,
-        ObservableCollection<InfoItem> incoming)
-    {
-        if (existing.Count != incoming.Count) return false;
-
-        return !existing
-            .Where((t, i) =>
-                !t.Name.Equals(incoming[i].Name, StringComparison.Ordinal)
-                || !t.Value.Equals(incoming[i].Value, StringComparison.Ordinal))
-            .Any();
-    }
 
     public void Dispose()
     {
