@@ -10,10 +10,12 @@ public class InstallingService : IInstallingService
 {
     private readonly ILogger _logger;
     private readonly IModInstallService _modInstallService;
+    private readonly ISoundManagerService _soundManagerService;
 
-    public InstallingService(IModInstallService modInstallService)
+    public InstallingService(IModInstallService modInstallService, ISoundManagerService soundManagerService)
     {
         _modInstallService = modInstallService;
+        _soundManagerService = soundManagerService;
         _logger = Log.ForContext<InstallingService>();
     }
     
@@ -54,6 +56,7 @@ public class InstallingService : IInstallingService
         {
             if (await _modInstallService.InstallModAsync(filePath))
             {
+                await _soundManagerService.PlaySoundAsync(SoundType.GeneralChime);
                 _logger.Information("Successfully installed mod: {FilePath}", filePath);
             }
         }

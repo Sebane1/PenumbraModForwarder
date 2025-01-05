@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using PenumbraModForwarder.UI.Services;
@@ -19,6 +20,7 @@ public class MainWindowViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationService _notificationService;
     private readonly IWebSocketClient _webSocketClient;
+    private readonly ISoundManagerService _soundManagerService; // We need it for InstallView
     private readonly IConfigurationListener _configurationListener; // We just need to start it here
     private readonly ILogger _logger;
 
@@ -54,12 +56,13 @@ public class MainWindowViewModel : ViewModelBase
         IServiceProvider serviceProvider,
         INotificationService notificationService,
         IWebSocketClient webSocketClient,
-        int port, IConfigurationListener configurationListener)
+        int port, IConfigurationListener configurationListener, ISoundManagerService soundManagerService)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
         _webSocketClient = webSocketClient;
         _configurationListener = configurationListener;
+        _soundManagerService = soundManagerService;
         _logger = Log.ForContext<MainWindowViewModel>();
 
         var app = Application.Current;
@@ -96,7 +99,7 @@ public class MainWindowViewModel : ViewModelBase
         _selectedMenuItem = MenuItems[0];
         _currentPage = _selectedMenuItem.ViewModel;
         
-        InstallViewModel = new InstallViewModel(_webSocketClient);
+        InstallViewModel = new InstallViewModel(_webSocketClient, _soundManagerService);
 
         _ = InitializeWebSocketConnection(port);
         _configurationListener.StartListening();

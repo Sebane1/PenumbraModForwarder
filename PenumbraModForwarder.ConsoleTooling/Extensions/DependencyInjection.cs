@@ -14,6 +14,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.SetupLogging();
+        services.AddSingleton<ISoundManagerService, SoundManagerService>();
         services.AddSingleton<IInstallingService, InstallingService>();
         services.AddSingleton<IPenumbraService, PenumbraService>();
         services.AddSingleton<IFileStorage, FileStorage>();

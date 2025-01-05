@@ -12,6 +12,7 @@
       <PackageReference Include="MessagePack" Version="3.1.1" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+      <PackageReference Include="NAudio" Version="2.2.1" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Serilog" Version="4.2.0" />
       <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0-dev-02303" />
@@ -21,6 +22,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Sounds\notification.mp3" />
+      <EmbeddedResource Include="Sounds\notification.mp3" />
     </ItemGroup>
 
 </Project>

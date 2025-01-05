@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<ConfigurationModel>();
 
         // Services
+        services.AddSingleton<ISoundManagerService, SoundManagerService>();
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();

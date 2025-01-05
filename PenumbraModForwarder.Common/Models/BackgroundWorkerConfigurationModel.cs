@@ -27,7 +27,7 @@ public class BackgroundWorkerConfigurationModel
     public string TexToolPath { get; set; } = string.Empty;
     [Display(Name = "Skip Endwalker and below mods", GroupName = "General", Description = "Skip endwalker and below mods")]
     public bool SkipPreDt  { get; set; } = true;
-    [Display(Name = "Penumbra Mod Folder Path", GroupName = "Pathing", Description = "Penumbra Mod Folder")]
+    [ExcludeFromSettingsUI]
     public string PenumbraModFolderPath { get; set; } = string.Empty;
     [Display(Name = "Relocate Mod/Archive Files", GroupName = "General", Description = "Relocate mod/archive files when they are detected")]
     public bool RelocateFiles { get; set; } = true;

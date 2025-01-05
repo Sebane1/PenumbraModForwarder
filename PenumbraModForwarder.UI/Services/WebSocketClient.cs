@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Events;
@@ -62,6 +63,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                 _logger.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
                 await _notificationService.ShowNotification(
                     $"Connection failed. Retrying in 5 seconds... (Attempt {_retryCount})",
+                    SoundType.GeneralChime,
                     5
                 );
                 await Task.Delay(5000, _cts.Token);
@@ -106,6 +108,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                     _logger.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
                     await _notificationService.ShowNotification(
                         $"Connection to {endpoint} lost. Attempting to reconnect...",
+                        SoundType.GeneralChime,
                         5
                     );
                     _isReconnecting = true;
@@ -221,7 +224,8 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             if (!_isReconnecting)
             {
                 await _notificationService.ShowNotification(
-                    $"Lost connection to {endpoint}. Attempting to reconnect..."
+                    $"Lost connection to {endpoint}. Attempting to reconnect...",
+                    SoundType.GeneralChime
                 );
                 _isReconnecting = true;
             }
@@ -291,7 +295,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         {
             if (message.Progress > 0)
             {
-                _notificationService.UpdateProgress(
+                await _notificationService.UpdateProgress(
                     message.TaskId,
                     message.Message,
                     message.Progress
@@ -299,7 +303,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             }
             else
             {
-                await _notificationService.ShowNotification(message.Message);
+                await _notificationService.ShowNotification(message.Message, SoundType.GeneralChime);
             }
         }
     }
