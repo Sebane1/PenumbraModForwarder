@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
 using Serilog;
@@ -25,6 +26,8 @@ public class HomeViewModel : ViewModelBase, IDisposable
     private readonly IXmaModDisplay _xmaModDisplay;
     private readonly CompositeDisposable _disposables = new();
     private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
+    
+    private readonly IWebSocketClient _webSocketClient;
 
     private ObservableCollection<InfoItem> _infoItems;
     public ObservableCollection<InfoItem> InfoItems
@@ -47,46 +50,37 @@ public class HomeViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref _isLoading, value);
     }
 
-    public ReactiveCommand<XmaMods, Unit> OpenModLinkCommand { get; }
-
     public HomeViewModel(
         IStatisticService statisticService,
-        IXmaModDisplay xmaModDisplay)
+        IXmaModDisplay xmaModDisplay,
+        IWebSocketClient webSocketClient)
     {
         _logger = Log.ForContext<HomeViewModel>();
         _statisticService = statisticService;
         _xmaModDisplay = xmaModDisplay;
+        _webSocketClient = webSocketClient;
 
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
 
-        _ = LoadStatisticsAsync();
+        // Subscribe to ModInstalled event so we can refresh stats immediately.
+        _webSocketClient.ModInstalled += OnModInstalled;
 
-        OpenModLinkCommand = ReactiveCommand.Create<XmaMods>(mod =>
-        {
-            if (!string.IsNullOrEmpty(mod.ModUrl))
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo(mod.ModUrl)
-                    {
-                        UseShellExecute = true
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Failed to open the browser for: {ModUrl}", mod.ModUrl);
-                }
-            }
-        });
+        _ = LoadStatisticsAsync();
 
         Observable.Timer(TimeSpan.Zero, TimeSpan.FromMinutes(5))
             .SelectMany(_ => Observable.FromAsync(RefreshRecentModsAsync))
-            .Merge(Observable.Timer(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20))
-                .SelectMany(_ => Observable.FromAsync(LoadStatisticsAsync)))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
+    }
+    
+    private async void OnModInstalled(object sender, EventArgs e)
+    {
+        RxApp.MainThreadScheduler.ScheduleAsync(async (_, __) =>
+        {
+            await LoadStatisticsAsync();
+        });
     }
 
     private async Task RefreshRecentModsAsync()
@@ -126,13 +120,12 @@ public class HomeViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // Create a new collection
             var newItems = new ObservableCollection<InfoItem>
             {
                 new("Total Mods Installed", (await _statisticService.GetStatCountAsync(Stat.ModsInstalled)).ToString()),
                 new("Unique Mods Installed", (await _statisticService.GetUniqueModsInstalledCountAsync()).ToString())
             };
-            
+
             var modsInstalledToday = await _statisticService.GetModsInstalledTodayAsync();
             newItems.Add(new InfoItem("Mods Installed Today", modsInstalledToday.ToString()));
 
@@ -141,7 +134,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
-            // Replace the old collection
             InfoItems = newItems;
         }
         catch (Exception ex)
@@ -154,9 +146,9 @@ public class HomeViewModel : ViewModelBase, IDisposable
         }
     }
 
-
     public void Dispose()
     {
+        _webSocketClient.ModInstalled -= OnModInstalled;
         _disposables.Dispose();
     }
 }

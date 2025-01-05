@@ -136,9 +136,6 @@ public class FileWatcherService : IFileWatcherService, IDisposable
     private void OnFileMoved(object? sender, FileMovedEvent e)
     {
         _logger.Information("File moved: {DestinationPath}", e.DestinationPath);
-        var taskId = Guid.NewGuid().ToString();
-        var message = WebSocketMessage.CreateStatus(taskId, "Found File", $"Found File: {e.FileName}");
-        _webSocketServer.BroadcastToEndpointAsync("/status", message).GetAwaiter().GetResult();
         _modHandlerService.HandleFileAsync(e.DestinationPath).GetAwaiter().GetResult();
     }
 

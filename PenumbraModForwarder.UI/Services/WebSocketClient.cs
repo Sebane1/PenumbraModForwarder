@@ -31,6 +31,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
     private readonly string _clientId;
 
     public event EventHandler<FileSelectionRequestedEventArgs> FileSelectionRequested;
+    public event EventHandler ModInstalled; 
 
     public WebSocketClient(INotificationService notificationService, IConfigurationService configurationService)
     {
@@ -171,66 +172,69 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         }
     }
 
-    private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
+private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
+{
+    var buffer = new byte[1024 * 4];
+
+    try
     {
-        var buffer = new byte[1024 * 4];
-
-        try
+        while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
         {
-            while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
+            var result = await webSocket.ReceiveAsync(
+                new ArraySegment<byte>(buffer),
+                _cts.Token
+            );
+
+            if (result.MessageType == WebSocketMessageType.Text)
             {
-                var result = await webSocket.ReceiveAsync(
-                    new ArraySegment<byte>(buffer),
-                    _cts.Token
-                );
+                var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
 
-                if (result.MessageType == WebSocketMessageType.Text)
+                // Ignore messages that match our own client ID
+                if (message?.ClientId == _clientId)
                 {
-                    var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
-
-                    // Ignore messages that match our own client ID
-                    if (message?.ClientId == _clientId)
-                    {
-                        _logger.Debug("Ignored message from this client: {MessageJson}", messageJson);
-                        continue;
-                    }
-
-                    _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
-
-                    switch (endpoint)
-                    {
-                        case "/install":
-                            await HandleInstallMessageAsync(message);
-                            break;
-                        case "/config":
-                            await HandleConfigMessageAsync(message);
-                            break;
-                        default:
-                            await HandleGeneralMessageAsync(message, endpoint);
-                            break;
-                    }
+                    _logger.Debug("Ignored message from this client: {MessageJson}", messageJson);
+                    continue;
                 }
-                else if (result.MessageType == WebSocketMessageType.Close)
+
+                _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+
+                switch (endpoint)
                 {
-                    await DisconnectWebSocketAsync(webSocket);
-                    break;
+                    case "/install":
+                        await HandleInstallMessageAsync(message);
+                        break;
+                    case "/config":
+                        await HandleConfigMessageAsync(message);
+                        break;
+                    case "/status":
+                        await HandleStatusMessageAsync(message);
+                        break;
+                    default:
+                        await HandleGeneralMessageAsync(message, endpoint);
+                        break;
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
-            if (!_isReconnecting)
+            else if (result.MessageType == WebSocketMessageType.Close)
             {
-                await _notificationService.ShowNotification(
-                    $"Lost connection to {endpoint}. Attempting to reconnect...",
-                    SoundType.GeneralChime
-                );
-                _isReconnecting = true;
+                await DisconnectWebSocketAsync(webSocket);
+                break;
             }
         }
     }
+    catch (Exception ex)
+    {
+        _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+        if (!_isReconnecting)
+        {
+            await _notificationService.ShowNotification(
+                $"Lost connection to {endpoint}. Attempting to reconnect...",
+                SoundType.GeneralChime
+            );
+            _isReconnecting = true;
+        }
+    }
+}
 
     private async Task HandleInstallMessageAsync(WebSocketMessage message)
     {
@@ -282,6 +286,28 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         {
             _logger.Warning(
                 "Unhandled message on /config endpoint: Type={Type}, Status={Status}",
+                message.Type,
+                message.Status
+            );
+        }
+    }
+    
+    private async Task HandleStatusMessageAsync(WebSocketMessage message)
+    {
+        if (message.Type == CustomWebSocketMessageType.Status &&
+            (message.Status?.Equals("installed_file", StringComparison.OrdinalIgnoreCase) == true ||
+             message.Status?.Equals("Installed File", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            _logger.Information(
+                "Detected 'installed_file' or 'Installed File' status on /status endpoint. Invoking ModInstalled event."
+            );
+            await _notificationService.ShowNotification(message.Message, SoundType.GeneralChime); 
+            ModInstalled?.Invoke(this, EventArgs.Empty);
+        }
+        else
+        {
+            _logger.Warning(
+                "Unhandled message on /status endpoint: Type={Type}, Status={Status}",
                 message.Type,
                 message.Status
             );

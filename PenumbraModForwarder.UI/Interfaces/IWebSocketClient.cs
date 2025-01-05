@@ -10,4 +10,5 @@ public interface IWebSocketClient
     Task ConnectAsync(int port);
     Task SendMessageAsync(WebSocketMessage message, string endpoint);
     event EventHandler<FileSelectionRequestedEventArgs> FileSelectionRequested;
+    event EventHandler ModInstalled;
 }
