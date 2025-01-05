@@ -19,6 +19,14 @@ public class SoundManagerService : ISoundManagerService
     };
 
     private readonly List<string> _embeddedResourceNames;
+    
+    private static readonly Lock PlaybackLock = new();
+    
+    private static bool _isPlaying;
+    
+    private static DateTime _lastPlayTime = DateTime.MinValue;
+    
+    private static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(2);
 
     public SoundManagerService(IConfigurationService configurationService)
     {
@@ -35,9 +43,18 @@ public class SoundManagerService : ISoundManagerService
 
     public async Task PlaySoundAsync(SoundType soundType, float volume = 1.0f)
     {
-        if (!(bool)_configurationService.ReturnConfigValue(c => c.UI.NotificationSoundEnabled)) return;
+        if (!(bool)_configurationService.ReturnConfigValue(c => c.UI.NotificationSoundEnabled))
+        {
+            _logger.Debug("Notification sound is disabled in the configuration.");
+            return;
+        }
         
-        const bool waitUntilFinished = true;
+        var now = DateTime.UtcNow;
+        if (now - _lastPlayTime < Cooldown)
+        {
+            _logger.Debug("Skipping playback because it is within the cooldown period.");
+            return;
+        }
         
         var isMuted = IsSystemMuted();
         _logger.Debug("System muted state is {IsMuted}", isMuted);
@@ -46,48 +63,60 @@ public class SoundManagerService : ISoundManagerService
             _logger.Information("Skipping playback because system is muted.");
             return;
         }
+        
+        lock (PlaybackLock)
+        {
+            if (_isPlaying)
+            {
+                _logger.Debug("Another sound is currently playing. Skipping new playback to avoid overlap.");
+                return;
+            }
 
-        _logger.Debug(
-            "PlaySoundAsync called for {SoundType}. Volume={Volume}, WaitUntilFinished={WaitUntilFinished}",
-            soundType,
-            volume,
-            waitUntilFinished
-        );
+            _isPlaying = true;
+            _lastPlayTime = now;
+        }
+
+        _logger.Debug("PlaySoundAsync called for {SoundType} with Volume={Volume}.", soundType, volume);
 
         var filePath = EnsureSoundFileExtracted(soundType);
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            _logger.Debug("No valid filePath resolved for {SoundType}. Exiting PlaySoundAsync.", soundType);
+            _logger.Debug("No valid file path found for {SoundType}. Exiting PlaySoundAsync.", soundType);
+            lock (PlaybackLock)
+            {
+                _isPlaying = false;
+            }
             return;
         }
-
+        
         try
         {
             using var outputDevice = new WaveOutEvent();
             await using var audioFile = new AudioFileReader(filePath);
 
-            _logger.Debug("AudioFileReader created for {SoundType} from path: {FilePath}", soundType, filePath);
-
             audioFile.Volume = volume;
-            _logger.Debug("Volume set to {Volume} for {SoundType}.", volume, soundType);
-
             outputDevice.Init(audioFile);
             outputDevice.Play();
 
             _logger.Debug("Playback started for {SoundType}.", soundType);
 
-            if (waitUntilFinished)
+            while (outputDevice.PlaybackState == PlaybackState.Playing)
             {
-                while (outputDevice.PlaybackState == PlaybackState.Playing)
-                {
-                    await Task.Delay(100);
-                }
-                _logger.Debug("Playback finished for {SoundType}.", soundType);
+                await Task.Delay(100);
             }
+
+            _logger.Debug("Playback finished for {SoundType}.", soundType);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error playing sound for {SoundType}", soundType);
+        }
+        finally
+        {
+            lock (PlaybackLock)
+            {
+                _isPlaying = false;
+            }
         }
     }
 
@@ -95,12 +124,12 @@ public class SoundManagerService : ISoundManagerService
     {
         if (!_soundFileMap.TryGetValue(soundType, out var fileName) || string.IsNullOrWhiteSpace(fileName))
         {
-            _logger.Debug("No entry found in _soundFileMap for {SoundType}.", soundType);
+            _logger.Debug("No entry found in soundFileMap for {SoundType}.", soundType);
             return null;
         }
 
         _logger.Debug(
-            "Attempting to ensure sound file extracted for {SoundType} with file name {FileName}.",
+            "Ensuring sound file is extracted for {SoundType} with file name {FileName}.",
             soundType,
             fileName
         );
@@ -111,7 +140,7 @@ public class SoundManagerService : ISoundManagerService
             if (!Directory.Exists(soundFolder))
             {
                 Directory.CreateDirectory(soundFolder);
-                _logger.Debug("Created directory: {SoundFolder}", soundFolder);
+                _logger.Debug("Created directory {SoundFolder}", soundFolder);
             }
 
             var destinationPath = Path.Combine(soundFolder, fileName);
@@ -140,12 +169,7 @@ public class SoundManagerService : ISoundManagerService
             using var fileStream = File.Create(destinationPath);
             resourceStream.CopyTo(fileStream);
 
-            _logger.Debug(
-                "Extracted {FileName} resource to {DestinationPath}.",
-                fileName,
-                destinationPath
-            );
-
+            _logger.Debug("Extracted {FileName} resource to {DestinationPath}.", fileName, destinationPath);
             return destinationPath;
         }
         catch (Exception ex)
