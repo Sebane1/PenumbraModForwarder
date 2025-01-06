@@ -1,11 +1,9 @@
 ﻿using System.Diagnostics;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
+using SevenZipExtractor;
 
 namespace PenumbraModForwarder.Common.Services;
 
@@ -68,7 +66,6 @@ public class Aria2Service : IAria2Service
 
             var finalFileName = Uri.UnescapeDataString(rawFileName);
 
-            // Example extra arguments; can be adapted as needed.
             var extraAria2Args = "--log-level=debug";
             var arguments = $"\"{fileUrl}\" --dir=\"{sanitizedDirectory}\" --out=\"{finalFileName}\" {extraAria2Args}";
 
@@ -91,11 +88,9 @@ public class Aria2Service : IAria2Service
                 return false;
             }
 
-            // Read output concurrently and wait for the process to exit:
             var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);
             var stdErrTask = process.StandardError.ReadToEndAsync(ct);
 
-            // Example: Cancel download after a certain duration
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromMinutes(30));
 
@@ -154,30 +149,32 @@ public class Aria2Service : IAria2Service
                 _logger.Error("No matching Windows 64-bit asset URL found. Cannot install aria2.");
                 return false;
             }
-
+            
             var zipPath = Path.Combine(Aria2Folder, "aria2_latest_win64.zip");
             using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.Add("User-Agent", "PenumbraModForwarder/Aria2Service");
-
                 var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
                 response.EnsureSuccessStatusCode();
 
                 _logger.Information("Downloading aria2 from {Url}", downloadUrl);
 
-                using var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await using var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await response.Content.CopyToAsync(fs, ct);
             }
 
             _logger.Information("Extracting aria2 files to {ExtractPath}", Aria2Folder);
-            ZipFile.ExtractToDirectory(zipPath, Aria2Folder, overwriteFiles: true);
+            
+            using (var archiveFile = new ArchiveFile(zipPath))
+            {
+                archiveFile.Extract(Aria2Folder, overwrite: true);
+            }
 
             if (File.Exists(zipPath))
             {
                 File.Delete(zipPath);
             }
 
-            // In case aria2 is extracted into a subdirectory:
             if (!File.Exists(Aria2ExePath))
             {
                 var exeCandidate = Directory
@@ -191,6 +188,22 @@ public class Aria2Service : IAria2Service
                     {
                         File.Move(exeCandidate, targetPath);
                         _logger.Information("Found aria2c.exe in a subdirectory; moved it to {TargetPath}", targetPath);
+
+                        var candidateFolder = Path.GetDirectoryName(exeCandidate);
+                        if (!string.IsNullOrEmpty(candidateFolder) &&
+                            !candidateFolder.Equals(Aria2Folder, StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                _logger.Information("Removing extracted folder {Folder}", candidateFolder);
+                                Directory.Delete(candidateFolder, recursive: true);
+                                _logger.Information("Successfully removed folder {Folder}", candidateFolder);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Warning(ex, "Failed to remove folder {Folder}", candidateFolder);
+                            }
+                        }
                     }
                 }
             }
@@ -224,27 +237,20 @@ public class Aria2Service : IAria2Service
             client.DefaultRequestHeaders.Add("User-Agent", "PenumbraModForwarder/Aria2Service");
 
             var json = await client.GetStringAsync(Aria2LatestReleaseApi, ct);
-            using var doc = JsonDocument.Parse(json);
+            var doc = JToken.Parse(json);
 
-            if (!doc.RootElement.TryGetProperty("assets", out var assetsElement) ||
-                assetsElement.ValueKind != JsonValueKind.Array)
+            if (doc["assets"] is not JArray assetsArray)
             {
                 return null;
             }
 
-            foreach (var asset in assetsElement.EnumerateArray())
+            foreach (var asset in assetsArray)
             {
-                if (!asset.TryGetProperty("name", out var assetNameElement) ||
-                    !asset.TryGetProperty("browser_download_url", out var downloadUrlElement))
-                {
-                    continue;
-                }
+                var assetName = (string?)asset["name"] ?? string.Empty;
+                var downloadUrl = (string?)asset["browser_download_url"] ?? string.Empty;
 
-                var assetName = assetNameElement.GetString() ?? string.Empty;
-                var downloadUrl = downloadUrlElement.GetString() ?? string.Empty;
-
-                if (assetName.Contains("win-64", StringComparison.OrdinalIgnoreCase) &&
-                    assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                if (assetName.Contains("win-64", StringComparison.OrdinalIgnoreCase)
+                    && assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                 {
                     return downloadUrl;
                 }
