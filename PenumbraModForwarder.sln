@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Statis
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.ConsoleTooling", "PenumbraModForwarder.ConsoleTooling\PenumbraModForwarder.ConsoleTooling.csproj", "{565BF6A6-74F6-48D6-AE6F-D25CABEC6A84}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedResources", "SharedResources\SharedResources.csproj", "{06419E81-1761-4EB7-AC10-358FE3C360A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,6 +81,10 @@ Global
 		{565BF6A6-74F6-48D6-AE6F-D25CABEC6A84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{565BF6A6-74F6-48D6-AE6F-D25CABEC6A84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{565BF6A6-74F6-48D6-AE6F-D25CABEC6A84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

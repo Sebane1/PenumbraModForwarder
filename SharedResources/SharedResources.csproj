@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <None Remove="Assets\Icons\png\Black_arrow_cat.png" />
+      <EmbeddedResource Include="Assets\Icons\png\Black_arrow_cat_image.png" />
+      <None Remove="Assets\Icons\png\Exclamation_mark_cat.png" />
+      <EmbeddedResource Include="Assets\Icons\png\Exclamation_mark_cat_image.png" />
+      <None Remove="Assets\Icons\png\Purple_arrow_cat.png" />
+      <EmbeddedResource Include="Assets\Icons\png\Purple_arrow_cat_image.png" />
+      <None Remove="Assets\Icons\ico\Black_arrow_cat.ico" />
+      <EmbeddedResource Include="Assets\Icons\ico\Black_arrow_cat_icon.ico" />
+      <None Remove="Assets\Icons\ico\Exclamation_mark_cat.ico" />
+      <EmbeddedResource Include="Assets\Icons\ico\Exclamation_mark_cat_icon.ico" />
+      <None Remove="Assets\Icons\ico\Purple_arrow_cat.ico" />
+      <EmbeddedResource Include="Assets\Icons\ico\Purple_arrow_cat_icon.ico" />
+    </ItemGroup>
+
+</Project>

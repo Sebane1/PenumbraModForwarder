@@ -6,6 +6,7 @@
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationIcon>..\SharedResources\Assets\Icons\ico\Purple_arrow_cat_icon.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +14,12 @@
         <None Remove="Animations\LoadingAnimation.json" />
         <None Remove="Animations\Loading.gif" />
         <AvaloniaResource Include="Animations\LoadingAnimation.gif" />
+        <None Include="..\SharedResources\Assets\Icons\ico\Purple_arrow_cat_icon.ico">
+          <Link>Purple_arrow_cat_icon.ico</Link>
+        </None>
+        <None Include="..\SharedResources\Assets\Icons\png\Purple_arrow_cat_image.png">
+          <Link>Purple_arrow_cat_image.png</Link>
+        </None>
     </ItemGroup>
 
     <ItemGroup>

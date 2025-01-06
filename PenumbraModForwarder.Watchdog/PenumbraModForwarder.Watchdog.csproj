@@ -4,6 +4,10 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <ApplicationIcon>..\SharedResources\Assets\Icons\ico\Exclamation_mark_cat_icon.ico</ApplicationIcon>
+        <Company>PenumbraModForwarder.Launcher</Company>
+        <Product>PenumbraModForwarder.Launcher</Product>
+        <AssemblyName>PenumbraModForwarder.Launcher</AssemblyName>
     </PropertyGroup>
     
     <!-- Build For Windows -->
@@ -28,6 +32,15 @@
       <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0-dev-02303" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
       <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\SharedResources\Assets\Icons\ico\Exclamation_mark_cat_icon.ico">
+        <Link>Exclamation_mark_cat_icon.ico</Link>
+      </None>
+      <None Include="..\SharedResources\Assets\Icons\png\Exclamation_mark_cat_image.png">
+        <Link>Exclamation_mark_cat_image.png</Link>
+      </None>
     </ItemGroup>
 
 </Project>

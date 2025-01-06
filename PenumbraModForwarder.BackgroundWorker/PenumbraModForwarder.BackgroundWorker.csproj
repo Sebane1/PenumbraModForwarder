@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-PenumbraModForwarder.BackgroundWorker-88ce3ad3-0e07-499a-b93c-84198df9b37c</UserSecretsId>
+        <ApplicationIcon>..\SharedResources\Assets\Icons\ico\Black_arrow_cat_icon.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,5 +29,14 @@
     <ItemGroup>
       <Folder Include="Consts\" />
       <Folder Include="Enums\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\SharedResources\Assets\Icons\ico\Black_arrow_cat_icon.ico">
+        <Link>Black_arrow_cat_icon.ico</Link>
+      </None>
+      <None Include="..\SharedResources\Assets\Icons\png\Black_arrow_cat_image.png">
+        <Link>Black_arrow_cat_image.png</Link>
+      </None>
     </ItemGroup>
 </Project>
