@@ -43,7 +43,7 @@ public class DownloadManagerService : IDownloadManagerService
         if (!modUri.Host.Equals("www.xivmodarchive.com", StringComparison.OrdinalIgnoreCase))
         {
             _logger.Warning("Unsupported domain for download: {Url}", mod.ModUrl);
-            _notificationService.ShowNotification(
+            await _notificationService.ShowNotification(
                 $"Unsupported domain '{modUri.Host}'. Only https://www.xivmodarchive.com/ is supported.",
                 SoundType.GeneralChime
             );
@@ -57,7 +57,7 @@ public class DownloadManagerService : IDownloadManagerService
             if (!directUri.Host.Equals("www.xivmodarchive.com", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.Warning("Unsupported download link for download: {Url}", directLink);
-                _notificationService.ShowNotification(
+                await _notificationService.ShowNotification(
                     $"Unsupported download link '{directUri.Host}'. Only https://www.xivmodarchive.com/ is supported.",
                     SoundType.GeneralChime
                 );
