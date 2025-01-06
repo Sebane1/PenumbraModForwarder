@@ -5,32 +5,70 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:PenumbraModForwarder.UI.ViewModels"
+    xmlns:models="clr-namespace:PenumbraModForwarder.Common.Models;assembly=PenumbraModForwarder.Common"
+    xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
     x:DataType="viewModels:HomeViewModel"
     mc:Ignorable="d"
     d:DesignWidth="800"
     d:DesignHeight="450">
-    <Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
-        <!-- LEFT COLUMN: Info Items -->
-        <ScrollViewer Grid.Column="0" Margin="5">
-            <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}"/>
-        </ScrollViewer>
+   <Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
+    <!-- LEFT COLUMN: Info Items -->
+    <ScrollViewer Grid.Column="0" Margin="5">
+        <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}"/>
+    </ScrollViewer>
 
-        <!-- (Empty Middle Column) -->
+    <!-- (Empty Middle Column) -->
 
-        <!-- RIGHT COLUMN: Recent Mods -->
-        <ScrollViewer Grid.Column="2" Margin="5">
-            <StackPanel>
-                <!-- Loading indicator -->
-                <TextBlock
-                    Text="Loading..."
-                    FontSize="18"
-                    FontWeight="Bold"
-                    HorizontalAlignment="Center"
-                    IsVisible="{Binding IsLoading}"/>
+    <!-- RIGHT COLUMN: Recent Mods -->
+    <ScrollViewer Grid.Column="2" Margin="5">
+        <StackPanel>
+            <!-- Loading indicator -->
+            <TextBlock
+                Text="Loading..."
+                FontSize="18"
+                FontWeight="Bold"
+                HorizontalAlignment="Center"
+                IsVisible="{Binding IsLoading}" />
 
-                <!-- Recent Mods display -->
-                <ItemsControl Classes="modDisplay" ItemsSource="{Binding RecentMods}"/>
-            </StackPanel>
-        </ScrollViewer>
+            <ItemsControl ItemsSource="{Binding RecentMods}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:XmaMods">
+                        <Border
+                            Margin="5"
+                            Padding="10"
+                            CornerRadius="4"
+                            Background="{StaticResource BackgroundBrush}"
+                            PointerPressed="OnItemPointerPressed">
+
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <asyncImageLoader:AdvancedImage
+                                    Source="{Binding ImageUrl}"
+                                    Width="120"
+                                    Height="120"
+                                    Stretch="UniformToFill" />
+
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock
+                                        Text="{Binding Name}"
+                                        Foreground="{StaticResource TextBrush}"
+                                        FontWeight="Bold"
+                                        FontSize="14" />
+
+                                    <TextBlock
+                                        Text="{Binding Publisher}"
+                                        Foreground="{StaticResource PrimaryBrush}"
+                                        FontStyle="Italic" />
+
+                                    <TextBlock
+                                        Text="{Binding Type}"
+                                        Foreground="{StaticResource AccentBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
     </Grid>
 </UserControl>
