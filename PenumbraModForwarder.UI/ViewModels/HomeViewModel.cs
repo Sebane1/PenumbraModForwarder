@@ -121,9 +121,9 @@ public class HomeViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public async Task DownloadModsAsync(XmaMods mod)
+    public async Task DownloadModsAsync(XmaMods mod, CancellationToken ct = default)
     {
-        await _downloadManagerService.DownloadModsAsync(mod);
+        await _downloadManagerService.DownloadModsAsync(mod, ct);
     }
 
     private async Task LoadStatisticsAsync()

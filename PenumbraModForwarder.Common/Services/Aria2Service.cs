@@ -2,6 +2,8 @@
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Interfaces;
 using Serilog;
 
@@ -10,6 +12,7 @@ namespace PenumbraModForwarder.Common.Services;
 public class Aria2Service : IAria2Service
 {
     private readonly ILogger _logger;
+    private bool _aria2Ready;
     private const string Aria2LatestReleaseApi = "https://api.github.com/repos/aria2/aria2/releases/latest";
 
     public string Aria2Folder { get; }
@@ -18,51 +21,54 @@ public class Aria2Service : IAria2Service
     public Aria2Service(string aria2InstallFolder)
     {
         _logger = Log.ForContext<Aria2Service>();
-        Aria2Folder = aria2InstallFolder;
-        _ = EnsureAria2AvailableAsync();
+        Aria2Folder = aria2InstallFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        _ = EnsureAria2AvailableAsync(CancellationToken.None);
     }
 
-    public async Task<bool> EnsureAria2AvailableAsync()
+    public async Task<bool> EnsureAria2AvailableAsync(CancellationToken ct)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            if (!File.Exists(Aria2ExePath))
-            {
-                _logger.Information("aria2 not found at '{Aria2Exe}'. Checking the latest release on GitHub...", Aria2ExePath);
-                return await DownloadAndInstallAria2FromLatestAsync();
-            }
-
-            _logger.Information("aria2 located: {Aria2Exe}", Aria2ExePath);
+        if (_aria2Ready)
             return true;
-        }
-        else
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            _logger.Warning("Service is only set up for Windows platforms in this implementation.");
+            _logger.Warning("Service is only supported on Windows platforms in this implementation.");
             return false;
         }
+
+        if (!File.Exists(Aria2ExePath))
+        {
+            _logger.Information("aria2 not found at '{Path}'. Checking the latest release on GitHub...", Aria2ExePath);
+            var installed = await DownloadAndInstallAria2FromLatestAsync(ct);
+            _aria2Ready = installed;
+            return installed;
+        }
+
+        _logger.Information("aria2 located at {Path}", Aria2ExePath);
+        _aria2Ready = true;
+        return true;
     }
-    
-    public async Task<bool> DownloadFileAsync(string fileUrl, string downloadDirectory)
+
+    public async Task<bool> DownloadFileAsync(string fileUrl, string downloadDirectory, CancellationToken ct)
     {
-        var isReady = await EnsureAria2AvailableAsync();
-        if (!isReady)
+        var isReady = await EnsureAria2AvailableAsync(ct);
+        if (!isReady) 
             return false;
 
         try
         {
-            // Remove any trailing slashes
-            var sanitizedDirectory = downloadDirectory.TrimEnd('\\', '/');
-
-            // Derive the file name (including extension) from the remote URL
+            var sanitizedDirectory = downloadDirectory.TrimEnd(
+                Path.DirectorySeparatorChar, 
+                Path.AltDirectorySeparatorChar
+            );
             var rawFileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
-            if (string.IsNullOrWhiteSpace(rawFileName))
-            {
-                rawFileName = "download.bin";
-            }
 
-            // Decode percent-encoded characters (e.g. "%20" -> space, "%27" -> apostrophe)
+            if (string.IsNullOrWhiteSpace(rawFileName))
+                rawFileName = "download.bin";
+
             var finalFileName = Uri.UnescapeDataString(rawFileName);
 
+            // Example extra arguments; can be adapted as needed.
             var extraAria2Args = "--log-level=debug";
             var arguments = $"\"{fileUrl}\" --dir=\"{sanitizedDirectory}\" --out=\"{finalFileName}\" {extraAria2Args}";
 
@@ -81,51 +87,59 @@ public class Aria2Service : IAria2Service
             using var process = Process.Start(startInfo);
             if (process == null)
             {
-                _logger.Error("Failed to start aria2 at {ExePath}", Aria2ExePath);
+                _logger.Error("Failed to start aria2 at {Aria2ExePath}", Aria2ExePath);
                 return false;
             }
 
-            var stdOutTask = process.StandardOutput.ReadToEndAsync();
-            var stdErrTask = process.StandardError.ReadToEndAsync();
+            // Read output concurrently and wait for the process to exit:
+            var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);
+            var stdErrTask = process.StandardError.ReadToEndAsync(ct);
 
-            await process.WaitForExitAsync();
+            // Example: Cancel download after a certain duration
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMinutes(30));
+
+            await process.WaitForExitAsync(timeoutCts.Token);
 
             var stdOut = await stdOutTask;
             var stdErr = await stdErrTask;
 
             if (!string.IsNullOrWhiteSpace(stdOut))
             {
-                _logger.Debug("[aria2 STDOUT] {Output}", stdOut.TrimEnd());
+                _logger.Debug("[aria2 STDOUT] {Output}", stdOut.Trim());
             }
             if (!string.IsNullOrWhiteSpace(stdErr))
             {
-                _logger.Debug("[aria2 STDERR] {Output}", stdErr.TrimEnd());
+                _logger.Debug("[aria2 STDERR] {Output}", stdErr.Trim());
             }
 
             if (process.ExitCode == 0)
             {
                 _logger.Information(
-                    "aria2 finished downloading '{FileUrl}' to '{Folder}\\{OutFile}'",
-                    fileUrl,
-                    sanitizedDirectory,
+                    "aria2 finished downloading {FileUrl} to {Directory}\\{FileName}",
+                    fileUrl, 
+                    sanitizedDirectory, 
                     finalFileName
                 );
                 return true;
             }
-            else
-            {
-                _logger.Error("aria2 exited with code {ExitCode} for {FileUrl}", process.ExitCode, fileUrl);
-                return false;
-            }
+
+            _logger.Error("aria2 exited with code {Code} for {Url}", process.ExitCode, fileUrl);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Warning("Download canceled for {FileUrl}", fileUrl);
+            return false;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error downloading '{FileUrl}' via aria2.", fileUrl);
+            _logger.Error(ex, "Error downloading {FileUrl} via aria2", fileUrl);
             return false;
         }
     }
 
-    private async Task<bool> DownloadAndInstallAria2FromLatestAsync()
+    private async Task<bool> DownloadAndInstallAria2FromLatestAsync(CancellationToken ct)
     {
         try
         {
@@ -134,7 +148,7 @@ public class Aria2Service : IAria2Service
                 Directory.CreateDirectory(Aria2Folder);
             }
 
-            var downloadUrl = await FetchWin64AssetUrlAsync();
+            var downloadUrl = await FetchWin64AssetUrlAsync(ct);
             if (string.IsNullOrWhiteSpace(downloadUrl))
             {
                 _logger.Error("No matching Windows 64-bit asset URL found. Cannot install aria2.");
@@ -145,13 +159,17 @@ public class Aria2Service : IAria2Service
             using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.Add("User-Agent", "PenumbraModForwarder/Aria2Service");
+
+                var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+                response.EnsureSuccessStatusCode();
+
                 _logger.Information("Downloading aria2 from {Url}", downloadUrl);
 
-                var bytes = await client.GetByteArrayAsync(downloadUrl);
-                await File.WriteAllBytesAsync(zipPath, bytes);
+                using var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await response.Content.CopyToAsync(fs, ct);
             }
 
-            _logger.Information("Extracting aria2 files to: {Folder}", Aria2Folder);
+            _logger.Information("Extracting aria2 files to {ExtractPath}", Aria2Folder);
             ZipFile.ExtractToDirectory(zipPath, Aria2Folder, overwriteFiles: true);
 
             if (File.Exists(zipPath))
@@ -159,6 +177,7 @@ public class Aria2Service : IAria2Service
                 File.Delete(zipPath);
             }
 
+            // In case aria2 is extracted into a subdirectory:
             if (!File.Exists(Aria2ExePath))
             {
                 var exeCandidate = Directory
@@ -171,19 +190,24 @@ public class Aria2Service : IAria2Service
                     if (!File.Exists(targetPath))
                     {
                         File.Move(exeCandidate, targetPath);
-                        _logger.Information("aria2c.exe found in a subdirectory and moved to: {TargetPath}", targetPath);
+                        _logger.Information("Found aria2c.exe in a subdirectory; moved it to {TargetPath}", targetPath);
                     }
                 }
             }
 
             if (!File.Exists(Aria2ExePath))
             {
-                _logger.Error("Setup failed. '{Aria2ExePath}' not found after extraction.", Aria2ExePath);
+                _logger.Error("Setup failed. {Aria2ExePath} not found after extraction.", Aria2ExePath);
                 return false;
             }
 
             _logger.Information("Successfully installed aria2 at {Aria2ExePath}", Aria2ExePath);
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Warning("Download or setup was canceled.");
+            return false;
         }
         catch (Exception ex)
         {
@@ -192,14 +216,14 @@ public class Aria2Service : IAria2Service
         }
     }
 
-    private async Task<string?> FetchWin64AssetUrlAsync()
+    private async Task<string?> FetchWin64AssetUrlAsync(CancellationToken ct)
     {
         try
         {
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "PenumbraModForwarder/Aria2Service");
 
-            var json = await client.GetStringAsync(Aria2LatestReleaseApi);
+            var json = await client.GetStringAsync(Aria2LatestReleaseApi, ct);
             using var doc = JsonDocument.Parse(json);
 
             if (!doc.RootElement.TryGetProperty("assets", out var assetsElement) ||
@@ -225,6 +249,11 @@ public class Aria2Service : IAria2Service
                     return downloadUrl;
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Warning("Fetching Windows 64-bit asset URL was canceled.");
+            return null;
         }
         catch (Exception ex)
         {
