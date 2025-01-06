@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -27,7 +25,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
     private readonly IDownloadManagerService _downloadManagerService;
     private readonly CompositeDisposable _disposables = new();
     private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
-    
+        
     private readonly IWebSocketClient _webSocketClient;
 
     private ObservableCollection<InfoItem> _infoItems;
@@ -54,7 +52,8 @@ public class HomeViewModel : ViewModelBase, IDisposable
     public HomeViewModel(
         IStatisticService statisticService,
         IXmaModDisplay xmaModDisplay,
-        IWebSocketClient webSocketClient, IDownloadManagerService downloadManagerService)
+        IWebSocketClient webSocketClient,
+        IDownloadManagerService downloadManagerService)
     {
         _logger = Log.ForContext<HomeViewModel>();
         _statisticService = statisticService;
@@ -65,7 +64,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
 
-        // Subscribe to ModInstalled event so we can refresh stats immediately.
         _webSocketClient.ModInstalled += OnModInstalled;
 
         _ = LoadStatisticsAsync();
@@ -76,7 +74,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
             .Subscribe()
             .DisposeWith(_disposables);
     }
-    
+
     private async void OnModInstalled(object sender, EventArgs e)
     {
         RxApp.MainThreadScheduler.ScheduleAsync(async (_, __) =>
@@ -91,19 +89,27 @@ public class HomeViewModel : ViewModelBase, IDisposable
         {
             IsLoading = true;
 
-            var mods = await _xmaModDisplay.GetRecentMods();
-            var distinctMods = mods
-                .GroupBy(mod => mod.ModUrl)
+            var modsFromSource = await _xmaModDisplay.GetRecentMods();
+
+            // Gather only one instance per ModUrl from the source data
+            var distinctSourceMods = modsFromSource
+                .GroupBy(m => m.ModUrl)
                 .Select(g => g.First())
                 .ToList();
-
-            RecentMods.Clear();
-            foreach (var mod in distinctMods)
+            
+            var existingModUrls = RecentMods
+                .Select(rm => rm.ModUrl)
+                .ToHashSet();
+            
+            foreach (var mod in distinctSourceMods)
             {
-                RecentMods.Add(mod);
+                if (!existingModUrls.Contains(mod.ModUrl))
+                {
+                    RecentMods.Add(mod);
+                }
             }
 
-            _logger.Information("Successfully refreshed recent mods.");
+            _logger.Information("Successfully updated the recent mods list without duplicates.");
         }
         catch (Exception ex)
         {
