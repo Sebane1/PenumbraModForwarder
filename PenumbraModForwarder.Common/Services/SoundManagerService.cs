@@ -104,7 +104,7 @@ public class SoundManagerService : ISoundManagerService
             {
                 await Task.Delay(100);
             }
-
+            
             _logger.Debug("Playback finished for {SoundType}.", soundType);
         }
         catch (Exception ex)

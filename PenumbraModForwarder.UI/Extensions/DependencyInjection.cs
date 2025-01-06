@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +27,13 @@ public static class DependencyInjection
 
         // Services
         services.AddSingleton<ISoundManagerService, SoundManagerService>();
+        services.AddSingleton<IAria2Service>(_ =>
+        {
+            var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
+            return new Aria2Service(aria2InstallFolder);
+        });
         services.AddSingleton<INotificationService, NotificationService>();
+        services.AddSingleton<IDownloadManagerService, DownloadManagerService>();
         services.AddSingleton<IWebSocketClient, WebSocketClient>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IXivLauncherService, XivLauncherService>();

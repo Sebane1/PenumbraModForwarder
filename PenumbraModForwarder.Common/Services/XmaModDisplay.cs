@@ -126,6 +126,64 @@ public class XmaModDisplay : IXmaModDisplay
 
         return results;
     }
+    
+    /// <summary>
+    /// Loads the mod details page and attempts to parse the direct download link.
+    /// </summary>
+    /// <param name="modUrl">The URL to the mod's detail page.</param>
+    /// <returns>The direct download link if found, otherwise null.</returns>
+    public async Task<string?> GetModDownloadLinkAsync(string modUrl)
+    {
+        try
+        {
+            const string domain = "https://www.xivmodarchive.com";
+            if (!modUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                modUrl = domain + modUrl;
+
+            using var client = new HttpClient();
+            var html = await client.GetStringAsync(modUrl);
+
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            // Look for the download button anchor with id = "mod-download-link"
+            var downloadNode = doc.DocumentNode.SelectSingleNode("//a[@id='mod-download-link']");
+            if (downloadNode == null)
+            {
+                _logger.Warning("No download anchor found on: {ModUrl}", modUrl);
+                return null;
+            }
+
+            // Extract the href
+            var hrefValue = downloadNode.GetAttributeValue("href", "");
+            if (string.IsNullOrWhiteSpace(hrefValue))
+            {
+                _logger.Warning("Download link was empty or missing on: {ModUrl}", modUrl);
+                return null;
+            }
+
+            // 1) Decode HTML entities (so &#39; => ')
+            hrefValue = WebUtility.HtmlDecode(hrefValue);
+
+            // If the URL is relative, prepend the domain
+            if (hrefValue.StartsWith("/"))
+                hrefValue = domain + hrefValue;
+
+            // 2) Unescape existing percent-encoded sequences (so %2520 => %20)
+            hrefValue = Uri.UnescapeDataString(hrefValue);
+
+            // 3) Manually encode any remaining literal spaces and apostrophes
+            hrefValue = hrefValue.Replace(" ", "%20")
+                .Replace("'", "%27");
+
+            return hrefValue;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to parse mod download link from: {ModUrl}", modUrl);
+            return null;
+        }
+    }
 
     /// <summary>
     /// Normalizes mod names to ensure compatibility with Avalonia.

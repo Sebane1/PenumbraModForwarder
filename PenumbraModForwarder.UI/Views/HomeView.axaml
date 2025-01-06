@@ -12,55 +12,65 @@
     mc:Ignorable="d"
     d:DesignWidth="800"
     d:DesignHeight="450">
-   <Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
-    <!-- LEFT COLUMN: Info Items -->
+<Grid ColumnDefinitions="Auto,*,Auto" Margin="5">
+    <!-- Left column (statistics, etc.) -->
     <ScrollViewer Grid.Column="0" Margin="5">
         <ItemsControl Classes="infoBoxes" ItemsSource="{Binding InfoItems}"/>
     </ScrollViewer>
 
-    <!-- (Empty Middle Column) -->
+    <!-- Middle column is empty -->
 
-    <!-- RIGHT COLUMN: Recent Mods -->
+    <!-- Right column: Recent Mods -->
     <ScrollViewer Grid.Column="2" Margin="5">
         <StackPanel>
-            <!-- Loading indicator -->
-            <gif:GifImage  Source="avares://PenumbraModForwarder.UI/Animations/LoadingAnimation.gif"
-                           Width="64"
-                           Height="64"
-                           IsVisible="{Binding IsLoading}" />
+            
+            <gif:GifImage
+                Source="avares://PenumbraModForwarder.UI/Animations/LoadingAnimation.gif"
+                Width="64"
+                Height="64"
+                IsVisible="{Binding IsLoading}" />
 
             <ItemsControl ItemsSource="{Binding RecentMods}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:XmaMods">
-                        <Border
-                            Margin="5"
-                            Padding="10"
-                            CornerRadius="4"
-                            Background="{StaticResource BackgroundBrush}"
-                            PointerPressed="OnItemPointerPressed">
+                        <Border Margin="5" Padding="10" CornerRadius="4" Background="{StaticResource BackgroundBrush}">
+                            <StackPanel Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <asyncImageLoader:AdvancedImage
+                                        Source="{Binding ImageUrl}"
+                                        Width="120"
+                                        Height="120"
+                                        Stretch="UniformToFill"/>
+                                    <StackPanel>
+                                        <TextBlock
+                                            Text="{Binding Name}"
+                                            Foreground="{StaticResource TextBrush}"
+                                            FontWeight="Bold"
+                                            FontSize="14"/>
+                                        <TextBlock
+                                            Text="{Binding Publisher}"
+                                            Foreground="{StaticResource PrimaryBrush}"
+                                            FontStyle="Italic"/>
+                                        <TextBlock
+                                            Text="{Binding Type}"
+                                            Foreground="{StaticResource AccentBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
 
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <asyncImageLoader:AdvancedImage
-                                    Source="{Binding ImageUrl}"
-                                    Width="120"
-                                    Height="120"
-                                    Stretch="UniformToFill" />
-
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock
-                                        Text="{Binding Name}"
-                                        Foreground="{StaticResource TextBrush}"
-                                        FontWeight="Bold"
-                                        FontSize="14" />
-
-                                    <TextBlock
-                                        Text="{Binding Publisher}"
-                                        Foreground="{StaticResource PrimaryBrush}"
-                                        FontStyle="Italic" />
-
-                                    <TextBlock
-                                        Text="{Binding Type}"
-                                        Foreground="{StaticResource AccentBrush}" />
+                                <!-- Row with View and Download buttons -->
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5">
+                                    <Button
+                                        Content="View Webpage"
+                                        Tag="{Binding}"
+                                        Click="OnViewModClicked"
+                                        Background="{StaticResource SecondaryBrush}"
+                                        Foreground="{StaticResource TextBrush}" />
+                                    <Button
+                                        Content="Download"
+                                        Tag="{Binding}"
+                                        Click="OnDownloadModClicked"
+                                        Background="{StaticResource AccentBrush}"
+                                        Foreground="{StaticResource TextBrush}" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -69,5 +79,5 @@
             </ItemsControl>
         </StackPanel>
     </ScrollViewer>
-    </Grid>
+</Grid>
 </UserControl>

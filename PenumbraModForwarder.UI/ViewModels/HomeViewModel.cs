@@ -24,6 +24,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
     private readonly ILogger _logger;
     private readonly IStatisticService _statisticService;
     private readonly IXmaModDisplay _xmaModDisplay;
+    private readonly IDownloadManagerService _downloadManagerService;
     private readonly CompositeDisposable _disposables = new();
     private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
     
@@ -53,12 +54,13 @@ public class HomeViewModel : ViewModelBase, IDisposable
     public HomeViewModel(
         IStatisticService statisticService,
         IXmaModDisplay xmaModDisplay,
-        IWebSocketClient webSocketClient)
+        IWebSocketClient webSocketClient, IDownloadManagerService downloadManagerService)
     {
         _logger = Log.ForContext<HomeViewModel>();
         _statisticService = statisticService;
         _xmaModDisplay = xmaModDisplay;
         _webSocketClient = webSocketClient;
+        _downloadManagerService = downloadManagerService;
 
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
@@ -111,6 +113,11 @@ public class HomeViewModel : ViewModelBase, IDisposable
         {
             IsLoading = false;
         }
+    }
+
+    public async Task DownloadModsAsync(XmaMods mod)
+    {
+        await _downloadManagerService.DownloadModsAsync(mod);
     }
 
     private async Task LoadStatisticsAsync()

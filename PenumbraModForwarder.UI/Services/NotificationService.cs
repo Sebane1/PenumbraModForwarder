@@ -36,15 +36,16 @@ namespace PenumbraModForwarder.UI.Services
 
         public async Task ShowNotification(string message, SoundType? soundType = null, int durationSeconds = 4)
         {
-            if (!(bool)_configurationService.ReturnConfigValue(config => config.UI.NotificationEnabled))
+            if (!(bool)_configurationService.ReturnConfigValue(config => config.UI.NotificationEnabled)) 
                 return;
-
+            
             if (soundType.HasValue)
             {
                 _ = _soundManagerService.PlaySoundAsync(soundType.Value);
             }
 
             var notification = new Notification(message, this, showProgress: true);
+
             lock (_lock)
             {
                 if (Notifications.Count >= 3)
@@ -55,8 +56,7 @@ namespace PenumbraModForwarder.UI.Services
                     {
                         lock (_lock)
                         {
-                            if (Notifications.Count > 0)
-                                Notifications.RemoveAt(0);
+                            if (Notifications.Count > 0) Notifications.RemoveAt(0);
                         }
                     });
                 }
