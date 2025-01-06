@@ -10,12 +10,17 @@
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
+        <None Remove="Animations\LoadingAnimation.json" />
+        <None Remove="Animations\Loading.gif" />
+        <AvaloniaResource Include="Animations\LoadingAnimation.gif" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.3.0" />
         <PackageReference Include="Avalonia" Version="11.2.1"/>
         <PackageReference Include="Avalonia.Desktop" Version="11.2.1"/>
+        <PackageReference Include="Avalonia.Labs.Controls" Version="11.2.0" />
+        <PackageReference Include="Avalonia.Labs.Gif" Version="11.2.0" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1"/>
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->

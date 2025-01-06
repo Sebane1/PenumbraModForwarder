@@ -7,6 +7,7 @@
     xmlns:viewModels="clr-namespace:PenumbraModForwarder.UI.ViewModels"
     xmlns:models="clr-namespace:PenumbraModForwarder.Common.Models;assembly=PenumbraModForwarder.Common"
     xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+    xmlns:gif="clr-namespace:Avalonia.Labs.Gif;assembly=Avalonia.Labs.Gif"
     x:DataType="viewModels:HomeViewModel"
     mc:Ignorable="d"
     d:DesignWidth="800"
@@ -23,12 +24,10 @@
     <ScrollViewer Grid.Column="2" Margin="5">
         <StackPanel>
             <!-- Loading indicator -->
-            <TextBlock
-                Text="Loading..."
-                FontSize="18"
-                FontWeight="Bold"
-                HorizontalAlignment="Center"
-                IsVisible="{Binding IsLoading}" />
+            <gif:GifImage  Source="avares://PenumbraModForwarder.UI/Animations/LoadingAnimation.gif"
+                           Width="64"
+                           Height="64"
+                           IsVisible="{Binding IsLoading}" />
 
             <ItemsControl ItemsSource="{Binding RecentMods}">
                 <ItemsControl.ItemTemplate>
