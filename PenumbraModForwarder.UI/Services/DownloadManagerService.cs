@@ -71,7 +71,7 @@ public class DownloadManagerService : IDownloadManagerService
             return;
         }
 
-        await _notificationService.ShowNotification($"Downloading file {mod.Name}", SoundType.GeneralChime);
+        await _notificationService.ShowNotification($"Downloading file: {mod.Name}", SoundType.GeneralChime);
 
         var configuredPaths = _configurationService.ReturnConfigValue(cfg => cfg.BackgroundWorker.DownloadPath)
             as System.Collections.Generic.List<string>;
