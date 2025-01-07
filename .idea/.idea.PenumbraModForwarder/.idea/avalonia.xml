@@ -36,6 +36,12 @@
         <entry key="PenumbraModForwarder.UI/Views/ModsView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/Settings/SettingsView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
         <entry key="PenumbraModForwarder.UI/Views/SettingsView.axaml" value="PenumbraModForwarder.UI/PenumbraModForwarder.UI.csproj" />
+        <entry key="PenumbraModForwarder.Updater/App.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
+        <entry key="PenumbraModForwarder.Updater/Styles/AcrylicMaterials.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
+        <entry key="PenumbraModForwarder.Updater/Styles/ColourResources.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
+        <entry key="PenumbraModForwarder.Updater/Styles/Elements/Button.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
+        <entry key="PenumbraModForwarder.Updater/Styles/Elements/TitleBar.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
+        <entry key="PenumbraModForwarder.Updater/Views/MainWindow.axaml" value="PenumbraModForwarder.Updater/PenumbraModForwarder.Updater.csproj" />
       </map>
     </option>
   </component>

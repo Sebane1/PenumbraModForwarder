@@ -6,15 +6,88 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PenumbraModForwarder.Updater.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="PenumbraModForwarder.Updater">
+        Title="Penumbra Mod Forwarder - Updater"
+        MinWidth="800"
+        MinHeight="600"
+        TransparencyLevelHint="AcrylicBlur"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        WindowStartupLocation="CenterScreen">
 
+    <!-- 
+        Design-time DataContext only. For runtime, set in code (e.g. in App.axaml.cs).
+    -->
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Grid>
+        <!-- Custom Title Bar -->
+        <ExperimentalAcrylicBorder Grid.Row="0"
+                                   Height="30"
+                                   Material="{StaticResource TopBarAcrylicMaterial}">
+            <Grid x:Name="TitleBar" Classes="titleBar">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
+                <TextBlock Text="Penumbra Mod Forwarder - Updater"
+                           VerticalAlignment="Center"
+                           Margin="10,0"
+                           Foreground="{DynamicResource TextBrush}"
+                           Classes="titleText" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Name="MinimizeButton"
+                            Classes="windowControl"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Path Data="M 0,0 L 10,0" />
+                    </Button>
+                    <Button Name="CloseButton"
+                            Classes="windowControl"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Path Data="M 0,0 L 10,10 M 0,10 L 10,0" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </ExperimentalAcrylicBorder>
+
+        <!-- Main content area -->
+        <Border Grid.Row="1">
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="{Binding Greeting}"
+                           Foreground="{StaticResource TextBrush}"
+                           FontSize="20"
+                           HorizontalAlignment="Center"/>
+                
+                <!-- Update button (not bound yet) -->
+                <Button Content="Update"
+                        Width="120"
+                        Background="{StaticResource AccentBrush}"
+                        Foreground="{StaticResource TextBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Optional status bar (if desired) -->
+        <Border Grid.Row="2"
+                Height="40">
+            <TextBlock Text="Status area..."
+                       VerticalAlignment="Center"
+                       Margin="16,0"
+                       Foreground="{StaticResource TextBrush}"/>
+        </Border>
+
+        <!-- Define rows for layout -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+    </Grid>
 </Window>
