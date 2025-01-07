@@ -2,6 +2,6 @@
 
 public class ErrorWindowViewModel : ViewModelBase
 {
-    public string ErrorMessage { get; } = "Please launch the application through the main executable.\n" +
+    public string ErrorMessage { get; } = "Please launch PenumbraModForwarder.Launcher.exe.\n" +
                                           "This ensures proper monitoring and crash recovery.";
 }
