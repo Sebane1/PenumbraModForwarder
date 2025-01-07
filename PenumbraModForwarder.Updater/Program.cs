@@ -1,41 +1,50 @@
-﻿using Avalonia;
+﻿using System;
+using System.Threading;
+using Avalonia;
 using Avalonia.ReactiveUI;
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Updater.Extensions;
 using Serilog;
 
-namespace PenumbraModForwarder.Updater;
-
-public static class Program
+namespace PenumbraModForwarder.Updater
 {
-    public static IServiceProvider ServiceProvider { get; private set; } = null!;
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
-    [STAThread]
-    public static void Main(string[] args)
+    public static class Program
     {
-        try
-        {
-            var services = new ServiceCollection();
-            services.AddApplicationServices();
-            
-            ServiceProvider = services.BuildServiceProvider();
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Application failed to start");
-            Environment.Exit(1);
-        }
-    }
+        public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
-    // Avalonia configuration, don't remove; also used by visual designer.
-    public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace()
-            .UseReactiveUI();
+        [STAThread]
+        public static void Main(string[] args)
+        {
+            bool isNewInstance;
+            using (var mutex = new Mutex(true, "PenumbraModForwarder.Updater", out isNewInstance))
+            {
+                if (!isNewInstance)
+                {
+                    Console.WriteLine("Another instance of PenumbraModForwarder.Updater is already running. Exiting...");
+                    return;
+                }
+
+                try
+                {
+                    var services = new ServiceCollection();
+                    services.AddApplicationServices();
+
+                    ServiceProvider = services.BuildServiceProvider();
+                    BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+                }
+                catch (Exception ex)
+                {
+                    Log.Fatal(ex, "Application failed to start");
+                    Environment.Exit(1);
+                }
+            }
+        }
+
+        public static AppBuilder BuildAvaloniaApp() =>
+            AppBuilder.Configure<App>()
+                .UsePlatformDetect()
+                .WithInterFont()
+                .LogToTrace()
+                .UseReactiveUI();
+    }
 }
