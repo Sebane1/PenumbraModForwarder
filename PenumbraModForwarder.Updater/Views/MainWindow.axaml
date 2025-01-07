@@ -116,7 +116,8 @@
                     <Button Content="Update"
                             Width="120"
                             Background="{StaticResource AccentBrush}"
-                            Foreground="{StaticResource TextBrush}" />
+                            Foreground="{StaticResource TextBrush}"
+                            Command="{Binding UpdateCommand}" />
                 </StackPanel>
             </Grid>
         </Border>

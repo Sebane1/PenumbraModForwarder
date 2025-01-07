@@ -1,17 +1,22 @@
 ﻿using System;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Updater.Interfaces;
 using ReactiveUI;
+using Serilog;
 
 namespace PenumbraModForwarder.Updater.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
         private readonly IGetBackgroundInformation _getBackgroundInformation;
-        private readonly Random _random = new Random();
+        private readonly IUpdateService _updateService;
+        private readonly ILogger _logger;
+        private readonly Random _random = new();
 
         private int _lastIndex1 = -1;
         private int _lastIndex2 = -1;
@@ -66,10 +71,13 @@ namespace PenumbraModForwarder.Updater.ViewModels
         }
 
         private IDisposable? _imageTimer;
+        public ReactiveCommand<Unit, Unit> UpdateCommand { get; }
 
-        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation)
+        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService)
         {
+            _logger = Log.ForContext<MainWindowViewModel>();
             _getBackgroundInformation = getBackgroundInformation;
+            _updateService = updateService;
 
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
@@ -78,14 +86,35 @@ namespace PenumbraModForwarder.Updater.ViewModels
                 : $"{version.Major}.{version.Minor}.{version.Build}";
 
             CurrentVersion = $"Current Version: v{semVersion}";
-            UpdatedVersion = "Updated Version: v2.0.0";
+            
+            UpdateCommand = ReactiveCommand.CreateFromTask(PerformUpdateAsync);
 
             Begin();
             StatusText = "Waiting for Update...";
         }
 
+        private async Task PerformUpdateAsync()
+        {
+            try
+            {
+                _logger.Debug("Button Clicked");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+            }
+        }
+
         private async Task Begin()
         {
+            var latestVersion = await _updateService.GetMostRecentVersionAsync();
+            UpdatedVersion = $"Updated Version: {latestVersion}";
+
+            if (CurrentVersion != latestVersion)
+            {
+                StatusText = "Update Needed...";
+            }
+            
             var (info, updater) = await _getBackgroundInformation.GetResources();
 
             InfoJson = info;
