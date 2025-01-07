@@ -1,4 +1,5 @@
-﻿using PenumbraModForwarder.Common.Events;
+﻿using System.Runtime.InteropServices;
+using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Interfaces;
@@ -36,10 +37,18 @@ public class ConfigurationListener : IConfigurationListener
             _xivLauncherService.EnableAutoStartWatchdog(shouldAutoStart);
         }
 
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return;
+        
         if (e is {PropertyName: "Common.FileLinkingEnabled", NewValue: bool shouldLinkFiles})
         {
             if (shouldLinkFiles) _fileLinkingService.EnableFileLinking();
             else _fileLinkingService.DisableFileLinking();
+        }      
+        
+        if (e is {PropertyName: "Common.StartOnBoot", NewValue: bool shouldStartOnBoot})
+        {
+            if (shouldStartOnBoot) _fileLinkingService.EnableStartup();
+            else _fileLinkingService.DisableStartup();
         }
     }
 }
