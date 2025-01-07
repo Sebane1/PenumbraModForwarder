@@ -1,20 +1,145 @@
-﻿using PenumbraModForwarder.Updater.Interfaces;
+﻿using System;
+using System.Reactive.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.Updater.Interfaces;
+using ReactiveUI;
 
-namespace PenumbraModForwarder.Updater.ViewModels;
-
-public class MainWindowViewModel : ViewModelBase
+namespace PenumbraModForwarder.Updater.ViewModels
 {
-    private readonly IGetBackgroundInformation _getBackgroundInformation;
-    public string Greeting { get; } = "Welcome to Avalonia!";
-
-    public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation)
+    public class MainWindowViewModel : ViewModelBase
     {
-        _getBackgroundInformation = getBackgroundInformation;
-        Begin();
-    }
+        private readonly IGetBackgroundInformation _getBackgroundInformation;
+        private readonly Random _random = new Random();
 
-    private void Begin()
-    {
-        _getBackgroundInformation.GetResources();
+        private int _lastIndex1 = -1;
+        private int _lastIndex2 = -1;
+
+        private GithubStaticResources.InformationJson? _infoJson;
+        public GithubStaticResources.InformationJson? InfoJson
+        {
+            get => _infoJson;
+            set => this.RaiseAndSetIfChanged(ref _infoJson, value);
+        }
+
+        private GithubStaticResources.UpdaterInformationJson? _updaterInfoJson;
+        public GithubStaticResources.UpdaterInformationJson? UpdaterInfoJson
+        {
+            get => _updaterInfoJson;
+            set => this.RaiseAndSetIfChanged(ref _updaterInfoJson, value);
+        }
+
+        private string[]? _backgroundImages;
+        public string[]? BackgroundImages
+        {
+            get => _backgroundImages;
+            set => this.RaiseAndSetIfChanged(ref _backgroundImages, value);
+        }
+
+        private string? _currentImage;
+        public string? CurrentImage
+        {
+            get => _currentImage;
+            set => this.RaiseAndSetIfChanged(ref _currentImage, value);
+        }
+        
+        private string _statusText;
+        public string StatusText
+        {
+            get => _statusText;
+            set => this.RaiseAndSetIfChanged(ref _statusText, value);
+        }
+        
+        private string _currentVersion;
+        public string CurrentVersion
+        {
+            get => _currentVersion;
+            set => this.RaiseAndSetIfChanged(ref _currentVersion, value);
+        }
+        
+        private string _updatedVersion;
+        public string UpdatedVersion
+        {
+            get => _updatedVersion;
+            set => this.RaiseAndSetIfChanged(ref _updatedVersion, value);
+        }
+
+        private IDisposable? _imageTimer;
+
+        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation)
+        {
+            _getBackgroundInformation = getBackgroundInformation;
+
+            var assembly = Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            var semVersion = version == null 
+                ? "Local Build" 
+                : $"{version.Major}.{version.Minor}.{version.Build}";
+
+            CurrentVersion = $"Current Version: v{semVersion}";
+            UpdatedVersion = "Updated Version: v2.0.0";
+
+            Begin();
+            StatusText = "Waiting for Update...";
+        }
+
+        private async Task Begin()
+        {
+            var (info, updater) = await _getBackgroundInformation.GetResources();
+
+            InfoJson = info;
+            UpdaterInfoJson = updater;
+            
+            if (UpdaterInfoJson?.Backgrounds?.Images != null)
+            {
+                BackgroundImages = UpdaterInfoJson.Backgrounds.Images;
+            }
+            
+            StartImageRotation();
+        }
+
+        private void StartImageRotation()
+        {
+            if (BackgroundImages == null || BackgroundImages.Length == 0)
+                return;
+
+            // Show a first random image
+            var initialIndex = _random.Next(BackgroundImages.Length);
+            CurrentImage = BackgroundImages[initialIndex];
+            _lastIndex1 = initialIndex;
+
+            // Dispose of any previous timer
+            _imageTimer?.Dispose();
+            
+            _imageTimer = Observable.Interval(TimeSpan.FromSeconds(30))
+                .Subscribe(_ =>
+                {
+                    if (BackgroundImages.Length <= 2)
+                    {
+                        CycleWithoutRandom();
+                        return;
+                    }
+
+                    int newIndex;
+                    do
+                    {
+                        newIndex = _random.Next(BackgroundImages.Length);
+                    }
+                    while (newIndex == _lastIndex1 || newIndex == _lastIndex2);
+
+                    CurrentImage = BackgroundImages[newIndex];
+                    
+                    _lastIndex2 = _lastIndex1;
+                    _lastIndex1 = newIndex;
+                });
+        }
+
+        private void CycleWithoutRandom()
+        {
+            var currentIndex = Array.IndexOf(BackgroundImages, CurrentImage);
+            var nextIndex = (currentIndex + 1) % BackgroundImages!.Length;
+            CurrentImage = BackgroundImages[nextIndex];
+        }
     }
 }

@@ -3,27 +3,27 @@
         xmlns:vm="using:PenumbraModForwarder.Updater.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="PenumbraModForwarder.Updater.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Penumbra Mod Forwarder - Updater"
-        MinWidth="800"
-        MinHeight="600"
+        Width="800"
+        Height="600"
         TransparencyLevelHint="AcrylicBlur"
         Background="Transparent"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
+        CanResize="False"
         WindowStartupLocation="CenterScreen">
 
-    <!-- 
-        Design-time DataContext only. For runtime, set in code (e.g. in App.axaml.cs).
-    -->
+    <!-- Design-time DataContext -->
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
     <Grid>
-        <!-- Custom Title Bar -->
+        <!-- Custom Title Bar (Row 0) -->
         <ExperimentalAcrylicBorder Grid.Row="0"
                                    Height="30"
                                    Material="{StaticResource TopBarAcrylicMaterial}">
@@ -36,7 +36,7 @@
                 <TextBlock Text="Penumbra Mod Forwarder - Updater"
                            VerticalAlignment="Center"
                            Margin="10,0"
-                           Foreground="{DynamicResource TextBrush}"
+                           Foreground="{StaticResource TextBrush}"
                            Classes="titleText" />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -56,38 +56,85 @@
             </Grid>
         </ExperimentalAcrylicBorder>
 
-        <!-- Main content area -->
-        <Border Grid.Row="1">
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
-                        Spacing="12">
-                <TextBlock Text="{Binding Greeting}"
-                           Foreground="{StaticResource TextBrush}"
-                           FontSize="20"
-                           HorizontalAlignment="Center"/>
-                
-                <!-- Update button (not bound yet) -->
-                <Button Content="Update"
-                        Width="120"
-                        Background="{StaticResource AccentBrush}"
-                        Foreground="{StaticResource TextBrush}"/>
-            </StackPanel>
+        <!-- Main content area (Row 1) -->
+        <Border Grid.Row="1"
+                Margin="16">
+            <Grid>
+                <!-- Two columns: left for images, right for text -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left column: show current image with a cross-fade -->
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    
+                    <Border BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="2"
+                            Padding="4"
+                            Width="500"
+                            Height="350"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <TransitioningContentControl Content="{Binding CurrentImage}">
+                            <TransitioningContentControl.PageTransition>
+                                <CrossFade Duration="0:0:1" />
+                            </TransitioningContentControl.PageTransition>
+
+                            <TransitioningContentControl.ContentTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <asyncImageLoader:AdvancedImage 
+                                        Source="{Binding}"
+                                        Stretch="UniformToFill"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </TransitioningContentControl.ContentTemplate>
+                        </TransitioningContentControl>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right column: text-based content -->
+                <StackPanel Grid.Column="1"
+                            Margin="16,0,0,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="12">
+
+                    <TextBlock Text="Updater Info:"
+                               Foreground="{StaticResource TextBrush}"
+                               FontSize="16"/>
+
+                    <TextBlock Text="{Binding CurrentVersion}"
+                               Foreground="{StaticResource TextBrush}"/>
+
+                    <TextBlock Text="{Binding UpdatedVersion}"
+                               Foreground="{StaticResource TextBrush}"/>
+
+                    <Button Content="Update"
+                            Width="120"
+                            Background="{StaticResource AccentBrush}"
+                            Foreground="{StaticResource TextBrush}" />
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- Optional status bar (if desired) -->
+        <!-- Bottom status bar (Row 2) -->
         <Border Grid.Row="2"
-                Height="40">
-            <TextBlock Text="Status area..."
+                Height="80">
+            <TextBlock Text="{Binding StatusText}"
                        VerticalAlignment="Center"
                        Margin="16,0"
                        Foreground="{StaticResource TextBrush}"/>
         </Border>
 
-        <!-- Define rows for layout -->
+        <!-- Define row layout -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
     </Grid>
 </Window>

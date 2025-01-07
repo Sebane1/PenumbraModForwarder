@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Updater.Interfaces;
 using Serilog;
 
@@ -16,13 +17,9 @@ public class GetBackgroundInformation : IGetBackgroundInformation
         _logger = Log.ForContext<GetBackgroundInformation>();
     }
 
-    public async Task GetResources()
+    public async Task<(GithubStaticResources.InformationJson?, GithubStaticResources.UpdaterInformationJson?)> GetResources()
     {
         var resources = await _staticResourceService.GetResourcesUsingGithubApiAsync();
-        var mainInfo = resources.Item1;
-        var updaterInfo = resources.Item2;
-        
-        _logger.Debug($"Main info: {mainInfo.Name}");
-        _logger.Debug($"Updater info: {updaterInfo.Name}");
+        return resources;
     }
 }
