@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using PenumbraModForwarder.Common.Interfaces;
+﻿using PenumbraModForwarder.Common.Interfaces;
 
 namespace PenumbraModForwarder.Common.Services;
 
@@ -33,12 +30,11 @@ public class FileStorage : IFileStorage
             Directory.CreateDirectory(path);
         }
     }
-    
+
     public void WriteAllText(string path, string content)
     {
         File.WriteAllText(path, content);
     }
-
 
     public void Delete(string path)
     {
@@ -69,4 +65,18 @@ public class FileStorage : IFileStorage
         }
         File.Copy(sourcePath, destinationPath, overwrite);
     }
+    
+    public Stream OpenRead(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"The file at '{path}' does not exist.");
+        }
+        return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    }
+    
+    public Stream OpenWrite(string path)  
+    {  
+        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);  
+    } 
 }

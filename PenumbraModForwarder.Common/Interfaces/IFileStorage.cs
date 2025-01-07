@@ -11,4 +11,6 @@ public interface IFileStorage
     Stream CreateFile(string path);
     void CopyFile(string sourcePath, string destinationPath, bool overwrite);
     void WriteAllText(string path, string content);
+    Stream OpenRead(string path);
+    Stream OpenWrite(string path);
 }

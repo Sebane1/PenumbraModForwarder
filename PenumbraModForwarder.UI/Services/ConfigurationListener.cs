@@ -10,12 +10,14 @@ public class ConfigurationListener : IConfigurationListener
 {
     private readonly IConfigurationService _configurationService;
     private readonly IXivLauncherService _xivLauncherService;
+    private readonly IFileLinkingService _fileLinkingService;
     private readonly ILogger _logger;
 
-    public ConfigurationListener(IConfigurationService configurationService, IXivLauncherService xivLauncherService)
+    public ConfigurationListener(IConfigurationService configurationService, IXivLauncherService xivLauncherService, IFileLinkingService fileLinkingService)
     {
         _configurationService = configurationService;
         _xivLauncherService = xivLauncherService;
+        _fileLinkingService = fileLinkingService;
         _logger = Log.ForContext<ConfigurationListener>();
     }
 
@@ -32,6 +34,12 @@ public class ConfigurationListener : IConfigurationListener
         if (e is {PropertyName: "Common.StartOnFfxivBoot", NewValue: bool shouldAutoStart})
         {
             _xivLauncherService.EnableAutoStartWatchdog(shouldAutoStart);
+        }
+
+        if (e is {PropertyName: "Common.FileLinkingEnabled", NewValue: bool shouldLinkFiles})
+        {
+            if (shouldLinkFiles) _fileLinkingService.EnableFileLinking();
+            else _fileLinkingService.DisableFileLinking();
         }
     }
 }

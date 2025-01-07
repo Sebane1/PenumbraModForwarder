@@ -12,6 +12,8 @@ using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
+using IRegistryHelper = PenumbraModForwarder.UI.Interfaces.IRegistryHelper;
+using RegistryHelper = PenumbraModForwarder.UI.Services.RegistryHelper;
 
 namespace PenumbraModForwarder.UI.Extensions;
 
@@ -32,6 +34,8 @@ public static class DependencyInjection
             var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
             return new Aria2Service(aria2InstallFolder);
         });
+        services.AddSingleton<IRegistryHelper, RegistryHelper>();
+        services.AddSingleton<IFileLinkingService, FileLinkingService>();
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IDownloadManagerService, DownloadManagerService>();
         services.AddSingleton<IWebSocketClient, WebSocketClient>();

@@ -16,7 +16,7 @@ public class ConfigurationService : IConfigurationService
     private readonly IFileStorage _fileStorage;
     private readonly ILogger _logger;
     private ConfigurationModel _config;
-    public event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
+    public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 
     public ConfigurationService(IFileStorage fileStorage)
     {
@@ -27,10 +27,21 @@ public class ConfigurationService : IConfigurationService
 
     private void LoadConfiguration()
     {
+        // If the file exists, read it within a using block to ensure the file lock is released once we're done.
         if (_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
-            var configContent = _fileStorage.Read(ConfigurationConsts.ConfigurationFilePath);
-            _config = JsonConvert.DeserializeObject<ConfigurationModel>(configContent) ?? new ConfigurationModel();
+            try
+            {
+                using var stream = _fileStorage.OpenRead(ConfigurationConsts.ConfigurationFilePath);
+                using var reader = new StreamReader(stream);
+                var configContent = reader.ReadToEnd();
+                _config = JsonConvert.DeserializeObject<ConfigurationModel>(configContent) ?? new ConfigurationModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to load configuration file. Falling back to default configuration.");
+                _config = new ConfigurationModel();
+            }
         }
         else
         {
@@ -45,6 +56,7 @@ public class ConfigurationService : IConfigurationService
         {
             _fileStorage.CreateDirectory(configDirectory);
         }
+
         if (!_fileStorage.Exists(ConfigurationConsts.ConfigurationFilePath))
         {
             _config = new ConfigurationModel();
@@ -65,11 +77,13 @@ public class ConfigurationService : IConfigurationService
     public void SaveConfiguration(ConfigurationModel updatedConfig, bool detectChangesAndInvokeEvents = true)
     {
         if (updatedConfig == null) throw new ArgumentNullException(nameof(updatedConfig));
+
         if (detectChangesAndInvokeEvents)
         {
             var originalConfig = _config.DeepClone();
             _config = updatedConfig;
             var changes = GetChanges(originalConfig, _config);
+
             if (changes.Any())
             {
                 foreach (var change in changes)
@@ -82,8 +96,21 @@ public class ConfigurationService : IConfigurationService
         {
             _config = updatedConfig;
         }
+
+        // Serialize and then write within a using block to release the file lock immediately afterward.
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
-        _fileStorage.Write(ConfigurationConsts.ConfigurationFilePath, updatedConfigContent);
+
+        try
+        {
+            using var stream = _fileStorage.OpenWrite(ConfigurationConsts.ConfigurationFilePath);
+            using var writer = new StreamWriter(stream);
+            writer.Write(updatedConfigContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to save configuration to {Path}", ConfigurationConsts.ConfigurationFilePath);
+            throw;
+        }
     }
 
     public void ResetToDefaultConfiguration()
@@ -96,21 +123,21 @@ public class ConfigurationService : IConfigurationService
     public object ReturnConfigValue(Func<ConfigurationModel, object> propertySelector)
     {
         if (propertySelector == null)
-        {
             throw new ArgumentNullException(nameof(propertySelector));
-        }
+
         return propertySelector(_config);
     }
 
     public void UpdateConfigValue(Action<ConfigurationModel> propertyUpdater, string changedPropertyPath, object newValue)
     {
         if (propertyUpdater == null)
-        {
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
-        }
+
         propertyUpdater(_config);
         _logger.Debug("Raising ConfigurationChanged event for {ChangedPropertyPath} with new value: {NewValue}", changedPropertyPath, newValue);
         ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(changedPropertyPath, newValue));
+
+        // Save the configuration without re-doing the detection because we already know what's changed.
         SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
     }
 
@@ -137,18 +164,18 @@ public class ConfigurationService : IConfigurationService
                 throw new Exception($"Property '{propertyName}' not found on type '{currentObject.GetType().Name}'");
             }
 
+            // If we're at the final property, set it (potentially converting from JArray as needed).
             if (i == properties.Length - 1)
             {
-                // If the new value is a JArray, convert it to the desired type
                 if (newValue is JArray jArrayValue)
                 {
-                    // Handle List<string>:
+                    // Handle List<string>
                     if (propertyInfo.PropertyType == typeof(List<string>))
                     {
                         var typedList = jArrayValue.ToObject<List<string>>();
                         propertyInfo.SetValue(currentObject, typedList);
                     }
-                    // Handle string[]:
+                    // Handle string[]
                     else if (propertyInfo.PropertyType.IsArray &&
                              propertyInfo.PropertyType.GetElementType() == typeof(string))
                     {
@@ -157,20 +184,20 @@ public class ConfigurationService : IConfigurationService
                     }
                     else
                     {
-                        // Generic fallback for other collection or array types
+                        // Fallback for other collection or array types
                         var convertedCollection = jArrayValue.ToObject(propertyInfo.PropertyType);
                         propertyInfo.SetValue(currentObject, convertedCollection);
                     }
                 }
                 else
                 {
-                    // For non-JArray values, use standard type conversion
                     var convertedValue = Convert.ChangeType(newValue, propertyInfo.PropertyType);
                     propertyInfo.SetValue(currentObject, convertedValue);
                 }
             }
             else
             {
+                // Move deeper into the object graph
                 currentObject = propertyInfo.GetValue(currentObject);
             }
         }
@@ -193,6 +220,7 @@ public class ConfigurationService : IConfigurationService
                 Caching = false
             }
         };
+
         var comparisonResult = compareLogic.Compare(original, updated);
         if (!comparisonResult.AreEqual)
         {
@@ -201,23 +229,33 @@ public class ConfigurationService : IConfigurationService
                 var propertyName = difference.PropertyName.TrimStart('.');
                 var newValue = difference.Object2;
                 changes[propertyName] = newValue;
-                _logger.Debug("Detected change in property '{PropertyName}': Original Value = '{OriginalValue}', New Value = '{NewValue}'", propertyName, difference.Object1, difference.Object2);
+
+                _logger.Debug(
+                    "Detected change in property '{PropertyName}': Original Value = '{OriginalValue}', New Value = '{NewValue}'",
+                    propertyName,
+                    difference.Object1,
+                    difference.Object2
+                );
             }
         }
         else
         {
             _logger.Debug("No differences detected between original and updated configurations.");
         }
+
         return changes;
     }
 }
 
-// Extension method for deep cloning
+/// <summary>
+/// Extension method for deep cloning 
+/// </summary>
 public static class CloneExtensions
 {
     public static T DeepClone<T>(this T obj)
     {
         if (obj == null) return default(T);
+
         var settings = new JsonSerializerSettings
         {
             ObjectCreationHandling = ObjectCreationHandling.Replace,
@@ -225,6 +263,7 @@ public static class CloneExtensions
             TypeNameHandling = TypeNameHandling.Auto,
             Formatting = Formatting.Indented
         };
+
         var serialized = JsonConvert.SerializeObject(obj, settings);
         return JsonConvert.DeserializeObject<T>(serialized, settings);
     }
