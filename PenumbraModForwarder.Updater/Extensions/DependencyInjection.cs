@@ -27,7 +27,7 @@ public static class DependencyInjection
             var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
             return new Aria2Service(aria2InstallFolder);
         });
-        
+        services.AddSingleton<IDownloadAndInstallUpdates, DownloadAndInstallUpdates>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
         

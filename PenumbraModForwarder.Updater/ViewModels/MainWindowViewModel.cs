@@ -15,6 +15,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
     {
         private readonly IGetBackgroundInformation _getBackgroundInformation;
         private readonly IUpdateService _updateService;
+        private readonly IDownloadAndInstallUpdates _downloadAndInstallUpdates;
         private readonly ILogger _logger;
         private readonly Random _random = new();
 
@@ -73,14 +74,19 @@ namespace PenumbraModForwarder.Updater.ViewModels
         private IDisposable? _imageTimer;
         public ReactiveCommand<Unit, Unit> UpdateCommand { get; }
 
-        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService)
+        private string numberedVersionCurrent;
+        private string numberedVersionUpdated;
+
+        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService, IDownloadAndInstallUpdates downloadAndInstallUpdates)
         {
             _logger = Log.ForContext<MainWindowViewModel>();
             _getBackgroundInformation = getBackgroundInformation;
             _updateService = updateService;
+            _downloadAndInstallUpdates = downloadAndInstallUpdates;
 
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
+            numberedVersionCurrent = $"{version.Major}.{version.Minor}.{version.Build}";
             var semVersion = version == null 
                 ? "Local Build" 
                 : $"{version.Major}.{version.Minor}.{version.Build}";
@@ -98,6 +104,13 @@ namespace PenumbraModForwarder.Updater.ViewModels
             try
             {
                 _logger.Debug("Button Clicked");
+                StatusText = "Downloading Update...";
+                var (success, downloadPath) = await _downloadAndInstallUpdates.DownloadAndInstallAsync(_currentVersion);
+                if (!success)
+                {
+                    StatusText = "Download Failed";
+                    return;
+                }
             }
             catch (Exception ex)
             {
@@ -109,6 +122,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
         {
             var latestVersion = await _updateService.GetMostRecentVersionAsync();
             UpdatedVersion = $"Updated Version: {latestVersion}";
+            numberedVersionUpdated = latestVersion;
 
             if (CurrentVersion != latestVersion)
             {
