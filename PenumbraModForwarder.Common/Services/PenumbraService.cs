@@ -184,7 +184,7 @@ public class PenumbraService : IPenumbraService
 
         _configurationService.UpdateConfigValue(
             config => config.BackgroundWorker.PenumbraModFolderPath = foundPath,
-            "BackgroundWorker.PenumbraModPath",
+            "BackgroundWorker.PenumbraModFolderPath",
             foundPath
         );
     }

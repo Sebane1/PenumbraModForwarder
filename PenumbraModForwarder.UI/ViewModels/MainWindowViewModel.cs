@@ -34,6 +34,8 @@ public class MainWindowViewModel : ViewModelBase
         (_notificationService as NotificationService)?.Notifications ?? new();
 
     public InstallViewModel InstallViewModel { get; }
+    
+    public SentryPromptViewModel SentryPromptViewModel { get; }
 
     public MenuItem SelectedMenuItem
     {
@@ -62,7 +64,8 @@ public class MainWindowViewModel : ViewModelBase
         IWebSocketClient webSocketClient,
         int port,
         IConfigurationListener configurationListener,
-        ISoundManagerService soundManagerService, IConfigurationService configurationService)
+        ISoundManagerService soundManagerService,
+        IConfigurationService configurationService)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
@@ -71,10 +74,25 @@ public class MainWindowViewModel : ViewModelBase
         _soundManagerService = soundManagerService;
         _configurationService = configurationService;
 
+        // Check the configuration to see if Sentry is enabled at startup
         if ((bool)_configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
         {
             _logger.Info("Enabling Sentry");
             DependencyInjection.EnableSentryLogging();
+        }
+
+        // Create and manage your SentryPromptViewModel
+        SentryPromptViewModel = new SentryPromptViewModel(_configurationService, _webSocketClient)
+        {
+            // Set this to false initially; you can display it if the user hasn't chosen yet
+            IsVisible = false
+        };
+
+        var userHasChosenSentry = (bool)_configurationService.ReturnConfigValue(c => c.Common.UserChoseSentry);
+        if (!userHasChosenSentry)
+        {
+            // If the user has never made a choice, show the prompt overlay
+            SentryPromptViewModel.IsVisible = true;
         }
 
         var app = Application.Current;

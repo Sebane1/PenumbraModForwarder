@@ -1,0 +1,57 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:PenumbraModForwarder.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="PenumbraModForwarder.UI.Views.SentryPromptView"
+             x:DataType="viewModels:SentryPromptViewModel">
+    <!-- Use a Grid overlay with a semi-transparent background to match InstallView's style. -->
+    <Grid IsVisible="{Binding IsVisible}" Background="#80000000">
+        <!-- Acrylic background for the prompt -->
+        <ExperimentalAcrylicBorder
+            Material="{StaticResource ContentAcrylicMaterial}"
+            Padding="20"
+            MaxWidth="500"
+            MaxHeight="300"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            CornerRadius="10">
+
+            <StackPanel Spacing="15">
+                <!-- Title -->
+                <TextBlock
+                    Text="Enable Sentry"
+                    FontSize="20"
+                    FontWeight="Bold"
+                    Foreground="{StaticResource TextBrush}"
+                    HorizontalAlignment="Center" />
+
+                <!-- Description text -->
+                <TextBlock
+                    Text="Sentry helps us track crashes and errors so we can improve the user experience. No personal data is collected."
+                    FontSize="14"
+                    Foreground="{StaticResource TextBrush}"
+                    TextWrapping="Wrap" />
+
+                <!-- Button panel -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <Button
+                        Content="No"
+                        Command="{Binding DeclineCommand}"
+                        Width="100"
+                        Background="{StaticResource SecondaryBrush}"
+                        Foreground="{StaticResource TextBrush}"
+                        Classes="ButtonStyle" />
+                    <Button
+                        Content="Yes"
+                        Command="{Binding AcceptCommand}"
+                        Width="100"
+                        Background="{StaticResource AccentBrush}"
+                        Foreground="{StaticResource TextBrush}"
+                        Classes="ButtonStyle" />
+                </StackPanel>
+            </StackPanel>
+        </ExperimentalAcrylicBorder>
+    </Grid>
+</UserControl>

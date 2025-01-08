@@ -17,4 +17,6 @@ public class CommonConfigurationModel
     public bool StartOnFfxivBoot { get; set; }
     [Display(Name = "Enable Sentry", GroupName = "General", Description = "This will send crash logs to use so we can view them")]
     public bool EnableSentry { get; set; }
+    [ExcludeFromSettingsUI]
+    public bool UserChoseSentry { get; set; }
 }

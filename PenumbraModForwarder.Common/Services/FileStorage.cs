@@ -77,6 +77,6 @@ public class FileStorage : IFileStorage
     
     public Stream OpenWrite(string path)  
     {  
-        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);  
+        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);  
     } 
 }

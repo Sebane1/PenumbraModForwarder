@@ -112,5 +112,10 @@
         <views:InstallView DataContext="{Binding InstallViewModel}"
                            Grid.Row="0" Grid.RowSpan="2"
         />
+        
+        <!-- Sentry Enable Overlay -->
+        <views:SentryPromptView DataContext="{Binding SentryPromptViewModel}"
+                                Grid.Row="0" Grid.RowSpan="2"
+            />
     </Grid>
 </Window>
