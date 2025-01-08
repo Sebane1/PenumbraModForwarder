@@ -62,7 +62,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
                 return;
             }
             
-            Logging.EnableSentry(sentryDsn);
+            Logging.EnableSentry(sentryDsn, "BackgroundWorker");
         }
 
         private static void SetupLogging(this IServiceCollection services)

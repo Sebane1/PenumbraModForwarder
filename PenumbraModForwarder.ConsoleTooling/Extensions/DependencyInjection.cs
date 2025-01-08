@@ -50,6 +50,6 @@ public static class DependencyInjection
             return;
         }
 
-        Logging.EnableSentry(sentryDsn);
+        Logging.EnableSentry(sentryDsn, "ConsoleTool");
     }
 }

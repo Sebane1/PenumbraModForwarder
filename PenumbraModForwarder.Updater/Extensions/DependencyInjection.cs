@@ -14,6 +14,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.SetupLogging();
         services.AddHttpClient<IStaticResourceService, StaticResourceService>();
         services.AddSingleton<IGetBackgroundInformation, GetBackgroundInformation>();
         services.AddSingleton<IFileStorage, FileStorage>();
@@ -50,6 +51,6 @@ public static class DependencyInjection
             return;
         }
 
-        Logging.EnableSentry(sentryDsn);
+        Logging.EnableSentry(sentryDsn, "Updater");
     }
 }
