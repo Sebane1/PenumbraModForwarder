@@ -6,9 +6,11 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="PenumbraModForwarder.UI.Views.SentryPromptView"
              x:DataType="viewModels:SentryPromptViewModel">
-    <!-- Use a Grid overlay with a semi-transparent background to match InstallView's style. -->
-    <Grid IsVisible="{Binding IsVisible}" Background="#80000000">
-        <!-- Acrylic background for the prompt -->
+
+    <!-- Use the semi-transparent overlay brush -->
+    <Grid IsVisible="{Binding IsVisible}"
+          Background="{StaticResource OverlayBrush}">
+
         <ExperimentalAcrylicBorder
             Material="{StaticResource ContentAcrylicMaterial}"
             Padding="20"
@@ -34,8 +36,19 @@
                     Foreground="{StaticResource TextBrush}"
                     TextWrapping="Wrap" />
 
+                <!-- Additional info about Sentry -->
+                <TextBlock
+                    TextWrapping="Wrap"
+                    Foreground="{StaticResource TextBrush}">
+                    <Run Text="Sentry is a platform that collects application crash details to help developers diagnose and fix errors more quickly. " />
+                </TextBlock>
+
+
                 <!-- Button panel -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Spacing="10">
+
                     <Button
                         Content="No"
                         Command="{Binding DeclineCommand}"
@@ -43,6 +56,7 @@
                         Background="{StaticResource SecondaryBrush}"
                         Foreground="{StaticResource TextBrush}"
                         Classes="ButtonStyle" />
+
                     <Button
                         Content="Yes"
                         Command="{Binding AcceptCommand}"

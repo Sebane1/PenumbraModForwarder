@@ -14,18 +14,30 @@ public class ConfigurationServiceTests
     public ConfigurationServiceTests()
     {
         _mockFileStorage = new Mock<IFileStorage>();
+        
         _mockFileStorage.Setup(fs => fs.Exists(It.IsAny<string>())).Returns(false);
+        
+        _mockFileStorage.Setup(fs => fs.OpenWrite(It.IsAny<string>()))
+            .Returns(() => new MemoryStream());
+        
+        _mockFileStorage.Setup(fs => fs.OpenRead(It.IsAny<string>()))
+            .Returns(() => new MemoryStream());
+
         _configService = new ConfigurationService(_mockFileStorage.Object);
     }
 
     [Fact]
-    public void UpdateConfigValue_ModifiesAutoLoadProperty()
+    public void UpdateConfigValue_ModifiesEnableSentryProperty()
     {
-        // Act
-        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
+        _configService.UpdateConfigValue(
+            config => config.Common.EnableSentry = true,
+            "Common.EnableSentry", 
+            true
+        );
 
-        // Assert
-        var updatedValue = (bool)_configService.ReturnConfigValue(config => config.Common.AutoLoad);
+        var updatedValue = (bool)_configService.ReturnConfigValue(
+            config => config.Common.EnableSentry
+        );
         Assert.True(updatedValue);
     }
 
@@ -70,7 +82,7 @@ public class ConfigurationServiceTests
         // Act
         _configService.UpdateConfigValue(config =>
             {
-                config.Common.AutoLoad = true;
+                config.Common.EnableSentry = true;
                 config.BackgroundWorker.DownloadPath = new List<string> { @"/test/path" };
                 config.UI.NotificationEnabled = false;
             },
@@ -92,12 +104,12 @@ public class ConfigurationServiceTests
         _configService.ConfigurationChanged += (sender, args) =>
         {
             eventRaised = true;
-            Assert.Equal("Common.AutoLoad", args.PropertyName);
+            Assert.Equal("Common.EnableSentry", args.PropertyName);
             Assert.True((bool)args.NewValue);
         };
 
         // Act
-        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
+        _configService.UpdateConfigValue(config => config.Common.EnableSentry = true, "Common.EnableSentry", true);
 
         // Assert
         Assert.True(eventRaised, "ConfigurationChanged event was not raised.");
@@ -111,12 +123,12 @@ public class ConfigurationServiceTests
         _configService.ConfigurationChanged += (sender, args) => changes.Add(args);
 
         // Act
-        _configService.UpdateConfigValue(config => config.Common.AutoLoad = true, "Common.AutoLoad", true);
+        _configService.UpdateConfigValue(config => config.Common.EnableSentry = true, "Common.EnableSentry", true);
         _configService.UpdateConfigValue(config => config.BackgroundWorker.DownloadPath = new List<string> { @"/test/path" }, "BackgroundWorker.DownloadPath", new List<string> { @"/test/path" });
         _configService.UpdateConfigValue(config => config.UI.NotificationEnabled = false, "UI.NotificationEnabled", false);
 
         // Assert
-        Assert.Contains(changes, change => change.PropertyName == "Common.AutoLoad" && (bool)change.NewValue);
+        Assert.Contains(changes, change => change.PropertyName == "Common.EnableSentry" && (bool)change.NewValue);
         Assert.Contains(changes, change => change.PropertyName == "BackgroundWorker.DownloadPath" && ((List<string>)change.NewValue).SequenceEqual(new List<string> { @"/test/path" }));
         Assert.Contains(changes, change => change.PropertyName == "UI.NotificationEnabled" && (bool)change.NewValue == false);
     }
