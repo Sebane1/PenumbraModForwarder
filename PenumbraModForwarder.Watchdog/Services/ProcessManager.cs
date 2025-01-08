@@ -80,8 +80,7 @@ namespace PenumbraModForwarder.Watchdog.Services
             _logger.Information("Starting: {ProjectName}", projectName);
             return _isDevMode ? StartDevProcess(projectName, port) : StartProdProcess($"{projectName}.exe", port);
         }
-
-        // CHANGED: Added RedirectStandardInput = true to allow sending a shutdown command.
+        
         private Process StartDevProcess(string projectName, string port)
         {
             string projectDirectory = Path.Combine(_solutionDirectory, projectName);

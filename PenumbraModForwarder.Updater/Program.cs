@@ -11,6 +11,7 @@ namespace PenumbraModForwarder.Updater
     public static class Program
     {
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
+        public static string? ExternalVersion { get; set; }
 
         [STAThread]
         public static void Main(string[] args)
@@ -26,6 +27,11 @@ namespace PenumbraModForwarder.Updater
 
                 try
                 {
+                    if (args.Length > 0)
+                    {
+                        ExternalVersion = args[0];
+                    }
+
                     var services = new ServiceCollection();
                     services.AddApplicationServices();
 

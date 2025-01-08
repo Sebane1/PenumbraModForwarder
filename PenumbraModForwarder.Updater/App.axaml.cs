@@ -33,9 +33,14 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var externalVersion = Program.ExternalVersion; 
+            var mainWindowViewModel = ActivatorUtilities.CreateInstance<MainWindowViewModel>(
+                _serviceProvider,
+                externalVersion
+            );
             desktop.MainWindow = new MainWindow
             {
-                DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider)
+                DataContext = mainWindowViewModel
             };
         }
 

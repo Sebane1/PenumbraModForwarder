@@ -11,8 +11,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddTransient<IConfigurationService, ConfigurationService>();
-        services.AddTransient<IConfigurationSetup, ConfigurationSetup>();
+        services.AddSingleton<IConfigurationService, ConfigurationService>();
+        services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IConfigurationSetup, ConfigurationSetup>();
         services.AddSingleton<IProcessManager, ProcessManager>();
         services.AddSingleton<IFileStorage, FileStorage>();
         

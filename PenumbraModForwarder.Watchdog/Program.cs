@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
@@ -16,15 +17,17 @@ namespace PenumbraModForwarder.Watchdog
         private readonly IConfigurationService _configurationService;
         private readonly IProcessManager _processManager;
         private readonly IConfigurationSetup _configurationSetup;
+        private readonly IUpdateService _updateService; 
 
         public Program(
             IConfigurationService configurationService,
             IProcessManager processManager,
-            IConfigurationSetup configurationSetup)
+            IConfigurationSetup configurationSetup, IUpdateService updateService)
         {
             _configurationService = configurationService;
             _processManager = processManager;
             _configurationSetup = configurationSetup;
+            _updateService = updateService;
             _logger = Log.ForContext<Program>();
         }
 
@@ -64,6 +67,19 @@ namespace PenumbraModForwarder.Watchdog
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 HideConsoleWindow();
+            }
+            
+            var assembly = Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            var semVersion = version == null 
+                ? "Local Build" 
+                : $"{version.Major}.{version.Minor}.{version.Build}";
+
+            if (_updateService.NeedsUpdateAsync(semVersion).GetAwaiter().GetResult())
+            {
+                // Run the Updater
+                _logger.Information("Update detected, launching updater");
+                Environment.Exit(0);
             }
 
             _processManager.Run();

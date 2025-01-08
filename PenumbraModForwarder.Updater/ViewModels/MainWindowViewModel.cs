@@ -77,21 +77,33 @@ namespace PenumbraModForwarder.Updater.ViewModels
         private string numberedVersionCurrent;
         private string numberedVersionUpdated;
 
-        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService, IDownloadAndInstallUpdates downloadAndInstallUpdates)
+        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService, IDownloadAndInstallUpdates downloadAndInstallUpdates, string? externalCurrentVersion = null)
         {
             _logger = Log.ForContext<MainWindowViewModel>();
             _getBackgroundInformation = getBackgroundInformation;
             _updateService = updateService;
             _downloadAndInstallUpdates = downloadAndInstallUpdates;
 
-            var assembly = Assembly.GetExecutingAssembly();
-            var version = assembly.GetName().Version;
-            numberedVersionCurrent = $"{version.Major}.{version.Minor}.{version.Build}";
-            var semVersion = version == null 
-                ? "Local Build" 
-                : $"{version.Major}.{version.Minor}.{version.Build}";
+            if (!string.IsNullOrWhiteSpace(externalCurrentVersion))
+            {
+                numberedVersionCurrent = externalCurrentVersion;
+            }
+            else
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var version = assembly.GetName().Version;
 
-            CurrentVersion = $"Current Version: v{semVersion}";
+                if (version == null)
+                {
+                    numberedVersionCurrent = "Local Build";
+                }
+                else
+                {
+                    numberedVersionCurrent = $"{version.Major}.{version.Minor}.{version.Build}";
+                }
+            }
+
+            CurrentVersion = $"Current Version: v{numberedVersionCurrent}";
             
             UpdateCommand = ReactiveCommand.CreateFromTask(PerformUpdateAsync);
 
@@ -124,21 +136,20 @@ namespace PenumbraModForwarder.Updater.ViewModels
             UpdatedVersion = $"Updated Version: {latestVersion}";
             numberedVersionUpdated = latestVersion;
 
-            if (CurrentVersion != latestVersion)
+            if (!CurrentVersion.Contains(latestVersion))
             {
                 StatusText = "Update Needed...";
             }
-            
+        
             var (info, updater) = await _getBackgroundInformation.GetResources();
-
             InfoJson = info;
             UpdaterInfoJson = updater;
-            
+
             if (UpdaterInfoJson?.Backgrounds?.Images != null)
             {
                 BackgroundImages = UpdaterInfoJson.Backgrounds.Images;
             }
-            
+        
             StartImageRotation();
         }
 
