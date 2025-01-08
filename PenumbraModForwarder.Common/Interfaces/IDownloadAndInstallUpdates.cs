@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace PenumbraModForwarder.Updater.Interfaces;
+﻿namespace PenumbraModForwarder.Common.Interfaces;
 
 public interface IDownloadAndInstallUpdates
 {
