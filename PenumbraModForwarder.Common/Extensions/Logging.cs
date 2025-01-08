@@ -42,9 +42,9 @@ public static class Logging
         });
     }
 
-    public static void EnableSentry(string sentryDsn, string applicationName)
+    public static void EnableSentry(string sentryDns, string applicationName)
     {
-        if (string.IsNullOrWhiteSpace(sentryDsn))
+        if (string.IsNullOrWhiteSpace(sentryDns))
         {
             Console.WriteLine("Sentry DSN not provided. Skipping Sentry enablement.");
             return;
@@ -60,7 +60,7 @@ public static class Logging
         Log.Logger = GetBaseLoggerConfiguration(applicationName)
             .WriteTo.Sentry(sinkConfig =>
             {
-                sinkConfig.Dsn = sentryDsn;
+                sinkConfig.Dsn = sentryDns;
                 sinkConfig.MinimumEventLevel = LogEventLevel.Warning;
                 sinkConfig.AttachStacktrace = true;
                 sinkConfig.Release = semVersion;

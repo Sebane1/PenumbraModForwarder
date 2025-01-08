@@ -89,13 +89,13 @@ public static class DependencyInjection
             .AddEnvironmentVariables()
             .Build();
 
-        var sentryDsn = configuration["SENTRY_DSN"];
-        if (string.IsNullOrWhiteSpace(sentryDsn))
+        var sentryDns = configuration["SENTRY_DNS"];
+        if (string.IsNullOrWhiteSpace(sentryDns))
         {
             Console.WriteLine("No SENTRY_DSN provided. Skipping Sentry enablement.");
             return;
         }
 
-        Logging.EnableSentry(sentryDsn, "UI");
+        Logging.EnableSentry(sentryDns, "UI");
     }
 }

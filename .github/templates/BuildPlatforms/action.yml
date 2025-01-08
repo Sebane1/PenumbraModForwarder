@@ -2,6 +2,8 @@
 description: "Build Watchdog, UI, Console, and BackgroundWorker for Windows & Linux using .NET 9 self-contained without PDBs."
 
 runs:
+    env:
+        SENTRY_DNS: ${{ secrets.Sentry }}
     using: composite
     steps:
         - name: Set up .NET 9
