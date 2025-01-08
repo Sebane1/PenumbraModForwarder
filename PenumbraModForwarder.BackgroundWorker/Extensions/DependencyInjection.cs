@@ -14,6 +14,8 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, int port)
         {
+            services.SetupLogging();
+            
             services.AddHostedService(provider => new Worker(
                 provider.GetRequiredService<IWebSocketServer>(),
                 provider.GetRequiredService<IStartupService>(),
@@ -41,13 +43,31 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
             {
                 client.BaseAddress = new Uri(ApiConsts.BaseApiUrl);
             });
+            
             return services;
         }
-
-        public static void SetupLogging(this IServiceCollection services, string sentryDsn)
+        
+        public static void EnableSentryLogging()
         {
-            Logging.ConfigureLogging(services, "BackgroundWorker", sentryDsn);
+            var configuration = new ConfigurationBuilder()
+                .AddUserSecrets<Program>()
+                .AddEnvironmentVariables()
+                .Build();
+
+            var sentryDsn = configuration["SENTRY_DSN"];
+
+            if (string.IsNullOrWhiteSpace(sentryDsn))
+            {
+                Console.WriteLine("No SENTRY_DSN provided. Skipping Sentry enablement.");
+                return;
+            }
+            
+            Logging.EnableSentry(sentryDsn);
         }
 
+        private static void SetupLogging(this IServiceCollection services)
+        {
+            Logging.ConfigureLogging(services, "BackgroundWorker");
+        }
     }
 }

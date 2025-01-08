@@ -7,8 +7,6 @@ namespace PenumbraModForwarder.ConsoleTooling;
 
 public class Program
 {
-    public static IConfiguration Configuration { get; private set; } = null!;
-
     public static void Main(string[] args)
     {
         using var mutex = new Mutex(true, "PenumbraModForwarder.ConsoleTooling", out var isNewInstance);
@@ -17,23 +15,9 @@ public class Program
             Console.WriteLine("Another instance is already running. Exiting...");
             return;
         }
-
-        // Build configuration
-        Configuration = new ConfigurationBuilder()
-            .AddUserSecrets<Program>()
-            .AddEnvironmentVariables()
-            .Build();
-        
-        var sentryDsn = Configuration["SENTRY_DSN"];
-        if (string.IsNullOrWhiteSpace(sentryDsn))
-        {
-            Console.WriteLine("SENTRY_DSN is not provided. Sentry logging will not be configured.");
-        }
         
         var services = new ServiceCollection();
         services.AddApplicationServices();
-        
-        services.SetupLogging(sentryDsn);
 
         // Build the service provider
         using var serviceProvider = services.BuildServiceProvider();

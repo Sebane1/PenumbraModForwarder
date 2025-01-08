@@ -2,6 +2,7 @@
 using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
@@ -21,6 +22,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.SetupLogging();
+        
         // Register ConfigurationModel as a singleton
         services.AddSingleton<ConfigurationModel>();
 
@@ -62,7 +65,7 @@ public static class DependencyInjection
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<DownloadViewModel>();
-        
+
         // Views
         services.AddSingleton<MainWindow>();
         services.AddSingleton<ErrorWindowViewModel>();
@@ -70,12 +73,29 @@ public static class DependencyInjection
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<DownloadViewModel>();
-        
+
         return services;
     }
-
-    public static void SetupLogging(this IServiceCollection services, string sentryDsn)
+    
+    private static void SetupLogging(this IServiceCollection services)
     {
-        Logging.ConfigureLogging(services, "UI", sentryDsn);
+        Logging.ConfigureLogging(services, "UI");
+    }
+    
+    public static void EnableSentryLogging()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
+            .Build();
+
+        var sentryDsn = configuration["SENTRY_DSN"];
+        if (string.IsNullOrWhiteSpace(sentryDsn))
+        {
+            Console.WriteLine("No SENTRY_DSN provided. Skipping Sentry enablement.");
+            return;
+        }
+
+        Logging.EnableSentry(sentryDsn);
     }
 }

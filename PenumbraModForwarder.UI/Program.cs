@@ -12,7 +12,6 @@ namespace PenumbraModForwarder.UI
     public class Program
     {
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
-        public static IConfiguration Configuration { get; private set; } = null!;
 
         [STAThread]
         public static void Main(string[] args)
@@ -35,20 +34,8 @@ namespace PenumbraModForwarder.UI
 #endif
                 try
                 {
-                    Configuration = new ConfigurationBuilder()
-                        .AddUserSecrets<Program>()
-                        .AddEnvironmentVariables()
-                        .Build();
-                    
-                    var sentryDsn = Configuration["SENTRY_DSN"];
-                    if (string.IsNullOrWhiteSpace(sentryDsn))
-                    {
-                        Console.WriteLine("SENTRY_DSN is not provided. Sentry logging will not be configured.");
-                    }
-                    
                     var services = new ServiceCollection();
                     services.AddApplicationServices();
-                    services.SetupLogging(sentryDsn);
 
                     ServiceProvider = services.BuildServiceProvider();
                     BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

@@ -1,13 +1,12 @@
 ﻿using System;
 using System.IO;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.Updater.Interfaces;
 using PenumbraModForwarder.Updater.Services;
-using PenumbraModForwarder.Updater.ViewModels;
-using PenumbraModForwarder.Updater.Views;
 
 namespace PenumbraModForwarder.Updater.Extensions;
 
@@ -20,17 +19,37 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorage, FileStorage>();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IUpdateService, UpdateService>();
+
         services.AddSingleton<IAria2Service>(_ =>
         {
             var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
             return new Aria2Service(aria2InstallFolder);
         });
+
         services.AddSingleton<IDownloadAndInstallUpdates, DownloadAndInstallUpdates>();
+
         return services;
     }
     
-    public static void SetupLogging(this IServiceCollection services, string sentryDns)
+    private static void SetupLogging(this IServiceCollection services)
     {
-        Logging.ConfigureLogging(services, "Updater", sentryDns);
+        Logging.ConfigureLogging(services, "Updater");
+    }
+    
+    public static void EnableSentryLogging()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets<Program>()
+            .AddEnvironmentVariables()
+            .Build();
+
+        var sentryDsn = configuration["SENTRY_DSN"];
+        if (string.IsNullOrWhiteSpace(sentryDsn))
+        {
+            Console.WriteLine("No SENTRY_DSN provided. Skipping Sentry enablement.");
+            return;
+        }
+
+        Logging.EnableSentry(sentryDsn);
     }
 }
