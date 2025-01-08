@@ -1,51 +1,61 @@
+using NLog;
 using PenumbraModForwarder.BackgroundWorker.Extensions;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
-bool isNewInstance;
-using (new Mutex(true, "PenumbraModForwarder.BackgroundWorker", out isNewInstance))
+public class Program
 {
-    if (!isNewInstance)
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    public static void Main(string[] args)
     {
-        Console.WriteLine("Another instance of PenumbraModForwarder.BackgroundWorker is already running. Exiting...");
-        return;
-    }
+        bool isNewInstance;
+        using (new Mutex(true, "PenumbraModForwarder.BackgroundWorker", out isNewInstance))
+        {
+            if (!isNewInstance)
+            {
+                _logger.Info("Another instance of PenumbraModForwarder.BackgroundWorker is already running. Exiting...");
+                return;
+            }
 
-    var builder = Host.CreateApplicationBuilder(args);
+            var builder = Host.CreateApplicationBuilder(args);
 
-    ILogger logger = Log.ForContext<Program>();
-
-    bool isInitializedByWatchdog = Environment.GetEnvironmentVariable("WATCHDOG_INITIALIZED") == "true";
+            bool isInitializedByWatchdog = Environment.GetEnvironmentVariable("WATCHDOG_INITIALIZED") == "true";
 
 #if DEBUG
-    // In debug mode, mark as initialized and assign a default port
-    isInitializedByWatchdog = true;
-    if (args.Length == 0)
-    {
-        args = new string[] { "12345" }; // Fixed port for debugging
-    }
+            // In debug mode, mark as initialized and assign a default port if none is provided
+            isInitializedByWatchdog = true;
+            if (args.Length == 0)
+            {
+                args = new string[] { "12345" }; // Fixed port for debugging
+            }
 #endif
 
-    logger.Information("Application initialized by watchdog: {IsInitialized}", isInitializedByWatchdog);
+            _logger.Info("Application initialized by watchdog: {IsInitialized}", isInitializedByWatchdog);
 
-    if (!isInitializedByWatchdog)
-    {
-        logger.Warning("Application must be started through the main executable");
-        return;
+            if (!isInitializedByWatchdog)
+            {
+                _logger.Warn("Application must be started through the main executable.");
+                return;
+            }
+
+            if (args.Length == 0)
+            {
+                _logger.Fatal("No port specified for the BackgroundWorker.");
+                return;
+            }
+
+            if (!int.TryParse(args[0], out var port))
+            {
+                _logger.Fatal("Invalid port specified: {PortArg}", args[0]);
+                return;
+            }
+
+            _logger.Info("Starting BackgroundWorker on port {Port}", port);
+
+            // Register your application services (including logging, etc.)
+            builder.Services.AddApplicationServices(port);
+
+            var host = builder.Build();
+            host.Run();
+        }
     }
-
-    if (args.Length == 0)
-    {
-        logger.Fatal("No port specified for the BackgroundWorker.");
-        return;
-    }
-
-    int port = int.Parse(args[0]);
-    logger.Information("Starting BackgroundWorker on port {Port}", port);
-    var services = new ServiceCollection();
-    
-    builder.Services.AddApplicationServices(port);
-
-    var host = builder.Build();
-    host.Run();
 }

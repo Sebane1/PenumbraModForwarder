@@ -3,33 +3,30 @@ using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NLog;
 using PenumbraModForwarder.UI.Interfaces;
-using Serilog;
 
 namespace PenumbraModForwarder.UI.Services;
 
 public class XivLauncherService : IXivLauncherService
 {
-    private readonly ILogger _logger;
-    private const string ConfigFileName = "launcherConfigV3.json";
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    public XivLauncherService()
-    {
-        _logger = Log.ForContext<XivLauncherService>();
-    }
+    private const string ConfigFileName = "launcherConfigV3.json";
 
     public void EnableAutoStart(bool enable, string appPath, string label)
     {
-        _logger.Debug("Entering EnableAutoStart with enable={Enable}, appPath={AppPath}, label={Label}", enable, appPath, label);
+        _logger.Debug("Entering EnableAutoStart with enable={Enable}, appPath={AppPath}, label={Label}",
+            enable, appPath, label);
 
         if (enable)
         {
-            _logger.Information("Enabling auto-start for {Label}", label);
+            _logger.Info("Enabling auto-start for {Label}", label);
             AddExternalAppToAddonList(appPath, label);
         }
         else
         {
-            _logger.Information("Disabling auto-start for {Label}", label);
+            _logger.Info("Disabling auto-start for {Label}", label);
             RemoveExternalAppFromAddonList(label);
         }
 
@@ -40,9 +37,9 @@ public class XivLauncherService : IXivLauncherService
     {
         _logger.Debug("Entering EnableAutoStartWatchdog with enable={Enable}", enable);
 
-        var baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+        var baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+                            ?? string.Empty;
         var watchdogPath = Path.Combine(baseDirectory, "PenumbraModForwarder.Watchdog.exe");
-            
         const string watchdogLabel = "Penumbra Watchdog";
 
         EnableAutoStart(enable, watchdogPath, watchdogLabel);
@@ -64,7 +61,7 @@ public class XivLauncherService : IXivLauncherService
 
             if (!File.Exists(configFilePath))
             {
-                _logger.Warning("XIVLauncher config not found; cannot add external app.");
+                _logger.Warn("XIVLauncher config not found; cannot add external app.");
                 return;
             }
 
@@ -110,9 +107,11 @@ public class XivLauncherService : IXivLauncherService
             }
 
             var existingObj = FindAddonObjectByLabel(addonArray, label);
+
             if (existingObj == null)
             {
                 _logger.Debug("No existing addon found with label={Label}, creating a new entry.", label);
+
                 var newEntry = new JObject
                 {
                     ["IsEnabled"] = true,
@@ -126,6 +125,7 @@ public class XivLauncherService : IXivLauncherService
                         ["Name"] = label
                     }
                 };
+
                 addonArray.Add(newEntry);
             }
             else
@@ -171,7 +171,7 @@ public class XivLauncherService : IXivLauncherService
 
             if (!File.Exists(configFilePath))
             {
-                _logger.Warning("Cannot remove external app. XIVLauncher config not found.");
+                _logger.Warn("Cannot remove external app. XIVLauncher config not found.");
                 return;
             }
 
@@ -234,7 +234,8 @@ public class XivLauncherService : IXivLauncherService
             }
             else
             {
-                _logger.Debug("Removed {RemovedCount} external app(s) with label={Label}.", removedCount, label);
+                _logger.Debug("Removed {RemovedCount} external app(s) with label={Label}.",
+                    removedCount, label);
             }
 
             if (storedAsString)
@@ -271,6 +272,7 @@ public class XivLauncherService : IXivLauncherService
                 }
             }
         }
+
         return null;
     }
 }

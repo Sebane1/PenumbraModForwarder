@@ -1,17 +1,15 @@
 using Avalonia.Controls;
-using Serilog;
+using NLog;
 
 namespace PenumbraModForwarder.Updater.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly ILogger _logger;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     public MainWindow()
     {
         InitializeComponent();
-
-        _logger = Log.ForContext<MainWindow>();
 
         var titleBar = this.FindControl<Grid>("TitleBar");
         titleBar.PointerPressed += (s, e) =>
@@ -25,13 +23,13 @@ public partial class MainWindow : Window
         // Direct event handling for window controls
         this.Get<Button>("MinimizeButton").Click += (s, e) =>
         {
-            _logger.Information("Minimize button clicked");
+            _logger.Info("Minimize button clicked");
             WindowState = WindowState.Minimized;
         };
 
         this.Get<Button>("CloseButton").Click += (s, e) =>
         {
-            _logger.Information("Close button clicked");
+            _logger.Info("Close button clicked");
             Close();
         };
     }
@@ -39,6 +37,6 @@ public partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        _logger.Information("Window closing");
+        _logger.Info("Window closing");
     }
 }

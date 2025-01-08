@@ -1,15 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json.Linq;
+using NLog;
 using PenumbraModForwarder.Common.Interfaces;
-using Serilog;
 using SevenZipExtractor;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class Aria2Service : IAria2Service
 {
-    private readonly ILogger _logger;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private bool _aria2Ready;
     private const string Aria2LatestReleaseApi = "https://api.github.com/repos/aria2/aria2/releases/latest";
 
@@ -18,31 +19,32 @@ public class Aria2Service : IAria2Service
 
     public Aria2Service(string aria2InstallFolder)
     {
-        _logger = Log.ForContext<Aria2Service>();
         Aria2Folder = aria2InstallFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        // Begin ensuring aria2 is installed asynchronously
         _ = EnsureAria2AvailableAsync(CancellationToken.None);
     }
 
     public async Task<bool> EnsureAria2AvailableAsync(CancellationToken ct)
     {
-        if (_aria2Ready)
+        if (_aria2Ready) 
             return true;
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            _logger.Warning("Service is only supported on Windows platforms in this implementation.");
+            _logger.Warn("Service is only supported on Windows platforms in this implementation.");
             return false;
         }
 
         if (!File.Exists(Aria2ExePath))
         {
-            _logger.Information("aria2 not found at '{Path}'. Checking the latest release on GitHub...", Aria2ExePath);
+            _logger.Info("aria2 not found at '{Path}'. Checking the latest release on GitHub...", Aria2ExePath);
             var installed = await DownloadAndInstallAria2FromLatestAsync(ct);
             _aria2Ready = installed;
             return installed;
         }
 
-        _logger.Information("aria2 located at {Path}", Aria2ExePath);
+        _logger.Info("aria2 located at {Path}", Aria2ExePath);
         _aria2Ready = true;
         return true;
     }
@@ -56,17 +58,19 @@ public class Aria2Service : IAria2Service
         try
         {
             var sanitizedDirectory = downloadDirectory.TrimEnd(
-                Path.DirectorySeparatorChar, 
+                Path.DirectorySeparatorChar,
                 Path.AltDirectorySeparatorChar
             );
-            var rawFileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
 
+            var rawFileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
             if (string.IsNullOrWhiteSpace(rawFileName))
                 rawFileName = "download.bin";
 
             var finalFileName = Uri.UnescapeDataString(rawFileName);
 
+            // Add extra arguments if desired
             var extraAria2Args = "--log-level=debug";
+
             var arguments = $"\"{fileUrl}\" --dir=\"{sanitizedDirectory}\" --out=\"{finalFileName}\" {extraAria2Args}";
 
             var startInfo = new ProcessStartInfo
@@ -110,10 +114,10 @@ public class Aria2Service : IAria2Service
 
             if (process.ExitCode == 0)
             {
-                _logger.Information(
+                _logger.Info(
                     "aria2 finished downloading {FileUrl} to {Directory}\\{FileName}",
-                    fileUrl, 
-                    sanitizedDirectory, 
+                    fileUrl,
+                    sanitizedDirectory,
                     finalFileName
                 );
                 return true;
@@ -124,7 +128,7 @@ public class Aria2Service : IAria2Service
         }
         catch (OperationCanceledException)
         {
-            _logger.Warning("Download canceled for {FileUrl}", fileUrl);
+            _logger.Warn("Download canceled for {FileUrl}", fileUrl);
             return false;
         }
         catch (Exception ex)
@@ -149,22 +153,23 @@ public class Aria2Service : IAria2Service
                 _logger.Error("No matching Windows 64-bit asset URL found. Cannot install aria2.");
                 return false;
             }
-            
+
             var zipPath = Path.Combine(Aria2Folder, "aria2_latest_win64.zip");
+
             using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.Add("User-Agent", "PenumbraModForwarder/Aria2Service");
                 var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
                 response.EnsureSuccessStatusCode();
 
-                _logger.Information("Downloading aria2 from {Url}", downloadUrl);
+                _logger.Info("Downloading aria2 from {Url}", downloadUrl);
 
                 await using var fs = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await response.Content.CopyToAsync(fs, ct);
             }
 
-            _logger.Information("Extracting aria2 files to {ExtractPath}", Aria2Folder);
-            
+            _logger.Info("Extracting aria2 files to {ExtractPath}", Aria2Folder);
+
             using (var archiveFile = new ArchiveFile(zipPath))
             {
                 archiveFile.Extract(Aria2Folder, overwrite: true);
@@ -187,7 +192,8 @@ public class Aria2Service : IAria2Service
                     if (!File.Exists(targetPath))
                     {
                         File.Move(exeCandidate, targetPath);
-                        _logger.Information("Found aria2c.exe in a subdirectory; moved it to {TargetPath}", targetPath);
+
+                        _logger.Info("Found aria2c.exe in a subdirectory; moved it to {TargetPath}", targetPath);
 
                         var candidateFolder = Path.GetDirectoryName(exeCandidate);
                         if (!string.IsNullOrEmpty(candidateFolder) &&
@@ -195,13 +201,13 @@ public class Aria2Service : IAria2Service
                         {
                             try
                             {
-                                _logger.Information("Removing extracted folder {Folder}", candidateFolder);
+                                _logger.Info("Removing extracted folder {Folder}", candidateFolder);
                                 Directory.Delete(candidateFolder, recursive: true);
-                                _logger.Information("Successfully removed folder {Folder}", candidateFolder);
+                                _logger.Info("Successfully removed folder {Folder}", candidateFolder);
                             }
                             catch (Exception ex)
                             {
-                                _logger.Warning(ex, "Failed to remove folder {Folder}", candidateFolder);
+                                _logger.Warn(ex, "Failed to remove folder {Folder}", candidateFolder);
                             }
                         }
                     }
@@ -214,12 +220,12 @@ public class Aria2Service : IAria2Service
                 return false;
             }
 
-            _logger.Information("Successfully installed aria2 at {Aria2ExePath}", Aria2ExePath);
+            _logger.Info("Successfully installed aria2 at {Aria2ExePath}", Aria2ExePath);
             return true;
         }
         catch (OperationCanceledException)
         {
-            _logger.Warning("Download or setup was canceled.");
+            _logger.Warn("Download or setup was canceled.");
             return false;
         }
         catch (Exception ex)
@@ -258,7 +264,7 @@ public class Aria2Service : IAria2Service
         }
         catch (OperationCanceledException)
         {
-            _logger.Warning("Fetching Windows 64-bit asset URL was canceled.");
+            _logger.Warn("Fetching Windows 64-bit asset URL was canceled.");
             return null;
         }
         catch (Exception ex)

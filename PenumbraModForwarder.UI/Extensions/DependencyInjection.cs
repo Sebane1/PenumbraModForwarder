@@ -22,8 +22,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.SetupLogging();
-        
         // Register ConfigurationModel as a singleton
         services.AddSingleton<ConfigurationModel>();
 
@@ -64,7 +62,6 @@ public static class DependencyInjection
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
-        services.AddSingleton<DownloadViewModel>();
 
         // Views
         services.AddSingleton<MainWindow>();
@@ -72,7 +69,8 @@ public static class DependencyInjection
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
-        services.AddSingleton<DownloadViewModel>();
+        
+        services.SetupLogging();
 
         return services;
     }

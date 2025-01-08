@@ -5,58 +5,55 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using NLog;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using ReactiveUI;
-using Serilog;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
-public class ModsViewModel : ViewModelBase
+public class ModsViewModel : ViewModelBase, IDisposable
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IStatisticService _statisticService;
-    private readonly ILogger _logger;
     private readonly CompositeDisposable _disposables = new();
 
     private ObservableCollection<ModInstallationRecord> _installedMods;
-
     public ObservableCollection<ModInstallationRecord> InstalledMods
     {
         get => _installedMods;
         set => this.RaiseAndSetIfChanged(ref _installedMods, value);
     }
-    
+
     public ModsViewModel(IStatisticService statisticService)
     {
-        _logger = Log.ForContext<ModsViewModel>();
         _statisticService = statisticService;
-        
         InstalledMods = new ObservableCollection<ModInstallationRecord>();
-        
-        // TODO: Make this update in real time (Maybe Websocket firing an event - similar to how we do the file picker)
+
+        // Periodically refresh installed mods
         Observable.Timer(TimeSpan.Zero, TimeSpan.FromSeconds(10))
             .SelectMany(_ => Observable.FromAsync(LoadInstalledModsAsync))
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(_disposables);
     }
-    
+
     private async Task LoadInstalledModsAsync()
     {
         try
         {
             var fetchedMods = await _statisticService.GetAllInstalledModsAsync();
 
-            // If the list is exactly the same (including count, names, etc.), skip updates
+            // Check if the newly fetched mods are the same as the current list
             if (AreSame(InstalledMods, fetchedMods))
-            {
                 return;
-            }
 
             InstalledMods.Clear();
+
             foreach (var mod in fetchedMods)
             {
-                _logger.Debug($"Found data for mod {mod.ModName}");
+                _logger.Debug("Found data for mod {ModName}", mod.ModName);
                 InstalledMods.Add(mod);
             }
         }
@@ -71,11 +68,13 @@ public class ModsViewModel : ViewModelBase
         IEnumerable<ModInstallationRecord> incoming)
     {
         var incomingList = incoming as IList<ModInstallationRecord> ?? incoming.ToList();
-
         if (current.Count != incomingList.Count)
             return false;
 
-        return !current.Where((t, i) => !string.Equals(t.ModName, incomingList[i].ModName, StringComparison.Ordinal)).Any();
+        // Compare items individually by ModName
+        return !current
+            .Where((t, i) => !string.Equals(t.ModName, incomingList[i].ModName, StringComparison.Ordinal))
+            .Any();
     }
 
     public void Dispose()

@@ -1,48 +1,43 @@
-using System;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Serilog;
-using ILogger = Serilog.ILogger;
+using NLog;
 
-namespace PenumbraModForwarder.UI.Views;
-
-public partial class MainWindow : Window
+namespace PenumbraModForwarder.UI.Views
 {
-    private readonly ILogger _logger;
-
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        _logger = Log.ForContext<MainWindow>();
-
-        var titleBar = this.FindControl<Grid>("TitleBar");
-        titleBar.PointerPressed += (s, e) =>
+        public MainWindow()
         {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            InitializeComponent();
+
+            var titleBar = this.FindControl<Grid>("TitleBar");
+            titleBar.PointerPressed += (s, e) =>
             {
-                BeginMoveDrag(e);
-            }
-        };
+                if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                {
+                    BeginMoveDrag(e);
+                }
+            };
 
-        // Direct event handling for window controls
-        this.Get<Button>("MinimizeButton").Click += (s, e) =>
+            // Direct event handling for window controls
+            this.Get<Button>("MinimizeButton").Click += (s, e) =>
+            {
+                _logger.Info("Minimize button clicked");
+                WindowState = WindowState.Minimized;
+            };
+
+            this.Get<Button>("CloseButton").Click += (s, e) =>
+            {
+                _logger.Info("Close button clicked");
+                Close();
+            };
+        }
+
+        protected override void OnClosing(WindowClosingEventArgs e)
         {
-            _logger.Information("Minimize button clicked");
-            WindowState = WindowState.Minimized;
-        };
-
-        this.Get<Button>("CloseButton").Click += (s, e) =>
-        {
-            _logger.Information("Close button clicked");
-            Close();
-        };
-    }
-
-    protected override void OnClosing(WindowClosingEventArgs e)
-    {
-        base.OnClosing(e);
-        _logger.Information("Window closing");
+            base.OnClosing(e);
+            _logger.Info("Window closing");
+        }
     }
 }

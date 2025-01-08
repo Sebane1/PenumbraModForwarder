@@ -1,12 +1,12 @@
+using NLog;
 using PenumbraModForwarder.BackgroundWorker.Interfaces;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.BackgroundWorker;
 
 public class Worker : BackgroundService
 {
-    private readonly ILogger _logger;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IWebSocketServer _webSocketServer;
     private readonly IStartupService _startupService;
     private readonly int _port;
@@ -19,7 +19,6 @@ public class Worker : BackgroundService
         int port,
         IHostApplicationLifetime lifetime)
     {
-        _logger = Log.ForContext<Worker>();
         _webSocketServer = webSocketServer;
         _startupService = startupService;
         _port = port;
@@ -28,10 +27,11 @@ public class Worker : BackgroundService
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.Information("Starting WebSocket Server on port {Port}", _port);
+        _logger.Info("Starting WebSocket Server on port {Port}", _port);
         _webSocketServer.Start(_port);
 
-        _logger.Information("Launching file watcher...");
+        _logger.Info("Launching file watcher...");
+
         // Begin listening for a "shutdown" command in parallel
         _ = Task.Run(() => ListenForShutdownCommand(cancellationToken), cancellationToken);
 
@@ -56,7 +56,7 @@ public class Worker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.Information("Worker stopping gracefully...");
+            _logger.Info("Worker stopping gracefully...");
         }
         catch (Exception ex)
         {
@@ -73,10 +73,9 @@ public class Worker : BackgroundService
             if (Console.In.Peek() > -1)
             {
                 var line = await Console.In.ReadLineAsync();
-                if (line != null &&
-                    line.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
+                if (line != null && line.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.Information("Received 'shutdown' command via standard input, stopping application...");
+                    _logger.Info("Received 'shutdown' command via standard input, stopping application...");
                     _lifetime.StopApplication();
                     break;
                 }

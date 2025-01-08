@@ -1,16 +1,17 @@
-﻿using HtmlAgilityPack;
+﻿using System.Net;
+using HtmlAgilityPack;
 using MessagePack;
+using NLog;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using Serilog;
-using System.Net;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class XmaModDisplay : IXmaModDisplay
 {
-    private readonly ILogger _logger;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private static readonly string _cacheFilePath = Path.Combine(
         ConfigurationConsts.CachePath,
         "xivmodarchive",
@@ -21,7 +22,6 @@ public class XmaModDisplay : IXmaModDisplay
 
     public XmaModDisplay()
     {
-        _logger = Log.Logger.ForContext<XmaModDisplay>();
         var directory = Path.GetDirectoryName(_cacheFilePath);
         if (!string.IsNullOrEmpty(directory))
         {
@@ -49,7 +49,8 @@ public class XmaModDisplay : IXmaModDisplay
         var page2Results = await ParsePageAsync(2);
 
         // Combine and deduplicate mods by ImageUrl
-        var distinctMods = page1Results.Concat(page2Results)
+        var distinctMods = page1Results
+            .Concat(page2Results)
             .GroupBy(m => m.ImageUrl)
             .Select(g => g.First())
             .ToList();
@@ -60,6 +61,7 @@ public class XmaModDisplay : IXmaModDisplay
             Mods = distinctMods,
             ExpirationTime = DateTimeOffset.Now.Add(_cacheDuration)
         };
+
         SaveCacheToFile(newCache);
 
         return distinctMods;
@@ -95,7 +97,8 @@ public class XmaModDisplay : IXmaModDisplay
             var normalizedName = NormalizeModName(rawName);
 
             var publisherNode = modCard.SelectSingleNode(
-                ".//p[contains(@class, 'card-text')]/a[@href]");
+                ".//p[contains(@class, 'card-text')]/a[@href]"
+            );
             var publisherText = publisherNode?.InnerText?.Trim() ?? "";
 
             var typeNode = modCard.SelectNodes(".//code[contains(@class, 'text-light')]")
@@ -110,7 +113,7 @@ public class XmaModDisplay : IXmaModDisplay
             // Skip mods with missing image URL
             if (string.IsNullOrWhiteSpace(imgUrl))
             {
-                _logger.Warning("Mod skipped due to missing image URL: Name={Name}", normalizedName);
+                _logger.Warn("Mod skipped due to missing image URL: Name={Name}", normalizedName);
                 continue;
             }
 
@@ -126,7 +129,7 @@ public class XmaModDisplay : IXmaModDisplay
 
         return results;
     }
-    
+
     /// <summary>
     /// Loads the mod details page and attempts to parse the direct download link.
     /// </summary>
@@ -150,7 +153,7 @@ public class XmaModDisplay : IXmaModDisplay
             var downloadNode = doc.DocumentNode.SelectSingleNode("//a[@id='mod-download-link']");
             if (downloadNode == null)
             {
-                _logger.Warning("No download anchor found on: {ModUrl}", modUrl);
+                _logger.Warn("No download anchor found on: {ModUrl}", modUrl);
                 return null;
             }
 
@@ -158,7 +161,7 @@ public class XmaModDisplay : IXmaModDisplay
             var hrefValue = downloadNode.GetAttributeValue("href", "");
             if (string.IsNullOrWhiteSpace(hrefValue))
             {
-                _logger.Warning("Download link was empty or missing on: {ModUrl}", modUrl);
+                _logger.Warn("Download link was empty or missing on: {ModUrl}", modUrl);
                 return null;
             }
 
@@ -173,7 +176,8 @@ public class XmaModDisplay : IXmaModDisplay
             hrefValue = Uri.UnescapeDataString(hrefValue);
 
             // 3) Manually encode any remaining literal spaces and apostrophes
-            hrefValue = hrefValue.Replace(" ", "%20")
+            hrefValue = hrefValue
+                .Replace(" ", "%20")
                 .Replace("'", "%27");
 
             return hrefValue;
@@ -194,9 +198,9 @@ public class XmaModDisplay : IXmaModDisplay
         var decoded = WebUtility.HtmlDecode(name);
         var asciiOnly = string.Concat(decoded.Where(c => c <= 127));
         var sanitized = asciiOnly
-            .Replace("\n", " ")
-            .Replace("\r", " ")
-            .Replace("\t", " ");
+            .Replace("\\n", " ")
+            .Replace("\\r", " ")
+            .Replace("\\t", " ");
 
         var normalized = System.Text.RegularExpressions.Regex
             .Replace(sanitized, "\\s+", " ")
@@ -209,7 +213,8 @@ public class XmaModDisplay : IXmaModDisplay
     {
         try
         {
-            if (!File.Exists(_cacheFilePath)) return null;
+            if (!File.Exists(_cacheFilePath))
+                return null;
 
             var bytes = File.ReadAllBytes(_cacheFilePath);
             return MessagePackSerializer.Deserialize<XmaCacheData>(bytes);
@@ -231,7 +236,8 @@ public class XmaModDisplay : IXmaModDisplay
             _logger.Debug(
                 "Cache saved to {FilePath}, valid until {ExpirationTime}.",
                 _cacheFilePath,
-                data.ExpirationTime.ToString("u"));
+                data.ExpirationTime.ToString("u")
+            );
         }
         catch (Exception ex)
         {

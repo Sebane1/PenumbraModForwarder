@@ -1,19 +1,19 @@
 ﻿using System.Net.Http.Headers;
-using PenumbraModForwarder.Common.Extensions;
 using Newtonsoft.Json;
+using NLog;
+using PenumbraModForwarder.Common.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
-using Serilog;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class UpdateService : IUpdateService
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IConfigurationService _configurationService;
-    private readonly ILogger _logger;
 
     public UpdateService(IConfigurationService configurationService)
     {
-        _logger = Log.Logger.ForContext<UpdateService>();
         _configurationService = configurationService;
     }
 
@@ -56,8 +56,7 @@ public class UpdateService : IUpdateService
 
         if (IsVersionGreater(latestRelease.TagName, currentVersion))
         {
-            _logger.Debug("A newer version is available: {TagName}. Current: {CurrentVersion}",
-                          latestRelease.TagName, currentVersion);
+            _logger.Debug("A newer version is available: {TagName}. Current: {CurrentVersion}", latestRelease.TagName, currentVersion);
 
             var zipLinks = latestRelease.Assets
                 .Where(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -71,7 +70,7 @@ public class UpdateService : IUpdateService
         _logger.Debug("Current version is up-to-date. Returning an empty list.");
         return new List<string>();
     }
-    
+
     public async Task<bool> NeedsUpdateAsync(string currentVersion)
     {
         _logger.Debug("Entered NeedsUpdateAsync. CurrentVersion: {CurrentVersion}", currentVersion);
@@ -156,7 +155,7 @@ public class UpdateService : IUpdateService
 
         return latestRelease;
     }
-    
+
     private bool IsVersionGreater(string newVersion, string oldVersion)
     {
         _logger.Debug("IsVersionGreater check. New: {NewVersion}, Old: {OldVersion}", newVersion, oldVersion);
@@ -169,7 +168,6 @@ public class UpdateService : IUpdateService
 
         var splittedNew = newVersion.Split('.');
         var splittedOld = oldVersion.Split('.');
-
         if (splittedNew.Length != 3 || splittedOld.Length != 3)
         {
             _logger.Debug("Version not in x.x.x format. Reverting to ordinal compare.");

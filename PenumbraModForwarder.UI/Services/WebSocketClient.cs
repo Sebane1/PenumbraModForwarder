@@ -5,13 +5,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using NLog;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Events;
 using PenumbraModForwarder.UI.Interfaces;
-using Serilog;
-using ILogger = Serilog.ILogger;
 using WebSocketMessageType = System.Net.WebSockets.WebSocketMessageType;
 using CustomWebSocketMessageType = PenumbraModForwarder.Common.Models.WebSocketMessageType;
 
@@ -19,26 +18,31 @@ namespace PenumbraModForwarder.UI.Services;
 
 public class WebSocketClient : IWebSocketClient, IDisposable
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly Dictionary<string, ClientWebSocket> _webSockets;
     private readonly INotificationService _notificationService;
     private readonly IConfigurationService _configurationService;
+
     private readonly CancellationTokenSource _cts = new();
     private readonly string[] _endpoints = { "/status", "/currentTask", "/config", "/install" };
-    private readonly ILogger _logger;
+
     private bool _isReconnecting;
     private int _retryCount;
-    
     private readonly string _clientId;
 
     public event EventHandler<FileSelectionRequestedEventArgs> FileSelectionRequested;
-    public event EventHandler ModInstalled; 
+    public event EventHandler ModInstalled;
 
-    public WebSocketClient(INotificationService notificationService, IConfigurationService configurationService)
+    public WebSocketClient(
+        INotificationService notificationService,
+        IConfigurationService configurationService)
     {
         _webSockets = new Dictionary<string, ClientWebSocket>();
         _notificationService = notificationService;
         _configurationService = configurationService;
-        _logger = Log.ForContext<WebSocketClient>();
+        
+        _logger.Debug("WebSocketClient instance created using NLog.");
 
         // Assign a unique ID to help identify outgoing messages
         _clientId = Guid.NewGuid().ToString("N");
@@ -62,11 +66,13 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             {
                 _retryCount++;
                 _logger.Error(ex, "Connection loop error. Retry attempt: {RetryCount}", _retryCount);
+
                 await _notificationService.ShowNotification(
                     $"Connection failed. Retrying in 5 seconds... (Attempt {_retryCount})",
                     SoundType.GeneralChime,
                     5
                 );
+
                 await Task.Delay(5000, _cts.Token);
             }
         }
@@ -107,13 +113,16 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                 if (!_isReconnecting)
                 {
                     _logger.Error(ex, "WebSocket connection failed for endpoint {Endpoint}. Attempting to reconnect...", endpoint);
+
                     await _notificationService.ShowNotification(
                         $"Connection to {endpoint} lost. Attempting to reconnect...",
                         SoundType.GeneralChime,
                         5
                     );
+
                     _isReconnecting = true;
                 }
+
                 throw;
             }
         }
@@ -132,7 +141,13 @@ public class WebSocketClient : IWebSocketClient, IDisposable
 
                 try
                 {
-                    await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts.Token);
+                    await webSocket.SendAsync(
+                        new ArraySegment<byte>(bytes),
+                        WebSocketMessageType.Text,
+                        true,
+                        _cts.Token
+                    );
+
                     _logger.Debug("Sent message to endpoint {Endpoint}: {Message}", endpoint, json);
                 }
                 catch (Exception ex)
@@ -142,12 +157,12 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             }
             else
             {
-                _logger.Warning("WebSocket to {Endpoint} is not open", endpoint);
+                _logger.Warn("WebSocket to {Endpoint} is not open", endpoint);
             }
         }
         else
         {
-            _logger.Warning("No WebSocket connection found for endpoint {Endpoint}", endpoint);
+            _logger.Warn("No WebSocket connection found for endpoint {Endpoint}", endpoint);
         }
     }
 
@@ -163,6 +178,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                     _cts.Token
                 );
             }
+
             webSocket.Dispose();
         }
         catch (Exception ex)
@@ -172,82 +188,84 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         }
     }
 
-private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
-{
-    var buffer = new byte[1024 * 4];
-
-    try
+    private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoint)
     {
-        while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
+        var buffer = new byte[1024 * 4];
+
+        try
         {
-            var result = await webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer),
-                _cts.Token
-            );
-
-            if (result.MessageType == WebSocketMessageType.Text)
+            while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
             {
-                var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
+                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
-                // Ignore messages that match our own client ID
-                if (message?.ClientId == _clientId)
+                if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    _logger.Debug("Ignored message from this client: {MessageJson}", messageJson);
-                    continue;
+                    var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
+
+                    // Ignore messages that match our own client ID
+                    if (message?.ClientId == _clientId)
+                    {
+                        _logger.Debug("Ignored message from this client: {MessageJson}", messageJson);
+                        continue;
+                    }
+
+                    _logger.Info("Received message from {Endpoint}: {Message}", endpoint, messageJson);
+
+                    switch (endpoint)
+                    {
+                        case "/install":
+                            await HandleInstallMessageAsync(message);
+                            break;
+
+                        case "/config":
+                            await HandleConfigMessageAsync(message);
+                            break;
+
+                        case "/status":
+                            await HandleStatusMessageAsync(message);
+                            break;
+
+                        default:
+                            await HandleGeneralMessageAsync(message, endpoint);
+                            break;
+                    }
                 }
-
-                _logger.Information("Received message from {Endpoint}: {Message}", endpoint, messageJson);
-
-                switch (endpoint)
+                else if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    case "/install":
-                        await HandleInstallMessageAsync(message);
-                        break;
-                    case "/config":
-                        await HandleConfigMessageAsync(message);
-                        break;
-                    case "/status":
-                        await HandleStatusMessageAsync(message);
-                        break;
-                    default:
-                        await HandleGeneralMessageAsync(message, endpoint);
-                        break;
+                    await DisconnectWebSocketAsync(webSocket);
+                    break;
                 }
             }
-            else if (result.MessageType == WebSocketMessageType.Close)
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
+
+            if (!_isReconnecting)
             {
-                await DisconnectWebSocketAsync(webSocket);
-                break;
+                await _notificationService.ShowNotification(
+                    $"Lost connection to {endpoint}. Attempting to reconnect...",
+                    SoundType.GeneralChime
+                );
+                _isReconnecting = true;
             }
         }
     }
-    catch (Exception ex)
-    {
-        _logger.Error(ex, "Error receiving WebSocket messages from {Endpoint}", endpoint);
-        if (!_isReconnecting)
-        {
-            await _notificationService.ShowNotification(
-                $"Lost connection to {endpoint}. Attempting to reconnect...",
-                SoundType.GeneralChime
-            );
-            _isReconnecting = true;
-        }
-    }
-}
 
     private async Task HandleInstallMessageAsync(WebSocketMessage message)
     {
-        if (message.Type == CustomWebSocketMessageType.Status && message.Status == "select_files")
+        if (message.Type == CustomWebSocketMessageType.Status &&
+            message.Status == "select_files")
         {
-            _logger.Information("Received 'select_files' message: {Message}", message.Message);
+            _logger.Info("Received 'select_files' message: {Message}", message.Message);
 
             var fileList = JsonConvert.DeserializeObject<List<string>>(message.Message);
             FileSelectionRequested?.Invoke(this, new FileSelectionRequestedEventArgs(fileList, message.TaskId));
         }
         else
         {
-            _logger.Warning(
+            _logger.Warn(
                 "Unhandled message on /install endpoint: Type={Type}, Status={Status}",
                 message.Type,
                 message.Status
@@ -257,24 +275,27 @@ private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoi
 
     private async Task HandleConfigMessageAsync(WebSocketMessage message)
     {
-        if (message.Type == CustomWebSocketMessageType.Status && message.Status == "config_update")
+        if (message.Type == CustomWebSocketMessageType.Status &&
+            message.Status == "config_update")
         {
-            _logger.Information("Received config update: {Data}", message.Message);
+            _logger.Info("Received config update: {Data}", message.Message);
 
             try
             {
                 var updateData = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.Message);
+
                 if (updateData != null &&
                     updateData.ContainsKey("PropertyPath") &&
                     updateData.ContainsKey("Value"))
                 {
                     var propertyPath = updateData["PropertyPath"]?.ToString();
                     var newValue = updateData["Value"];
+
                     _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
                 }
                 else
                 {
-                    _logger.Warning("Missing 'PropertyPath' or 'Value' in config update message.");
+                    _logger.Warn("Missing 'PropertyPath' or 'Value' in config update message.");
                 }
             }
             catch (Exception ex)
@@ -284,29 +305,28 @@ private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoi
         }
         else
         {
-            _logger.Warning(
+            _logger.Warn(
                 "Unhandled message on /config endpoint: Type={Type}, Status={Status}",
                 message.Type,
                 message.Status
             );
         }
     }
-    
+
     private async Task HandleStatusMessageAsync(WebSocketMessage message)
     {
         if (message.Type == CustomWebSocketMessageType.Status &&
             (message.Status?.Equals("installed_file", StringComparison.OrdinalIgnoreCase) == true ||
              message.Status?.Equals("Installed File", StringComparison.OrdinalIgnoreCase) == true))
         {
-            _logger.Information(
-                "Detected 'installed_file' or 'Installed File' status on /status endpoint. Invoking ModInstalled event."
-            );
-            await _notificationService.ShowNotification(message.Message, SoundType.GeneralChime); 
+            _logger.Info("Detected 'installed_file' status on /status endpoint. Invoking ModInstalled event.");
+
+            await _notificationService.ShowNotification(message.Message, SoundType.GeneralChime);
             ModInstalled?.Invoke(this, EventArgs.Empty);
         }
         else
         {
-            _logger.Warning(
+            _logger.Warn(
                 "Unhandled message on /status endpoint: Type={Type}, Status={Status}",
                 message.Type,
                 message.Status
@@ -321,11 +341,7 @@ private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoi
         {
             if (message.Progress > 0)
             {
-                await _notificationService.UpdateProgress(
-                    message.TaskId,
-                    message.Message,
-                    message.Progress
-                );
+                await _notificationService.UpdateProgress(message.TaskId, message.Message, message.Progress);
             }
             else
             {
@@ -337,10 +353,12 @@ private async Task ReceiveMessagesAsync(ClientWebSocket webSocket, string endpoi
     public void Dispose()
     {
         _cts.Cancel();
+
         foreach (var webSocket in _webSockets.Values)
         {
             DisconnectWebSocketAsync(webSocket).Wait();
         }
+
         _cts.Dispose();
     }
 }

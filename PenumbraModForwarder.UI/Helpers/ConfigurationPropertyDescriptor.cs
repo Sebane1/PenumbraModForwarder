@@ -4,25 +4,17 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
+using NLog;
 using ReactiveUI;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.Helpers;
 
 public class ConfigurationPropertyDescriptor : ReactiveObject
 {
-    private readonly ILogger _logger;
-
-    public ConfigurationPropertyDescriptor()
-    {
-        _logger = Log.ForContext<ConfigurationPropertyDescriptor>();
-    }
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     public string DisplayName { get; set; }
-        
     public string Description { get; set; }
-
     public string GroupName { get; set; }
     public PropertyInfo PropertyInfo { get; set; }
     public object ModelInstance { get; set; }
@@ -37,6 +29,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
             this.RaiseAndSetIfChanged(ref _value, value);
             UpdateModelValue(value);
 
+            // If we're dealing with a List<string>, update the path items
             if (PropertyInfo?.PropertyType == typeof(List<string>))
             {
                 UpdatePathItems();
@@ -51,6 +44,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
     private void UpdatePathItems()
     {
         PathItems.Clear();
+
         if (Value is List<string> paths)
         {
             var uniquePaths = paths.Distinct().ToList();
@@ -78,6 +72,7 @@ public class ConfigurationPropertyDescriptor : ReactiveObject
         try
         {
             object convertedValue;
+
             if (PropertyInfo?.PropertyType == typeof(int) && value is decimal decimalValue)
             {
                 convertedValue = Convert.ToInt32(decimalValue);

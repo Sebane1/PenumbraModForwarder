@@ -5,24 +5,26 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
+using NLog;
 using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Extensions;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using PenumbraModForwarder.UI.Services;
 using ReactiveUI;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
 public class MainWindowViewModel : ViewModelBase
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationService _notificationService;
     private readonly IWebSocketClient _webSocketClient;
-    private readonly ISoundManagerService _soundManagerService; // We need it for InstallView
-    private readonly IConfigurationListener _configurationListener; // We just need to start it here
-    private readonly ILogger _logger;
+    private readonly ISoundManagerService _soundManagerService;
+    private readonly IConfigurationListener _configurationListener;
+    private readonly IConfigurationService _configurationService;
 
     private ViewModelBase _currentPage = null!;
     private MenuItem _selectedMenuItem = null!;
@@ -30,7 +32,7 @@ public class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MenuItem> MenuItems { get; }
     public ObservableCollection<Notification> Notifications =>
         (_notificationService as NotificationService)?.Notifications ?? new();
-    
+
     public InstallViewModel InstallViewModel { get; }
 
     public MenuItem SelectedMenuItem
@@ -40,7 +42,9 @@ public class MainWindowViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _selectedMenuItem, value);
             if (value != null)
+            {
                 CurrentPage = value.ViewModel;
+            }
         }
     }
 
@@ -56,39 +60,41 @@ public class MainWindowViewModel : ViewModelBase
         IServiceProvider serviceProvider,
         INotificationService notificationService,
         IWebSocketClient webSocketClient,
-        int port, IConfigurationListener configurationListener, ISoundManagerService soundManagerService)
+        int port,
+        IConfigurationListener configurationListener,
+        ISoundManagerService soundManagerService, IConfigurationService configurationService)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
         _webSocketClient = webSocketClient;
         _configurationListener = configurationListener;
         _soundManagerService = soundManagerService;
-        _logger = Log.ForContext<MainWindowViewModel>();
+        _configurationService = configurationService;
+
+        if ((bool)_configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
+        {
+            _logger.Info("Enabling Sentry");
+            DependencyInjection.EnableSentryLogging();
+        }
 
         var app = Application.Current;
-        
+
         var homeViewModel = _serviceProvider.GetRequiredService<HomeViewModel>();
         var modsViewModel = _serviceProvider.GetRequiredService<ModsViewModel>();
-        var downloadViewModel = _serviceProvider.GetRequiredService<DownloadViewModel>();
 
-
-        MenuItems =
-        [
+        MenuItems = new ObservableCollection<MenuItem>
+        {
             new MenuItem(
                 "Home",
                 app?.Resources["HomeIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                homeViewModel),
-
+                homeViewModel
+            ),
             new MenuItem(
                 "Mods",
                 app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                modsViewModel),
-
-            new MenuItem(
-                "Download",
-                app?.Resources["DownloadIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
-                downloadViewModel)
-        ];
+                modsViewModel
+            )
+        };
 
         NavigateToSettingsCommand = ReactiveCommand.Create(() =>
         {
@@ -98,7 +104,7 @@ public class MainWindowViewModel : ViewModelBase
 
         _selectedMenuItem = MenuItems[0];
         _currentPage = _selectedMenuItem.ViewModel;
-        
+
         InstallViewModel = new InstallViewModel(_webSocketClient, _soundManagerService);
 
         _ = InitializeWebSocketConnection(port);

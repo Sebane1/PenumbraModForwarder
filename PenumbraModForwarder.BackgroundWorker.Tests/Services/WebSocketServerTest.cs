@@ -4,7 +4,6 @@ using PenumbraModForwarder.BackgroundWorker.Services;
 using PenumbraModForwarder.BackgroundWorker.Tests.Extensions;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using Serilog;
 using Moq;
 
 namespace PenumbraModForwarder.BackgroundWorker.Tests.Services;
@@ -17,10 +16,6 @@ public class WebSocketServerTests : IDisposable
 
     public WebSocketServerTests()
     {
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .CreateLogger();
-
         _mockConfigurationService = new Mock<IConfigurationService>();
         _webSocketServer = new WebSocketServer(_mockConfigurationService.Object);
         _mockWebSocket = new MockWebSocket();

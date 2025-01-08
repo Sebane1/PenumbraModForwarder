@@ -1,37 +1,32 @@
 ﻿using System.Reflection;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using NLog;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class SoundManagerService : ISoundManagerService
 {
-    private readonly ILogger _logger;
-    private readonly IConfigurationService _configurationService;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
+    private readonly IConfigurationService _configurationService;
     private readonly Dictionary<SoundType, string> _soundFileMap = new()
     {
         [SoundType.GeneralChime] = "notification.mp3"
     };
-
     private readonly List<string> _embeddedResourceNames;
-    
-    private static readonly Lock PlaybackLock = new();
-    
+
+    // Simple lock object to coordinate playback
+    private static readonly object PlaybackLock = new();
     private static bool _isPlaying;
-    
     private static DateTime _lastPlayTime = DateTime.MinValue;
-    
     private static readonly TimeSpan Cooldown = TimeSpan.FromSeconds(2);
 
     public SoundManagerService(IConfigurationService configurationService)
     {
         _configurationService = configurationService;
-        _logger = Log.ForContext<SoundManagerService>();
         _logger.Debug("Constructing SoundManagerService.");
 
         _embeddedResourceNames = Assembly.GetExecutingAssembly()
@@ -43,27 +38,28 @@ public class SoundManagerService : ISoundManagerService
 
     public async Task PlaySoundAsync(SoundType soundType, float volume = 1.0f)
     {
-        if (!(bool)_configurationService.ReturnConfigValue(c => c.UI.NotificationSoundEnabled))
+        var notificationEnabled = (bool)_configurationService.ReturnConfigValue(c => c.UI.NotificationSoundEnabled);
+        if (!notificationEnabled)
         {
             _logger.Debug("Notification sound is disabled in the configuration.");
             return;
         }
-        
+
         var now = DateTime.UtcNow;
         if (now - _lastPlayTime < Cooldown)
         {
             _logger.Debug("Skipping playback because it is within the cooldown period.");
             return;
         }
-        
+
         var isMuted = IsSystemMuted();
         _logger.Debug("System muted state is {IsMuted}", isMuted);
         if (isMuted)
         {
-            _logger.Information("Skipping playback because system is muted.");
+            _logger.Info("Skipping playback because system is muted.");
             return;
         }
-        
+
         lock (PlaybackLock)
         {
             if (_isPlaying)
@@ -71,7 +67,6 @@ public class SoundManagerService : ISoundManagerService
                 _logger.Debug("Another sound is currently playing. Skipping new playback to avoid overlap.");
                 return;
             }
-
             _isPlaying = true;
             _lastPlayTime = now;
         }
@@ -88,13 +83,13 @@ public class SoundManagerService : ISoundManagerService
             }
             return;
         }
-        
+
         try
         {
             using var outputDevice = new WaveOutEvent();
             await using var audioFile = new AudioFileReader(filePath);
-
             audioFile.Volume = volume;
+
             outputDevice.Init(audioFile);
             outputDevice.Play();
 
@@ -104,7 +99,7 @@ public class SoundManagerService : ISoundManagerService
             {
                 await Task.Delay(100);
             }
-            
+
             _logger.Debug("Playback finished for {SoundType}.", soundType);
         }
         catch (Exception ex)
@@ -128,12 +123,7 @@ public class SoundManagerService : ISoundManagerService
             return null;
         }
 
-        _logger.Debug(
-            "Ensuring sound file is extracted for {SoundType} with file name {FileName}.",
-            soundType,
-            fileName
-        );
-
+        _logger.Debug("Ensuring sound file is extracted for {SoundType} with file name {FileName}.", soundType, fileName);
         try
         {
             var soundFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Sound");
@@ -170,6 +160,7 @@ public class SoundManagerService : ISoundManagerService
             resourceStream.CopyTo(fileStream);
 
             _logger.Debug("Extracted {FileName} resource to {DestinationPath}.", fileName, destinationPath);
+
             return destinationPath;
         }
         catch (Exception ex)

@@ -6,26 +6,26 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using ReactiveUI;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
 public class HomeViewModel : ViewModelBase, IDisposable
 {
-    private readonly ILogger _logger;
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IStatisticService _statisticService;
     private readonly IXmaModDisplay _xmaModDisplay;
     private readonly IDownloadManagerService _downloadManagerService;
     private readonly CompositeDisposable _disposables = new();
     private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
-        
+
     private readonly IWebSocketClient _webSocketClient;
 
     private ObservableCollection<InfoItem> _infoItems;
@@ -55,7 +55,6 @@ public class HomeViewModel : ViewModelBase, IDisposable
         IWebSocketClient webSocketClient,
         IDownloadManagerService downloadManagerService)
     {
-        _logger = Log.ForContext<HomeViewModel>();
         _statisticService = statisticService;
         _xmaModDisplay = xmaModDisplay;
         _webSocketClient = webSocketClient;
@@ -96,11 +95,11 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 .GroupBy(m => m.ModUrl)
                 .Select(g => g.First())
                 .ToList();
-            
+
             var existingModUrls = RecentMods
                 .Select(rm => rm.ModUrl)
                 .ToHashSet();
-            
+
             foreach (var mod in distinctSourceMods)
             {
                 if (!existingModUrls.Contains(mod.ModUrl))
@@ -109,7 +108,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 }
             }
 
-            _logger.Information("Successfully updated the recent mods list without duplicates.");
+            _logger.Info("Successfully updated the recent mods list without duplicates.");
         }
         catch (Exception ex)
         {

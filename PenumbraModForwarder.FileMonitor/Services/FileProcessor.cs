@@ -1,29 +1,26 @@
 ﻿using System.Text.RegularExpressions;
+using NLog;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
-using Serilog;
 using SevenZipExtractor;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
 
 public sealed class FileProcessor : IFileProcessor
 {
-    private static readonly Regex PreDtRegex = new(@"\[?(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    private static readonly Regex PreDtRegex = new(@"\[(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
 
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
-    private readonly ILogger _logger;
 
-    public FileProcessor(
-        IFileStorage fileStorage,
-        IConfigurationService configurationService
-    )
+    public FileProcessor(IFileStorage fileStorage, IConfigurationService configurationService)
     {
         _fileStorage = fileStorage;
         _configurationService = configurationService;
-        _logger = Log.ForContext<FileProcessor>();
     }
 
     public bool IsFileReady(string filePath)
@@ -47,8 +44,7 @@ public sealed class FileProcessor : IFileProcessor
         string filePath,
         CancellationToken cancellationToken,
         EventHandler<FileMovedEvent> onFileMoved,
-        EventHandler<FilesExtractedEventArgs> onFilesExtracted
-    )
+        EventHandler<FilesExtractedEventArgs> onFilesExtracted)
     {
         var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
         var relocateFiles = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.RelocateFiles);
@@ -56,14 +52,16 @@ public sealed class FileProcessor : IFileProcessor
         if (FileExtensionsConsts.ModFileTypes.Contains(extension))
         {
             // Decide whether to physically move the file or just organize it locally
-            var finalFilePath = relocateFiles
-                ? MoveFile(filePath)
-                : OrganizeLocalFile(filePath);
-
+            var finalFilePath = relocateFiles ? MoveFile(filePath) : OrganizeLocalFile(filePath);
             var fileName = Path.GetFileName(finalFilePath);
+
             onFileMoved?.Invoke(
                 this,
-                new FileMovedEvent(fileName, finalFilePath, Path.GetFileNameWithoutExtension(finalFilePath))
+                new FileMovedEvent(
+                    fileName,
+                    finalFilePath,
+                    Path.GetFileNameWithoutExtension(finalFilePath)
+                )
             );
         }
         else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
@@ -71,15 +69,12 @@ public sealed class FileProcessor : IFileProcessor
             if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
             {
                 // Decide whether to physically move the file or just organize it locally
-                var finalFilePath = relocateFiles
-                    ? MoveFile(filePath)
-                    : OrganizeLocalFile(filePath);
-
+                var finalFilePath = relocateFiles ? MoveFile(filePath) : OrganizeLocalFile(filePath);
                 await ProcessArchiveFileAsync(finalFilePath, cancellationToken, onFilesExtracted);
             }
             else
             {
-                _logger.Information(
+                _logger.Info(
                     "Archive {FilePath} doesn’t contain any recognized mod files; leaving file in place.",
                     filePath
                 );
@@ -87,7 +82,7 @@ public sealed class FileProcessor : IFileProcessor
         }
         else
         {
-            _logger.Warning("Unhandled file type: {FullPath}", filePath);
+            _logger.Warn("Unhandled file type: {FullPath}", filePath);
         }
     }
 
@@ -104,10 +99,7 @@ public sealed class FileProcessor : IFileProcessor
 
                 if (partFiles.Length > 0)
                 {
-                    _logger.Debug(
-                        "Detected part files for {FilePath}. Still downloading.",
-                        filePath
-                    );
+                    _logger.Debug("Detected part files for {FilePath}. Still downloading.", filePath);
                     return false;
                 }
             }
@@ -115,6 +107,7 @@ public sealed class FileProcessor : IFileProcessor
             // Check file size stability
             const int maxChecks = 3;
             long lastSize = -1;
+
             for (int i = 0; i < maxChecks; i++)
             {
                 var fileInfo = new FileInfo(filePath);
@@ -137,24 +130,16 @@ public sealed class FileProcessor : IFileProcessor
         }
         catch (Exception ex)
         {
-            _logger.Error(
-                ex,
-                "Unexpected error checking download completeness: {FilePath}",
-                filePath
-            );
+            _logger.Error(ex, "Unexpected error checking download completeness: {FilePath}", filePath);
             return false;
         }
     }
 
-    private async Task<bool> ArchiveContainsModFileAsync(
-        string filePath,
-        CancellationToken cancellationToken
-    )
+    private async Task<bool> ArchiveContainsModFileAsync(string filePath, CancellationToken cancellationToken)
     {
         try
         {
             using var archiveFile = new ArchiveFile(filePath);
-
             var skipPreDt = (bool)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.SkipPreDt);
 
             var modEntries = GetModEntries(archiveFile, skipPreDt);
@@ -162,12 +147,12 @@ public sealed class FileProcessor : IFileProcessor
         }
         catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
         {
-            _logger.Warning("File {FilePath} is not recognized as a valid archive.", filePath);
+            _logger.Warn("File {FilePath} is not recognized as a valid archive.", filePath);
             return false;
         }
         catch (OperationCanceledException)
         {
-            _logger.Information("Archive check canceled for {FilePath}.", filePath);
+            _logger.Info("Archive check canceled for {FilePath}.", filePath);
             return false;
         }
         catch (Exception ex)
@@ -184,7 +169,6 @@ public sealed class FileProcessor : IFileProcessor
     private string MoveFile(string filePath)
     {
         var modPath = (string)_configurationService.ReturnConfigValue(c => c.BackgroundWorker.ModFolderPath);
-
         var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
         var destinationFolder = Path.Combine(modPath, fileNameWithoutExt);
 
@@ -196,11 +180,11 @@ public sealed class FileProcessor : IFileProcessor
 
         // Clean up original file
         DeleteFileWithRetry(filePath);
-        _logger.Information("File moved from {SourcePath} to {DestinationPath}", filePath, destinationPath);
 
+        _logger.Info("File moved from {SourcePath} to {DestinationPath}", filePath, destinationPath);
         return destinationPath;
     }
-    
+
     private string OrganizeLocalFile(string filePath)
     {
         var originalDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
@@ -216,15 +200,14 @@ public sealed class FileProcessor : IFileProcessor
         // Clean up the original
         DeleteFileWithRetry(filePath);
 
-        _logger.Information("File placed in subfolder: {DestinationPath}", destinationPath);
+        _logger.Info("File placed in subfolder: {DestinationPath}", destinationPath);
         return destinationPath;
     }
 
     private async Task ProcessArchiveFileAsync(
         string archivePath,
         CancellationToken cancellationToken,
-        EventHandler<FilesExtractedEventArgs> onFilesExtracted
-    )
+        EventHandler<FilesExtractedEventArgs> onFilesExtracted)
     {
         var extractedFiles = new List<string>();
 
@@ -245,7 +228,7 @@ public sealed class FileProcessor : IFileProcessor
                     if (destinationDirectory != null)
                         _fileStorage.CreateDirectory(destinationDirectory);
 
-                    _logger.Information("Extracting: {FileName} to {DestPath}", entry.FileName, destinationPath);
+                    _logger.Info("Extracting: {FileName} to {DestPath}", entry.FileName, destinationPath);
                     entry.Extract(destinationPath);
                     extractedFiles.Add(destinationPath);
                 }
@@ -264,23 +247,26 @@ public sealed class FileProcessor : IFileProcessor
                 if (shouldDelete)
                 {
                     DeleteFileWithRetry(archivePath);
-                    _logger.Information("Archive deleted after extraction: {ArchiveFileName}", Path.GetFileName(archivePath));
+                    _logger.Info(
+                        "Archive deleted after extraction: {ArchiveFileName}",
+                        Path.GetFileName(archivePath)
+                    );
                 }
             }
             else
             {
-                _logger.Information("No mod files found in the archive: {ArchiveFileName}", Path.GetFileName(archivePath));
+                _logger.Info("No mod files found in the archive: {ArchiveFileName}", Path.GetFileName(archivePath));
             }
         }
         catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
         {
-            _logger.Warning("Unrecognized archive format: {ArchiveFilePath}", archivePath);
+            _logger.Warn("Unrecognized archive format: {ArchiveFilePath}", archivePath);
             DeleteFileWithRetry(archivePath);
-            _logger.Information("Deleted invalid archive: {ArchiveFileName}", Path.GetFileName(archivePath));
+            _logger.Info("Deleted invalid archive: {ArchiveFileName}", Path.GetFileName(archivePath));
         }
         catch (OperationCanceledException)
         {
-            _logger.Information("Canceled processing of archive: {ArchiveFileName}", Path.GetFileName(archivePath));
+            _logger.Info("Canceled processing of archive: {ArchiveFileName}", Path.GetFileName(archivePath));
         }
         catch (Exception ex)
         {
@@ -295,12 +281,12 @@ public sealed class FileProcessor : IFileProcessor
             try
             {
                 _fileStorage.Delete(filePath);
-                _logger.Information("Deleted file on attempt {Attempt}: {FilePath}", attempt, filePath);
+                _logger.Info("Deleted file on attempt {Attempt}: {FilePath}", attempt, filePath);
                 return;
             }
             catch (IOException) when (attempt < maxAttempts)
             {
-                _logger.Warning(
+                _logger.Warn(
                     "Attempt {Attempt} to delete file failed: {FilePath}. Retrying...",
                     attempt,
                     filePath
@@ -318,7 +304,7 @@ public sealed class FileProcessor : IFileProcessor
         try
         {
             _fileStorage.Delete(filePath);
-            _logger.Information("Deleted file on final attempt: {FilePath}", filePath);
+            _logger.Info("Deleted file on final attempt: {FilePath}", filePath);
         }
         catch (Exception ex)
         {
@@ -329,21 +315,24 @@ public sealed class FileProcessor : IFileProcessor
 
     private List<Entry?> GetModEntries(ArchiveFile archiveFile, bool skipPreDt)
     {
-        return archiveFile.Entries.Where(entry =>
-        {
-            var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
-            if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
-                return false;
-
-            if (skipPreDt && entry.FileName
-                .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries)
-                .Any(dir => PreDtRegex.IsMatch(dir)))
+        return archiveFile.Entries
+            .Where(entry =>
             {
-                _logger.Information("Skipping file in pre-Dt folder: {FileName}", entry.FileName);
-                return false;
-            }
+                var entryExtension = Path.GetExtension(entry.FileName)?.ToLowerInvariant();
+                if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
+                    return false;
 
-            return true;
-        }).ToList();
+                if (skipPreDt &&
+                    entry.FileName
+                        .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Any(dir => PreDtRegex.IsMatch(dir)))
+                {
+                    _logger.Info("Skipping file in pre-Dt folder: {FileName}", entry.FileName);
+                    return false;
+                }
+
+                return true;
+            })
+            .ToList();
     }
 }

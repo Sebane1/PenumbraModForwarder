@@ -1,14 +1,15 @@
-﻿using Microsoft.Win32;
+﻿using System;
+using Microsoft.Win32;
+using NLog;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.Common.Services
 {
     public class RegistryHelper : IRegistryHelper
     {
-        private readonly ILogger _logger;
+        // Replace Serilog ILogger with NLog's Logger
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Indicates whether the registry is supported on the current platform.
@@ -17,7 +18,7 @@ namespace PenumbraModForwarder.Common.Services
 
         public RegistryHelper()
         {
-            _logger = Log.ForContext<RegistryHelper>();
+            // No additional initialization needed for NLog
         }
 
         /// <summary>
@@ -38,7 +39,7 @@ namespace PenumbraModForwarder.Common.Services
                 var value = key?.GetValue("InstallLocation")?.ToString();
                 if (string.IsNullOrEmpty(value))
                 {
-                    _logger.Warning("Registry value not found at {Path}", RegistryConsts.RegistryPath);
+                    _logger.Warn("Registry value not found at {Path}", RegistryConsts.RegistryPath);
                     return null;
                 }
                 return value;

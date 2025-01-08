@@ -35,7 +35,6 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
             services.AddSingleton<IStatisticService, StatisticService>();
             services.AddSingleton<IPenumbraService, PenumbraService>();
             services.AddSingleton<IConfigurationListener, ConfigurationListener>();
-            
             services.AddTransient<IFileWatcher, FileWatcher>();
             services.AddSingleton<IFileQueueProcessor, FileQueueProcessor>();
             services.AddSingleton<IFileProcessor, FileProcessor>();

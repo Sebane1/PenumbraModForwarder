@@ -7,23 +7,23 @@ using System.Reactive;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Newtonsoft.Json;
+using NLog;
 using PenumbraModForwarder.Common.Enums;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using PenumbraModForwarder.Common.Interfaces; 
 using PenumbraModForwarder.UI.Events;
 using PenumbraModForwarder.UI.Interfaces;
 using ReactiveUI;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
 public class InstallViewModel : ViewModelBase, IDisposable
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IWebSocketClient _webSocketClient;
     private readonly ISoundManagerService _soundManagerService;
-    private readonly ILogger _logger;
-        
+
     private string _currentTaskId;
     private bool _isSelectionVisible;
 
@@ -40,12 +40,10 @@ public class InstallViewModel : ViewModelBase, IDisposable
 
     public InstallViewModel(
         IWebSocketClient webSocketClient,
-        ISoundManagerService soundManagerService
-    )
+        ISoundManagerService soundManagerService)
     {
         _webSocketClient = webSocketClient;
         _soundManagerService = soundManagerService;
-        _logger = Log.ForContext<InstallViewModel>();
 
         InstallCommand = ReactiveCommand.CreateFromTask(ExecuteInstallCommand);
         CancelCommand = ReactiveCommand.CreateFromTask(ExecuteCancelCommand);
@@ -69,12 +67,14 @@ public class InstallViewModel : ViewModelBase, IDisposable
                     FilePath = file,
                     IsSelected = true
                 });
-                _logger.Information("Added file {FileName}", fileName);
+
+                _logger.Info("Added file {FileName}", fileName);
             }
 
-            _logger.Information("Selected {FileCount} files", Files.Count);
+            _logger.Info("Selected {FileCount} files", Files.Count);
+
             IsSelectionVisible = true;
-            
+
             await _soundManagerService.PlaySoundAsync(
                 SoundType.GeneralChime,
                 volume: 1.0f
@@ -101,13 +101,13 @@ public class InstallViewModel : ViewModelBase, IDisposable
         await _webSocketClient.SendMessageAsync(responseMessage, "/install");
 
         IsSelectionVisible = false;
-        _logger.Information("User selected files sent: {SelectedFiles}", selectedFiles);
+        _logger.Info("User selected files sent: {SelectedFiles}", selectedFiles);
     }
 
     private async Task ExecuteCancelCommand()
     {
         IsSelectionVisible = false;
-        _logger.Information("User canceled the file selection.");
+        _logger.Info("User canceled the file selection.");
 
         var responseMessage = new WebSocketMessage
         {

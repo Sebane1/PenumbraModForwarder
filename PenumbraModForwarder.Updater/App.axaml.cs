@@ -3,20 +3,20 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using NLog;
 using PenumbraModForwarder.Updater.ViewModels;
 using PenumbraModForwarder.Updater.Views;
-using Serilog;
 
 namespace PenumbraModForwarder.Updater;
 
 public partial class App : Application
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
 
     public App()
     {
-        _logger = Log.ForContext<App>();
         try
         {
             _serviceProvider = Program.ServiceProvider;
@@ -33,9 +33,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var mainWindowViewModel = ActivatorUtilities.CreateInstance<MainWindowViewModel>(
-                _serviceProvider
-            );
+            var mainWindowViewModel = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider);
+
             desktop.MainWindow = new MainWindow
             {
                 DataContext = mainWindowViewModel

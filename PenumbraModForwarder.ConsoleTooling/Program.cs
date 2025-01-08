@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.ConsoleTooling.Extensions;
 using PenumbraModForwarder.ConsoleTooling.Interfaces;
 
@@ -26,6 +27,12 @@ public class Program
         {
             var filePath = args[0];
             var installingService = serviceProvider.GetRequiredService<IInstallingService>();
+            var configService = serviceProvider.GetRequiredService<IConfigurationService>();
+
+            if ((bool) configService.ReturnConfigValue(c => c.Common.EnableSentry))
+            {
+                DependencyInjection.EnableSentryLogging();
+            }
             installingService.HandleFileAsync(filePath).GetAwaiter().GetResult();
         }
         else

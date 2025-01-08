@@ -1,15 +1,16 @@
-﻿using PenumbraModForwarder.Common.Consts;
+﻿using NLog;
 using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
-using Serilog;
+using PenumbraModForwarder.Common.Consts;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
 
 public sealed class FileWatcher : IFileWatcher, IDisposable
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly List<FileSystemWatcher> _watchers;
     private readonly IFileQueueProcessor _fileQueueProcessor;
-    private readonly ILogger _logger;
     private bool _disposed;
 
     public event EventHandler<FileMovedEvent> FileMoved
@@ -28,27 +29,30 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     {
         _watchers = new List<FileSystemWatcher>();
         _fileQueueProcessor = fileQueueProcessor;
-        _logger = Log.ForContext<FileWatcher>();
     }
 
     public async Task StartWatchingAsync(IEnumerable<string> paths)
     {
+        // Load any saved state from disk
         await _fileQueueProcessor.LoadStateAsync();
-        
+
         var distinctPaths = paths.Distinct().ToList();
+
         foreach (var path in distinctPaths)
         {
             if (!Directory.Exists(path))
             {
-                _logger.Warning("Directory does not exist, skipping: {Path}", path);
+                _logger.Warn("Directory does not exist, skipping: {Path}", path);
                 continue;
             }
 
             var watcher = CreateFileWatcher(path);
             _watchers.Add(watcher);
-            _logger.Information("Started watching directory: {Path}", path);
+
+            _logger.Info("Started watching directory: {Path}", path);
         }
-        
+
+        // Start processing the queue in the background
         _fileQueueProcessor.StartProcessing();
     }
 
@@ -66,23 +70,24 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
             watcher.Filters.Add($"*{extension}");
         }
 
-        // Add partial extension filter
+        // Add partial extension filter for incomplete downloads, etc.
         watcher.Filters.Add("*.opdownload");
-        
+
         watcher.Created += OnCreated;
         watcher.Renamed += OnRenamed;
+
         return watcher;
     }
 
     private void OnCreated(object sender, FileSystemEventArgs e)
     {
-        _logger.Information("File added to queue: {FullPath}", e.FullPath);
+        _logger.Info("File added to queue: {FullPath}", e.FullPath);
         _fileQueueProcessor.EnqueueFile(e.FullPath);
     }
 
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
-        _logger.Information("File renamed from {OldFullPath} to {FullPath}", e.OldFullPath, e.FullPath);
+        _logger.Info("File renamed from {OldFullPath} to {FullPath}", e.OldFullPath, e.FullPath);
         _fileQueueProcessor.RenameFileInQueue(e.OldFullPath, e.FullPath);
     }
 
@@ -95,6 +100,7 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
     private void Dispose(bool disposing)
     {
         if (_disposed) return;
+
         if (disposing)
         {
             _fileQueueProcessor.PersistState();
@@ -104,10 +110,11 @@ public sealed class FileWatcher : IFileWatcher, IDisposable
                 watcher.EnableRaisingEvents = false;
                 watcher.Dispose();
             }
-            _watchers.Clear();
 
-            _logger.Information("All watchers disposed.");
+            _watchers.Clear();
+            _logger.Info("All watchers disposed.");
         }
+
         _disposed = true;
     }
 }

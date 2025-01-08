@@ -2,27 +2,27 @@
 using KellermanSoftware.CompareNetObjects;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NLog;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class ConfigurationService : IConfigurationService
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IFileStorage _fileStorage;
-    private readonly ILogger _logger;
     private ConfigurationModel _config;
-    private readonly Lock _configWriteLock  = new Lock();
+    private readonly object _configWriteLock = new object();
+
     public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 
     public ConfigurationService(IFileStorage fileStorage)
     {
         _fileStorage = fileStorage;
-        _logger = Log.ForContext<ConfigurationService>();
         LoadConfiguration();
     }
 
@@ -35,7 +35,7 @@ public class ConfigurationService : IConfigurationService
                 using var stream = _fileStorage.OpenRead(ConfigurationConsts.ConfigurationFilePath);
                 using var reader = new StreamReader(stream);
                 var configContent = reader.ReadToEnd();
-                _config = JsonConvert.DeserializeObject<ConfigurationModel>(configContent) 
+                _config = JsonConvert.DeserializeObject<ConfigurationModel>(configContent)
                           ?? new ConfigurationModel();
             }
             catch (Exception ex)
@@ -53,6 +53,7 @@ public class ConfigurationService : IConfigurationService
     public void CreateConfiguration()
     {
         var configDirectory = Path.GetDirectoryName(ConfigurationConsts.ConfigurationFilePath);
+
         if (!_fileStorage.Exists(configDirectory))
         {
             _fileStorage.CreateDirectory(configDirectory);
@@ -62,11 +63,11 @@ public class ConfigurationService : IConfigurationService
         {
             _config = new ConfigurationModel();
             SaveConfiguration(_config);
-            _logger.Information("Configuration file created with default values.");
+            _logger.Info("Configuration file created with default values.");
         }
         else
         {
-            _logger.Information("Configuration file already exists.");
+            _logger.Info("Configuration file already exists.");
         }
     }
 
@@ -84,6 +85,7 @@ public class ConfigurationService : IConfigurationService
         {
             var originalConfig = _config.DeepClone();
             _config = updatedConfig;
+
             var changes = GetChanges(originalConfig, _config);
             if (changes.Any())
             {
@@ -102,6 +104,7 @@ public class ConfigurationService : IConfigurationService
         }
 
         var updatedConfigContent = JsonConvert.SerializeObject(_config, Formatting.Indented);
+
         lock (_configWriteLock)
         {
             try
@@ -129,6 +132,7 @@ public class ConfigurationService : IConfigurationService
     {
         if (propertySelector == null)
             throw new ArgumentNullException(nameof(propertySelector));
+
         return propertySelector(_config);
     }
 
@@ -138,10 +142,16 @@ public class ConfigurationService : IConfigurationService
             throw new ArgumentNullException(nameof(propertyUpdater), "Property updater cannot be null.");
 
         propertyUpdater(_config);
-        _logger.Debug("Raising ConfigurationChanged event for {ChangedPropertyPath} with new value: {NewValue}",
-            changedPropertyPath, newValue);
+
+        _logger.Debug(
+            "Raising ConfigurationChanged event for {ChangedPropertyPath} with new value: {NewValue}",
+            changedPropertyPath,
+            newValue
+        );
 
         ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(changedPropertyPath, newValue));
+
+        // Save without re-checking changes to avoid re-raising.  
         SaveConfiguration(_config, detectChangesAndInvokeEvents: false);
     }
 
@@ -162,22 +172,26 @@ public class ConfigurationService : IConfigurationService
         {
             var propertyName = properties[i];
             propertyInfo = currentObject.GetType().GetProperty(propertyName);
+
             if (propertyInfo == null)
             {
-                throw new Exception($"Property '{propertyName}' not found on type '{currentObject.GetType().Name}'");
+                throw new Exception(
+                    $"Property '{propertyName}' not found on type '{currentObject.GetType().Name}'"
+                );
             }
 
             if (i == properties.Length - 1)
             {
                 if (newValue is JArray jArrayValue)
                 {
+                    // Convert JArray to either List<string>, string[], or any other collection
                     if (propertyInfo.PropertyType == typeof(List<string>))
                     {
                         var typedList = jArrayValue.ToObject<List<string>>();
                         propertyInfo.SetValue(currentObject, typedList);
                     }
-                    else if (propertyInfo.PropertyType.IsArray
-                             && propertyInfo.PropertyType.GetElementType() == typeof(string))
+                    else if (propertyInfo.PropertyType.IsArray &&
+                             propertyInfo.PropertyType.GetElementType() == typeof(string))
                     {
                         var stringArray = jArrayValue.ToObject<string[]>();
                         propertyInfo.SetValue(currentObject, stringArray);
@@ -204,6 +218,7 @@ public class ConfigurationService : IConfigurationService
     private Dictionary<string, object> GetChanges(ConfigurationModel original, ConfigurationModel updated)
     {
         var changes = new Dictionary<string, object>();
+
         var compareLogic = new CompareLogic
         {
             Config =
@@ -220,17 +235,20 @@ public class ConfigurationService : IConfigurationService
         };
 
         var comparisonResult = compareLogic.Compare(original, updated);
+
         if (!comparisonResult.AreEqual)
         {
             foreach (var difference in comparisonResult.Differences)
             {
                 var propertyName = difference.PropertyName.TrimStart('.');
                 var newValue = difference.Object2;
-
                 changes[propertyName] = newValue;
+
                 _logger.Debug(
                     "Detected change in property '{PropertyName}': Original Value = '{OriginalValue}', New Value = '{NewValue}'",
-                    propertyName, difference.Object1, difference.Object2
+                    propertyName,
+                    difference.Object1,
+                    difference.Object2
                 );
             }
         }
@@ -244,7 +262,7 @@ public class ConfigurationService : IConfigurationService
 }
 
 /// <summary>
-/// Extension method for deep cloning 
+/// Extension method for deep cloning
 /// </summary>
 public static class CloneExtensions
 {
@@ -259,6 +277,7 @@ public static class CloneExtensions
             TypeNameHandling = TypeNameHandling.Auto,
             Formatting = Formatting.Indented
         };
+
         var serialized = JsonConvert.SerializeObject(obj, settings);
         return JsonConvert.DeserializeObject<T>(serialized, settings);
     }

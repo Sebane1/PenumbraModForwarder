@@ -2,18 +2,18 @@
 using System.Threading;
 using Avalonia;
 using Avalonia.ReactiveUI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PenumbraModForwarder.Common.Interfaces;
+using NLog;
 using PenumbraModForwarder.Updater.Extensions;
 using PenumbraModForwarder.Updater.Interfaces;
 using PenumbraModForwarder.Updater.Services;
-using Serilog;
 
 namespace PenumbraModForwarder.Updater;
 
 public class Program
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
     [STAThread]
@@ -31,19 +31,21 @@ public class Program
             try
             {
                 var services = new ServiceCollection();
-                    
+
+                // Create and register your app arguments
                 var appArgs = new AppArguments(args);
                 services.AddSingleton<IAppArguments>(appArgs);
 
+                // Register other application services
                 services.AddApplicationServices();
 
                 ServiceProvider = services.BuildServiceProvider();
-                
+
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Application failed to start");
+                _logger.Fatal(ex, "Application failed to start");
                 Environment.Exit(1);
             }
         }

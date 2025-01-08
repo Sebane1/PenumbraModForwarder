@@ -3,210 +3,227 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using NLog;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Updater.Extensions;
 using PenumbraModForwarder.Updater.Interfaces;
 using ReactiveUI;
-using Serilog;
 
-namespace PenumbraModForwarder.Updater.ViewModels
+namespace PenumbraModForwarder.Updater.ViewModels;
+
+public class MainWindowViewModel : ViewModelBase
 {
-    public class MainWindowViewModel : ViewModelBase
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    private readonly IGetBackgroundInformation _getBackgroundInformation;
+    private readonly IUpdateService _updateService;
+    private readonly IDownloadAndInstallUpdates _downloadAndInstallUpdates;
+    private readonly IAppArguments _appArguments;
+    private readonly IConfigurationService _configurationService;
+
+    private readonly Random _random = new();
+    private int _lastIndex1 = -1;
+    private int _lastIndex2 = -1;
+
+    private GithubStaticResources.InformationJson? _infoJson;
+    public GithubStaticResources.InformationJson? InfoJson
     {
-        private readonly IGetBackgroundInformation _getBackgroundInformation;
-        private readonly IUpdateService _updateService;
-        private readonly IDownloadAndInstallUpdates _downloadAndInstallUpdates;
-        private readonly IAppArguments _appArguments;
-        private readonly IConfigurationService _configurationService;
-        private readonly ILogger _logger;
-        private readonly Random _random = new();
+        get => _infoJson;
+        set => this.RaiseAndSetIfChanged(ref _infoJson, value);
+    }
 
-        private int _lastIndex1 = -1;
-        private int _lastIndex2 = -1;
+    private GithubStaticResources.UpdaterInformationJson? _updaterInfoJson;
+    public GithubStaticResources.UpdaterInformationJson? UpdaterInfoJson
+    {
+        get => _updaterInfoJson;
+        set => this.RaiseAndSetIfChanged(ref _updaterInfoJson, value);
+    }
 
-        private GithubStaticResources.InformationJson? _infoJson;
-        public GithubStaticResources.InformationJson? InfoJson
+    private string[]? _backgroundImages;
+    public string[]? BackgroundImages
+    {
+        get => _backgroundImages;
+        set => this.RaiseAndSetIfChanged(ref _backgroundImages, value);
+    }
+
+    private string? _currentImage;
+    public string? CurrentImage
+    {
+        get => _currentImage;
+        set => this.RaiseAndSetIfChanged(ref _currentImage, value);
+    }
+
+    private string _statusText = string.Empty;
+    public string StatusText
+    {
+        get => _statusText;
+        set => this.RaiseAndSetIfChanged(ref _statusText, value);
+    }
+
+    private string _currentVersion = string.Empty;
+    public string CurrentVersion
+    {
+        get => _currentVersion;
+        set => this.RaiseAndSetIfChanged(ref _currentVersion, value);
+    }
+
+    private string _updatedVersion = string.Empty;
+    public string UpdatedVersion
+    {
+        get => _updatedVersion;
+        set => this.RaiseAndSetIfChanged(ref _updatedVersion, value);
+    }
+
+    private IDisposable? _imageTimer;
+
+    public ReactiveCommand<Unit, Unit> UpdateCommand { get; }
+
+    private string _numberedVersionCurrent = string.Empty;
+    private string _numberedVersionUpdated = string.Empty;
+
+    public MainWindowViewModel(
+        IGetBackgroundInformation getBackgroundInformation,
+        IUpdateService updateService,
+        IDownloadAndInstallUpdates downloadAndInstallUpdates,
+        IAppArguments appArguments,
+        IConfigurationService configurationService)
+    {
+        _logger.Debug("Constructing MainWindowViewModel...");
+
+        _getBackgroundInformation = getBackgroundInformation;
+        _updateService = updateService;
+        _downloadAndInstallUpdates = downloadAndInstallUpdates;
+        _appArguments = appArguments;
+        _configurationService = configurationService;
+
+        // Toggle Sentry logging based on config
+        if ((bool)_configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
         {
-            get => _infoJson;
-            set => this.RaiseAndSetIfChanged(ref _infoJson, value);
+            DependencyInjection.EnableSentryLogging();
+        }
+        else
+        {
+            DependencyInjection.DisableSentryLogging();
         }
 
-        private GithubStaticResources.UpdaterInformationJson? _updaterInfoJson;
-        public GithubStaticResources.UpdaterInformationJson? UpdaterInfoJson
+        // Determine current version
+        var externalCurrentVersion = _appArguments.Args.Length > 0 
+            ? _appArguments.Args[0] 
+            : null;
+
+        if (!string.IsNullOrWhiteSpace(externalCurrentVersion))
         {
-            get => _updaterInfoJson;
-            set => this.RaiseAndSetIfChanged(ref _updaterInfoJson, value);
+            _numberedVersionCurrent = externalCurrentVersion;
+        }
+        else
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            _numberedVersionCurrent = version == null
+                ? "Local Build"
+                : $"{version.Major}.{version.Minor}.{version.Build}";
         }
 
-        private string[]? _backgroundImages;
-        public string[]? BackgroundImages
+        CurrentVersion = $"Current Version: v{_numberedVersionCurrent}";
+
+        UpdateCommand = ReactiveCommand.CreateFromTask(PerformUpdateAsync);
+
+        Begin();
+
+        StatusText = "Waiting for Update...";
+    }
+
+    private async Task PerformUpdateAsync()
+    {
+        try
         {
-            get => _backgroundImages;
-            set => this.RaiseAndSetIfChanged(ref _backgroundImages, value);
-        }
+            _logger.Debug("Update button clicked");
+            StatusText = "Downloading Update...";
 
-        private string? _currentImage;
-        public string? CurrentImage
-        {
-            get => _currentImage;
-            set => this.RaiseAndSetIfChanged(ref _currentImage, value);
-        }
+            // Attempt to download and install
+            var (success, downloadPath) = await _downloadAndInstallUpdates
+                .DownloadAndInstallAsync(_numberedVersionCurrent);
 
-        private string _statusText;
-        public string StatusText
-        {
-            get => _statusText;
-            set => this.RaiseAndSetIfChanged(ref _statusText, value);
-        }
-
-        private string _currentVersion;
-        public string CurrentVersion
-        {
-            get => _currentVersion;
-            set => this.RaiseAndSetIfChanged(ref _currentVersion, value);
-        }
-
-        private string _updatedVersion;
-        public string UpdatedVersion
-        {
-            get => _updatedVersion;
-            set => this.RaiseAndSetIfChanged(ref _updatedVersion, value);
-        }
-
-        private IDisposable? _imageTimer;
-        public ReactiveCommand<Unit, Unit> UpdateCommand { get; }
-
-        private string numberedVersionCurrent;
-        private string numberedVersionUpdated;
-        
-        public MainWindowViewModel(
-            IGetBackgroundInformation getBackgroundInformation,
-            IUpdateService updateService,
-            IDownloadAndInstallUpdates downloadAndInstallUpdates, IAppArguments appArguments, IConfigurationService configurationService)
-        {
-            _logger = Log.ForContext<MainWindowViewModel>();
-            _getBackgroundInformation = getBackgroundInformation;
-            _updateService = updateService;
-            _downloadAndInstallUpdates = downloadAndInstallUpdates;
-            _appArguments = appArguments;
-            _configurationService = configurationService;
-
-            if ((bool) _configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
+            if (!success)
             {
-                DependencyInjection.EnableSentryLogging();
+                StatusText = "Download Failed";
+                return;
             }
-            else
-            {
-                DependencyInjection.DisableSentryLogging();
-            }
 
-            var externalCurrentVersion = _appArguments.Args.Length > 0
-                ? _appArguments.Args[0]
-                : null;
+            // If this code is reached, the download succeeded
+            StatusText = "Download Complete!";
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, ex.Message);
+            StatusText = "Update Failed";
+        }
+    }
 
-            if (!string.IsNullOrWhiteSpace(externalCurrentVersion))
-            {
-                numberedVersionCurrent = externalCurrentVersion;
-            }
-            else
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                var version = assembly.GetName().Version;
+    private async Task Begin()
+    {
+        _logger.Debug("Begin() called for MainWindowViewModel");
 
-                numberedVersionCurrent = version == null
-                    ? "Local Build"
-                    : $"{version.Major}.{version.Minor}.{version.Build}";
-            }
+        var latestVersion = await _updateService.GetMostRecentVersionAsync();
+        UpdatedVersion = $"Updated Version: {latestVersion}";
+        _numberedVersionUpdated = latestVersion;
 
-            CurrentVersion = $"Current Version: v{numberedVersionCurrent}";
-
-            UpdateCommand = ReactiveCommand.CreateFromTask(PerformUpdateAsync);
-
-            Begin();
-            StatusText = "Waiting for Update...";
+        if (!CurrentVersion.Contains(latestVersion))
+        {
+            StatusText = "Update Needed...";
         }
 
-        private async Task PerformUpdateAsync()
+        var (info, updater) = await _getBackgroundInformation.GetResources();
+        InfoJson = info;
+        UpdaterInfoJson = updater;
+
+        if (UpdaterInfoJson?.Backgrounds?.Images != null)
         {
-            try
+            BackgroundImages = UpdaterInfoJson.Backgrounds.Images;
+        }
+
+        StartImageRotation();
+    }
+
+    private void StartImageRotation()
+    {
+        if (BackgroundImages == null || BackgroundImages.Length == 0) return;
+
+        var initialIndex = _random.Next(BackgroundImages.Length);
+        CurrentImage = BackgroundImages[initialIndex];
+        _lastIndex1 = initialIndex;
+
+        _imageTimer?.Dispose();
+
+        _imageTimer = Observable.Interval(TimeSpan.FromSeconds(30))
+            .Subscribe(_ =>
             {
-                _logger.Debug("Button Clicked");
-                StatusText = "Downloading Update...";
-                var (success, downloadPath) = await _downloadAndInstallUpdates.DownloadAndInstallAsync(_currentVersion);
-                if (!success)
+                if (BackgroundImages.Length <= 2)
                 {
-                    StatusText = "Download Failed";
+                    CycleWithoutRandom();
                     return;
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex.Message);
-            }
-        }
 
-        private async Task Begin()
-        {
-            var latestVersion = await _updateService.GetMostRecentVersionAsync();
-            UpdatedVersion = $"Updated Version: {latestVersion}";
-            numberedVersionUpdated = latestVersion;
-
-            if (!CurrentVersion.Contains(latestVersion))
-            {
-                StatusText = "Update Needed...";
-            }
-
-            var (info, updater) = await _getBackgroundInformation.GetResources();
-            InfoJson = info;
-            UpdaterInfoJson = updater;
-
-            if (UpdaterInfoJson?.Backgrounds?.Images != null)
-            {
-                BackgroundImages = UpdaterInfoJson.Backgrounds.Images;
-            }
-
-            StartImageRotation();
-        }
-
-        private void StartImageRotation()
-        {
-            if (BackgroundImages == null || BackgroundImages.Length == 0)
-                return;
-
-            var initialIndex = _random.Next(BackgroundImages.Length);
-            CurrentImage = BackgroundImages[initialIndex];
-            _lastIndex1 = initialIndex;
-
-            _imageTimer?.Dispose();
-
-            _imageTimer = Observable.Interval(TimeSpan.FromSeconds(30))
-                .Subscribe(_ =>
+                int newIndex;
+                do
                 {
-                    if (BackgroundImages.Length <= 2)
-                    {
-                        CycleWithoutRandom();
-                        return;
-                    }
+                    newIndex = _random.Next(BackgroundImages.Length);
+                }
+                while (newIndex == _lastIndex1 || newIndex == _lastIndex2);
 
-                    int newIndex;
-                    do
-                    {
-                        newIndex = _random.Next(BackgroundImages.Length);
-                    }
-                    while (newIndex == _lastIndex1 || newIndex == _lastIndex2);
+                CurrentImage = BackgroundImages[newIndex];
+                _lastIndex2 = _lastIndex1;
+                _lastIndex1 = newIndex;
+            });
+    }
 
-                    CurrentImage = BackgroundImages[newIndex];
-                    _lastIndex2 = _lastIndex1;
-                    _lastIndex1 = newIndex;
-                });
-        }
+    private void CycleWithoutRandom()
+    {
+        if (BackgroundImages == null) return;
 
-        private void CycleWithoutRandom()
-        {
-            var currentIndex = Array.IndexOf(BackgroundImages, CurrentImage);
-            var nextIndex = (currentIndex + 1) % BackgroundImages!.Length;
-            CurrentImage = BackgroundImages[nextIndex];
-        }
+        var currentIndex = Array.IndexOf(BackgroundImages, CurrentImage);
+        var nextIndex = (currentIndex + 1) % BackgroundImages.Length;
+        CurrentImage = BackgroundImages[nextIndex];
     }
 }

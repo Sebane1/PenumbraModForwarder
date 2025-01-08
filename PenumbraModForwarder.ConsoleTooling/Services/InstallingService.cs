@@ -1,68 +1,70 @@
-﻿using PenumbraModForwarder.Common.Consts;
+﻿using NLog;
+using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.ConsoleTooling.Interfaces;
-using Serilog;
 
-namespace PenumbraModForwarder.ConsoleTooling.Services;
-
-public class InstallingService : IInstallingService
+namespace PenumbraModForwarder.ConsoleTooling.Services
 {
-    private readonly ILogger _logger;
-    private readonly IModInstallService _modInstallService;
-    private readonly ISoundManagerService _soundManagerService;
+    public class InstallingService : IInstallingService
+    {
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    public InstallingService(IModInstallService modInstallService, ISoundManagerService soundManagerService)
-    {
-        _modInstallService = modInstallService;
-        _soundManagerService = soundManagerService;
-        _logger = Log.ForContext<InstallingService>();
-    }
-    
-    public async Task HandleFileAsync(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
+        private readonly IModInstallService _modInstallService;
+        private readonly ISoundManagerService _soundManagerService;
+
+        public InstallingService(
+            IModInstallService modInstallService,
+            ISoundManagerService soundManagerService)
         {
-            throw new ArgumentException("File path must not be null or whitespace.", nameof(filePath));
+            _modInstallService = modInstallService;
+            _soundManagerService = soundManagerService;
         }
 
-        var fileType = GetFileType(filePath);
-
-        switch (fileType)
+        public async Task HandleFileAsync(string filePath)
         {
-            case FileType.ModFile:
-                await HandleModFileAsync(filePath);
-                break;
-            default:
-                throw new InvalidOperationException($"Unhandled file type: {fileType}");
-        }
-    }
-    
-    private FileType GetFileType(string filePath)
-    {
-        var fileExtension = Path.GetExtension(filePath)?.ToLowerInvariant();
-        if (FileExtensionsConsts.ModFileTypes.Contains(fileExtension))
-        {
-            return FileType.ModFile;
-        }
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path must not be null or whitespace.", nameof(filePath));
 
-        throw new NotSupportedException($"Unsupported file extension: {fileExtension}");
-    }
-
-    private async Task HandleModFileAsync(string filePath)
-    {
-        _logger.Information("Handling file: {FilePath}", filePath);
-        try
-        {
-            if (await _modInstallService.InstallModAsync(filePath))
+            var fileType = GetFileType(filePath);
+            switch (fileType)
             {
-                await _soundManagerService.PlaySoundAsync(SoundType.GeneralChime);
-                _logger.Information("Successfully installed mod: {FilePath}", filePath);
+                case FileType.ModFile:
+                    await HandleModFileAsync(filePath);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unhandled file type: {fileType}");
             }
         }
-        catch (Exception ex)
+
+        private FileType GetFileType(string filePath)
         {
-            _logger.Error(ex, "Failed to handle file: {FilePath}", filePath);
+            var fileExtension = Path.GetExtension(filePath)?.ToLowerInvariant();
+            if (FileExtensionsConsts.ModFileTypes.Contains(fileExtension))
+            {
+                return FileType.ModFile;
+            }
+
+            throw new NotSupportedException($"Unsupported file extension: {fileExtension}");
+        }
+
+        private async Task HandleModFileAsync(string filePath)
+        {
+            _logger.Info("Handling file: {FilePath}", filePath);
+
+            try
+            {
+                // If the mod is installed successfully, play a sound and log.
+                if (await _modInstallService.InstallModAsync(filePath))
+                {
+                    await _soundManagerService.PlaySoundAsync(SoundType.GeneralChime);
+                    _logger.Info("Successfully installed mod: {FilePath}", filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to handle file: {FilePath}", filePath);
+            }
         }
     }
 }

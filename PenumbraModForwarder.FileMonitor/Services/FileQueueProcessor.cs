@@ -1,25 +1,26 @@
 ﻿using System.Collections.Concurrent;
 using Newtonsoft.Json;
+using NLog;
 using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.FileMonitor.Interfaces;
 using PenumbraModForwarder.FileMonitor.Models;
-using Serilog;
 
 namespace PenumbraModForwarder.FileMonitor.Services;
 
 public sealed class FileQueueProcessor : IFileQueueProcessor
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly ConcurrentDictionary<string, DateTime> _fileQueue;
     private readonly ConcurrentDictionary<string, int> _retryCounts;
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
     private readonly IFileProcessor _fileProcessor;
-    private readonly ILogger _logger;
 
     private CancellationTokenSource _cancellationTokenSource;
     private Task _processingTask;
-    private Timer _persistenceTimer;
+    private System.Threading.Timer _persistenceTimer;
     private readonly string _stateFilePath;
 
     public event EventHandler<FileMovedEvent> FileMoved;
@@ -28,8 +29,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
     public FileQueueProcessor(
         IFileStorage fileStorage,
         IConfigurationService configurationService,
-        IFileProcessor fileProcessor
-    )
+        IFileProcessor fileProcessor)
     {
         _fileQueue = new ConcurrentDictionary<string, DateTime>();
         _retryCounts = new ConcurrentDictionary<string, int>();
@@ -37,7 +37,6 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
         _fileStorage = fileStorage;
         _configurationService = configurationService;
         _fileProcessor = fileProcessor;
-        _logger = Log.ForContext<FileQueueProcessor>();
 
         _stateFilePath = Path.Combine(ConfigurationConsts.ConfigurationPath, "fileQueueState.json");
     }
@@ -65,10 +64,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
             if (FileExtensionsConsts.AllowedExtensions.Contains(extension))
             {
                 EnqueueFile(newPath);
-                _logger.Information(
-                    "File added to queue after rename (unrecognized old path): {FullPath}",
-                    newPath
-                );
+                _logger.Info("File added to queue after rename (unrecognized old path): {FullPath}", newPath);
             }
         }
     }
@@ -81,7 +77,6 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
             {
                 var serializedQueue = _fileStorage.Read(_stateFilePath);
                 var deserializedQueue = JsonConvert.DeserializeObject<ConcurrentDictionary<string, DateTime>>(serializedQueue);
-
                 if (deserializedQueue != null)
                 {
                     foreach (var kvp in deserializedQueue)
@@ -93,12 +88,11 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
                         }
                         else
                         {
-                            _logger.Warning("File from state no longer exists: {FullPath}", kvp.Key);
+                            _logger.Warn("File from state no longer exists: {FullPath}", kvp.Key);
                         }
                     }
                 }
-
-                _logger.Information("File queue state loaded successfully.");
+                _logger.Info("File queue state loaded successfully.");
             }
         }
         catch (Exception ex)
@@ -115,7 +109,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
         {
             var serializedQueue = JsonConvert.SerializeObject(_fileQueue);
             _fileStorage.Write(_stateFilePath, serializedQueue);
-            _logger.Information("File queue state persisted.");
+            _logger.Info("File queue state persisted.");
         }
         catch (Exception ex)
         {
@@ -129,7 +123,12 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
         _processingTask = ProcessQueueAsync(_cancellationTokenSource.Token);
 
         // Save state every minute
-        _persistenceTimer = new Timer(_ => PersistState(), null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+        _persistenceTimer = new System.Threading.Timer(
+            _ => PersistState(),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromMinutes(1)
+        );
     }
 
     private async Task ProcessQueueAsync(CancellationToken cancellationToken)
@@ -143,14 +142,13 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
 
                 foreach (var filePath in filesToProcess)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    if (cancellationToken.IsCancellationRequested) break;
 
                     if (!_fileStorage.Exists(filePath))
                     {
                         if (_fileQueue.TryRemove(filePath, out _) | _retryCounts.TryRemove(filePath, out _))
                         {
-                            _logger.Warning("File not found, removing from queue: {FullPath}", filePath);
+                            _logger.Warn("File not found, removing from queue: {FullPath}", filePath);
                             hasChanges = true;
                         }
                         continue;
@@ -175,24 +173,17 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
                     else
                     {
                         var currentRetry = _retryCounts.AddOrUpdate(filePath, 1, (_, oldValue) => oldValue + 1);
+
                         if (currentRetry < 5)
                         {
-                            // Log at Information for first three attempts, then Debug
+                            // Log at Info for first three attempts, then Debug
                             if (currentRetry <= 3)
                             {
-                                _logger.Information(
-                                    "File not ready (attempt {Attempt}), requeue: {FullPath}",
-                                    currentRetry,
-                                    filePath
-                                );
+                                _logger.Info("File not ready (attempt {Attempt}), requeue: {FullPath}", currentRetry, filePath);
                             }
                             else
                             {
-                                _logger.Debug(
-                                    "File not ready (attempt {Attempt}), requeue: {FullPath}",
-                                    currentRetry,
-                                    filePath
-                                );
+                                _logger.Debug("File not ready (attempt {Attempt}), requeue: {FullPath}", currentRetry, filePath);
                             }
                         }
                         else
@@ -200,19 +191,11 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
                             // For attempts >= 5, log at Warning only every 5 attempts
                             if (currentRetry % 5 == 0)
                             {
-                                _logger.Warning(
-                                    "File not ready after {Attempt} attempts: {FullPath}",
-                                    currentRetry,
-                                    filePath
-                                );
+                                _logger.Warn("File not ready after {Attempt} attempts: {FullPath}", currentRetry, filePath);
                             }
                             else
                             {
-                                _logger.Debug(
-                                    "File not ready after {Attempt} attempts: {FullPath}",
-                                    currentRetry,
-                                    filePath
-                                );
+                                _logger.Debug("File not ready after {Attempt} attempts: {FullPath}", currentRetry, filePath);
                             }
                         }
                     }
@@ -228,7 +211,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
         }
         catch (TaskCanceledException)
         {
-            _logger.Information("Processing queue was canceled.");
+            _logger.Info("Processing queue was canceled.");
         }
         catch (Exception ex)
         {

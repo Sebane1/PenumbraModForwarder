@@ -1,28 +1,40 @@
 ﻿using Newtonsoft.Json;
+using NLog;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
-using Serilog;
 using SevenZipExtractor;
 
 namespace PenumbraModForwarder.Common.Services;
 
 public class PenumbraService : IPenumbraService
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     private readonly IConfigurationService _configurationService;
     private readonly IFileStorage _fileStorage;
-    private readonly ILogger _logger;
 
     private static readonly string[] PenumbraJsonLocations =
     {
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "XIVLauncher", "pluginConfigs", "Penumbra.json"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "XIVLauncherCN", "pluginConfigs", "Penumbra.json")
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "XIVLauncher",
+            "pluginConfigs",
+            "Penumbra.json"
+        ),
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "XIVLauncherCN",
+            "pluginConfigs",
+            "Penumbra.json"
+        )
     };
 
-    public PenumbraService(IConfigurationService configurationService, IFileStorage fileStorage)
+    public PenumbraService(
+        IConfigurationService configurationService,
+        IFileStorage fileStorage)
     {
         _configurationService = configurationService;
         _fileStorage = fileStorage;
-        _logger = Log.ForContext<PenumbraService>();
     }
 
     /// <summary>
@@ -36,7 +48,7 @@ public class PenumbraService : IPenumbraService
 
         if (!string.IsNullOrWhiteSpace(existingPath))
         {
-            _logger.Information("Penumbra path is already set in the configuration.");
+            _logger.Info("Penumbra path is already set in the configuration.");
             return;
         }
 
@@ -47,7 +59,7 @@ public class PenumbraService : IPenumbraService
         }
         else
         {
-            _logger.Warning("Penumbra path could not be located with any known configuration.");
+            _logger.Warn("Penumbra path could not be located with any known configuration.");
         }
     }
 
@@ -68,10 +80,12 @@ public class PenumbraService : IPenumbraService
             throw new InvalidOperationException("Penumbra path not configured. Make sure to set it first.");
 
         if (!_fileStorage.Exists(penumbraPath))
+        {
             _fileStorage.CreateDirectory(penumbraPath);
-        
+        }
+
         using var archive = new ArchiveFile(sourceFilePath);
-        
+
         var metaEntry = archive.Entries.FirstOrDefault(
             e => e?.FileName?.Equals("meta.json", StringComparison.OrdinalIgnoreCase) == true
         );
@@ -86,6 +100,7 @@ public class PenumbraService : IPenumbraService
             {
                 if (ReferenceEquals(entry, metaEntry))
                     return tempMetaFilePath;
+
                 return null;
             });
 
@@ -93,6 +108,7 @@ public class PenumbraService : IPenumbraService
             {
                 var metaContent = _fileStorage.Read(tempMetaFilePath);
                 var meta = JsonConvert.DeserializeObject<PmpMeta>(metaContent);
+
                 if (!string.IsNullOrWhiteSpace(meta?.Name))
                 {
                     destinationFolderName = meta.Name;
@@ -100,17 +116,19 @@ public class PenumbraService : IPenumbraService
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "Failed to parse meta.json in {SourceFile}; using default folder name.", sourceFilePath);
+                _logger.Warn(ex, "Failed to parse meta.json in {SourceFile}; using default folder name.", sourceFilePath);
             }
             finally
             {
                 if (_fileStorage.Exists(tempMetaFilePath))
+                {
                     _fileStorage.Delete(tempMetaFilePath);
+                }
             }
         }
         else
         {
-            _logger.Warning("No meta.json found in {SourceFile}; using default folder name.", sourceFilePath);
+            _logger.Warn("No meta.json found in {SourceFile}; using default folder name.", sourceFilePath);
         }
 
         // Clean up invalid characters for the file system
@@ -119,13 +137,14 @@ public class PenumbraService : IPenumbraService
         // Create final destination folder
         var destinationFolderPath = Path.Combine(penumbraPath, destinationFolderName);
         if (!_fileStorage.Exists(destinationFolderPath))
+        {
             _fileStorage.CreateDirectory(destinationFolderPath);
+        }
 
         // Extract all contents to the final folder
         archive.Extract(entry =>
         {
-            if (entry == null)
-                return null;
+            if (entry == null) return null;
             var outFileName = Path.Combine(destinationFolderPath, entry.FileName ?? string.Empty);
             return outFileName;
         });
@@ -133,8 +152,7 @@ public class PenumbraService : IPenumbraService
         // Optionally remove the original archive
         // _fileStorage.Delete(sourceFilePath);
 
-        _logger.Information("Installed archive from {Source} into {Destination}", sourceFilePath, destinationFolderPath);
-        
+        _logger.Info("Installed archive from {Source} into {Destination}", sourceFilePath, destinationFolderPath);
         return destinationFolderPath;
     }
 
@@ -149,6 +167,7 @@ public class PenumbraService : IPenumbraService
                     return path;
             }
         }
+
         return string.Empty;
     }
 
@@ -161,7 +180,8 @@ public class PenumbraService : IPenumbraService
 
     private void UpdatePenumbraPathInConfiguration(string foundPath)
     {
-        _logger.Information("Setting Penumbra path to {FoundPath}", foundPath);
+        _logger.Info("Setting Penumbra path to {FoundPath}", foundPath);
+
         _configurationService.UpdateConfigValue(
             config => config.BackgroundWorker.PenumbraModFolderPath = foundPath,
             "BackgroundWorker.PenumbraModPath",
