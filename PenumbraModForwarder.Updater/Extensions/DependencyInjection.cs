@@ -15,8 +15,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.SetupLogging();
-
         services.AddHttpClient<IStaticResourceService, StaticResourceService>();
         services.AddSingleton<IGetBackgroundInformation, GetBackgroundInformation>();
         services.AddSingleton<IFileStorage, FileStorage>();
@@ -28,14 +26,11 @@ public static class DependencyInjection
             return new Aria2Service(aria2InstallFolder);
         });
         services.AddSingleton<IDownloadAndInstallUpdates, DownloadAndInstallUpdates>();
-        services.AddSingleton<MainWindowViewModel>();
-        services.AddSingleton<MainWindow>();
-        
         return services;
     }
     
-    private static void SetupLogging(this IServiceCollection services)
+    public static void SetupLogging(this IServiceCollection services, string sentryDns)
     {
-        Logging.ConfigureLogging(services, "Updater");
+        Logging.ConfigureLogging(services, "Updater", sentryDns);
     }
 }

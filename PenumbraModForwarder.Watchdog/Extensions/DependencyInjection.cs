@@ -17,13 +17,11 @@ public static class DependencyInjection
         services.AddSingleton<IProcessManager, ProcessManager>();
         services.AddSingleton<IFileStorage, FileStorage>();
         
-        services.SetupLogging();
-        
         return services;
     }
 
-    private static void SetupLogging(this IServiceCollection services)
+    public static void SetupLogging(this IServiceCollection services, string sentryDns)
     {
-        Logging.ConfigureLogging(services, "WatchDog");
+        Logging.ConfigureLogging(services, "Launcher", sentryDns);
     }
 }

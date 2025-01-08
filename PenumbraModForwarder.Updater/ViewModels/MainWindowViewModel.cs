@@ -16,6 +16,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
         private readonly IGetBackgroundInformation _getBackgroundInformation;
         private readonly IUpdateService _updateService;
         private readonly IDownloadAndInstallUpdates _downloadAndInstallUpdates;
+        private readonly IAppArguments _appArguments;
         private readonly ILogger _logger;
         private readonly Random _random = new();
 
@@ -49,21 +50,21 @@ namespace PenumbraModForwarder.Updater.ViewModels
             get => _currentImage;
             set => this.RaiseAndSetIfChanged(ref _currentImage, value);
         }
-        
+
         private string _statusText;
         public string StatusText
         {
             get => _statusText;
             set => this.RaiseAndSetIfChanged(ref _statusText, value);
         }
-        
+
         private string _currentVersion;
         public string CurrentVersion
         {
             get => _currentVersion;
             set => this.RaiseAndSetIfChanged(ref _currentVersion, value);
         }
-        
+
         private string _updatedVersion;
         public string UpdatedVersion
         {
@@ -76,13 +77,21 @@ namespace PenumbraModForwarder.Updater.ViewModels
 
         private string numberedVersionCurrent;
         private string numberedVersionUpdated;
-
-        public MainWindowViewModel(IGetBackgroundInformation getBackgroundInformation, IUpdateService updateService, IDownloadAndInstallUpdates downloadAndInstallUpdates, string? externalCurrentVersion = null)
+        
+        public MainWindowViewModel(
+            IGetBackgroundInformation getBackgroundInformation,
+            IUpdateService updateService,
+            IDownloadAndInstallUpdates downloadAndInstallUpdates, IAppArguments appArguments)
         {
             _logger = Log.ForContext<MainWindowViewModel>();
             _getBackgroundInformation = getBackgroundInformation;
             _updateService = updateService;
             _downloadAndInstallUpdates = downloadAndInstallUpdates;
+            _appArguments = appArguments;
+
+            var externalCurrentVersion = _appArguments.Args.Length > 0
+                ? _appArguments.Args[0]
+                : null;
 
             if (!string.IsNullOrWhiteSpace(externalCurrentVersion))
             {
@@ -93,18 +102,13 @@ namespace PenumbraModForwarder.Updater.ViewModels
                 var assembly = Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version;
 
-                if (version == null)
-                {
-                    numberedVersionCurrent = "Local Build";
-                }
-                else
-                {
-                    numberedVersionCurrent = $"{version.Major}.{version.Minor}.{version.Build}";
-                }
+                numberedVersionCurrent = version == null
+                    ? "Local Build"
+                    : $"{version.Major}.{version.Minor}.{version.Build}";
             }
 
             CurrentVersion = $"Current Version: v{numberedVersionCurrent}";
-            
+
             UpdateCommand = ReactiveCommand.CreateFromTask(PerformUpdateAsync);
 
             Begin();
@@ -140,7 +144,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
             {
                 StatusText = "Update Needed...";
             }
-        
+
             var (info, updater) = await _getBackgroundInformation.GetResources();
             InfoJson = info;
             UpdaterInfoJson = updater;
@@ -149,7 +153,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
             {
                 BackgroundImages = UpdaterInfoJson.Backgrounds.Images;
             }
-        
+
             StartImageRotation();
         }
 
@@ -158,14 +162,12 @@ namespace PenumbraModForwarder.Updater.ViewModels
             if (BackgroundImages == null || BackgroundImages.Length == 0)
                 return;
 
-            // Show a first random image
             var initialIndex = _random.Next(BackgroundImages.Length);
             CurrentImage = BackgroundImages[initialIndex];
             _lastIndex1 = initialIndex;
 
-            // Dispose of any previous timer
             _imageTimer?.Dispose();
-            
+
             _imageTimer = Observable.Interval(TimeSpan.FromSeconds(30))
                 .Subscribe(_ =>
                 {
@@ -183,7 +185,6 @@ namespace PenumbraModForwarder.Updater.ViewModels
                     while (newIndex == _lastIndex1 || newIndex == _lastIndex2);
 
                     CurrentImage = BackgroundImages[newIndex];
-                    
                     _lastIndex2 = _lastIndex1;
                     _lastIndex1 = newIndex;
                 });

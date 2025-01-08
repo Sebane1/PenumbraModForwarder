@@ -43,6 +43,15 @@ using (new Mutex(true, "PenumbraModForwarder.BackgroundWorker", out isNewInstanc
     int port = int.Parse(args[0]);
     logger.Information("Starting BackgroundWorker on port {Port}", port);
 
+    var configuration = new ConfigurationBuilder()
+        .AddUserSecrets<Program>()
+        .AddEnvironmentVariables()
+        .Build();
+    
+    var sentryDsn = configuration["SENTRY_DSN"];
+    var services = new ServiceCollection();
+    services.SetupLogging(sentryDsn);
+    
     builder.Services.AddApplicationServices(port);
 
     var host = builder.Build();

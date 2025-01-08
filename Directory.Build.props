@@ -1,5 +1,7 @@
 ﻿<Project>
     <PropertyGroup>
+        <UserSecretsId>PenumbraModForwarderSolutionSecrets</UserSecretsId>
+        
         <!-- Version components -->
         <MajorVersion>1</MajorVersion>
         <MinorVersion>0</MinorVersion>

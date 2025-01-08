@@ -13,7 +13,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.SetupLogging();
         services.AddSingleton<ISoundManagerService, SoundManagerService>();
         services.AddSingleton<IInstallingService, InstallingService>();
         services.AddSingleton<IPenumbraService, PenumbraService>();
@@ -30,8 +29,8 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void SetupLogging(this IServiceCollection services)
+    public static void SetupLogging(this IServiceCollection services, string sentryDns)
     {
-        Logging.ConfigureLogging(services, "Console");
+        Logging.ConfigureLogging(services, "ConsoleTool", sentryDns);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
@@ -18,6 +19,7 @@ namespace PenumbraModForwarder.Watchdog
         private readonly IProcessManager _processManager;
         private readonly IConfigurationSetup _configurationSetup;
         private readonly IUpdateService _updateService; 
+        public static IConfiguration Configuration { get; private set; } = null!;
 
         public Program(
             IConfigurationService configurationService,
@@ -41,9 +43,22 @@ namespace PenumbraModForwarder.Watchdog
                     Console.WriteLine("Another instance is already running. Exiting...");
                     return;
                 }
+                
+                Configuration = new ConfigurationBuilder()
+                    .AddUserSecrets<Program>()
+                    .AddEnvironmentVariables()
+                    .Build();
+                    
+                var sentryDsn = Configuration["SENTRY_DSN"];
+                if (string.IsNullOrWhiteSpace(sentryDsn))
+                {
+                    Console.WriteLine("SENTRY_DSN is not provided. Sentry logging will not be configured.");
+                }
+
 
                 var services = new ServiceCollection();
                 services.AddApplicationServices();
+                services.SetupLogging(sentryDsn);
                 services.AddSingleton<Program>();
 
                 var serviceProvider = services.BuildServiceProvider();

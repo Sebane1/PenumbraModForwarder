@@ -41,14 +41,13 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
             {
                 client.BaseAddress = new Uri(ApiConsts.BaseApiUrl);
             });
-
-            services.SetupLogging();
             return services;
         }
 
-        private static void SetupLogging(this IServiceCollection services)
+        public static void SetupLogging(this IServiceCollection services, string sentryDsn)
         {
-            Logging.ConfigureLogging(services, "BackgroundWorker");
+            Logging.ConfigureLogging(services, "BackgroundWorker", sentryDsn);
         }
+
     }
 }

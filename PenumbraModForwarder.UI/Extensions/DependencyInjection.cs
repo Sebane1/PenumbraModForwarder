@@ -21,9 +21,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // Setup logging and other services
-        services.SetupLogging();
-
         // Register ConfigurationModel as a singleton
         services.AddSingleton<ConfigurationModel>();
 
@@ -77,8 +74,8 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void SetupLogging(this IServiceCollection services)
+    public static void SetupLogging(this IServiceCollection services, string sentryDsn)
     {
-        Logging.ConfigureLogging(services, "UI");
+        Logging.ConfigureLogging(services, "UI", sentryDsn);
     }
 }
