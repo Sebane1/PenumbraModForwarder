@@ -102,7 +102,6 @@ public class MainWindowViewModel : ViewModelBase
         InstallViewModel = new InstallViewModel(_webSocketClient, _soundManagerService);
 
         _ = InitializeWebSocketConnection(port);
-        _configurationListener.StartListening();
     }
 
     private async Task InitializeWebSocketConnection(int port)

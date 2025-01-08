@@ -15,4 +15,6 @@ public class CommonConfigurationModel
     public bool IncludePrereleases { get; set; }
     [Display(Name = "Start on FFXIV Boot", GroupName = "General", Description = "Put PMF into xivLauncher's config to make it run")]
     public bool StartOnFfxivBoot { get; set; }
+    [Display(Name = "Enable Sentry", GroupName = "General", Description = "This will upload error logs to a secure server so they can be viewed")]
+    public bool EnableSentry { get; set; }
 }

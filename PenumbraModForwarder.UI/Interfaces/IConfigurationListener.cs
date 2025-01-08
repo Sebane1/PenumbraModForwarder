@@ -2,5 +2,4 @@
 
 public interface IConfigurationListener
 {
-    void StartListening();
 }

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.Updater.Extensions;
 using PenumbraModForwarder.Updater.Interfaces;
 using ReactiveUI;
 using Serilog;
@@ -17,6 +18,7 @@ namespace PenumbraModForwarder.Updater.ViewModels
         private readonly IUpdateService _updateService;
         private readonly IDownloadAndInstallUpdates _downloadAndInstallUpdates;
         private readonly IAppArguments _appArguments;
+        private readonly IConfigurationService _configurationService;
         private readonly ILogger _logger;
         private readonly Random _random = new();
 
@@ -81,13 +83,23 @@ namespace PenumbraModForwarder.Updater.ViewModels
         public MainWindowViewModel(
             IGetBackgroundInformation getBackgroundInformation,
             IUpdateService updateService,
-            IDownloadAndInstallUpdates downloadAndInstallUpdates, IAppArguments appArguments)
+            IDownloadAndInstallUpdates downloadAndInstallUpdates, IAppArguments appArguments, IConfigurationService configurationService)
         {
             _logger = Log.ForContext<MainWindowViewModel>();
             _getBackgroundInformation = getBackgroundInformation;
             _updateService = updateService;
             _downloadAndInstallUpdates = downloadAndInstallUpdates;
             _appArguments = appArguments;
+            _configurationService = configurationService;
+
+            if ((bool) _configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
+            {
+                DependencyInjection.EnableSentryLogging();
+            }
+            else
+            {
+                DependencyInjection.DisableSentryLogging();
+            }
 
             var externalCurrentVersion = _appArguments.Args.Length > 0
                 ? _appArguments.Args[0]

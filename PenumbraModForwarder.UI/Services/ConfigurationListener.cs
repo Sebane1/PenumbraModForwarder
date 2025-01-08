@@ -2,6 +2,7 @@
 using PenumbraModForwarder.Common.Events;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
+using PenumbraModForwarder.UI.Extensions;
 using PenumbraModForwarder.UI.Interfaces;
 using Serilog;
 
@@ -20,9 +21,11 @@ public class ConfigurationListener : IConfigurationListener
         _xivLauncherService = xivLauncherService;
         _fileLinkingService = fileLinkingService;
         _logger = Log.ForContext<ConfigurationListener>();
+        
+        StartListening();
     }
 
-    public void StartListening()
+    private void StartListening()
     {
         _logger.Debug("Configuration Listen Events hooked");
         _configurationService.ConfigurationChanged += ConfigurationServiceOnConfigurationChanged;
@@ -49,6 +52,21 @@ public class ConfigurationListener : IConfigurationListener
         {
             if (shouldStartOnBoot) _fileLinkingService.EnableStartup();
             else _fileLinkingService.DisableStartup();
+        }
+
+        if (e is {PropertyName: "Common.EnableSentry", NewValue: bool shouldEnableSentry})
+        {
+            if (shouldEnableSentry)
+            {
+                _logger.Debug("EnableSentry event triggered");
+                DependencyInjection.EnableSentryLogging();
+            }
+            else
+            {
+                _logger.Debug("DisableSentry event triggered");
+                DependencyInjection.DisableSentryLogging();
+            }
+            
         }
     }
 }

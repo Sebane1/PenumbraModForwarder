@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.ReactiveUI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Updater.Extensions;
 using PenumbraModForwarder.Updater.Interfaces;
 using PenumbraModForwarder.Updater.Services;
@@ -37,6 +38,7 @@ public class Program
                 services.AddApplicationServices();
 
                 ServiceProvider = services.BuildServiceProvider();
+                
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             }
             catch (Exception ex)

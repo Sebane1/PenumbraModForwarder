@@ -45,4 +45,9 @@ public static class DependencyInjection
 
         Logging.EnableSentry(sentryDns, "Launcher");
     }
+    
+    public static void DisableSentryLogging()
+    {
+        Logging.DisableSentry("Launcher");
+    }
 }

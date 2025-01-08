@@ -98,4 +98,9 @@ public static class DependencyInjection
 
         Logging.EnableSentry(sentryDns, "UI");
     }
+
+    public static void DisableSentryLogging()
+    {
+        Logging.DisableSentry("UI");
+    }
 }

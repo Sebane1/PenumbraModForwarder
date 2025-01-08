@@ -34,6 +34,7 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
             services.AddSingleton<IModHandlerService, ModHandlerService>();
             services.AddSingleton<IStatisticService, StatisticService>();
             services.AddSingleton<IPenumbraService, PenumbraService>();
+            services.AddSingleton<IConfigurationListener, ConfigurationListener>();
             
             services.AddTransient<IFileWatcher, FileWatcher>();
             services.AddSingleton<IFileQueueProcessor, FileQueueProcessor>();
@@ -62,6 +63,11 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
             }
 
             Logging.EnableSentry(sentryDns, "BackgroundWorker");
+        }
+        
+        public static void DisableSentryLogging()
+        {
+            Logging.DisableSentry("BackgroundWorker");
         }
 
         private static void SetupLogging(this IServiceCollection services)

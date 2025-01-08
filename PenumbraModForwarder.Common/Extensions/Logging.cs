@@ -61,7 +61,7 @@ public static class Logging
             .WriteTo.Sentry(sinkConfig =>
             {
                 sinkConfig.Dsn = sentryDns;
-                sinkConfig.MinimumEventLevel = LogEventLevel.Warning;
+                sinkConfig.MinimumEventLevel = LogEventLevel.Error;
                 sinkConfig.AttachStacktrace = true;
                 sinkConfig.Release = semVersion;
                 sinkConfig.AutoSessionTracking = true;
@@ -73,5 +73,11 @@ public static class Logging
             .CreateLogger();
 
         Console.WriteLine("Sentry is now enabled at runtime.");
+    }
+    
+    public static void DisableSentry(string applicationName)
+    {
+        Log.Logger = GetBaseLoggerConfiguration(applicationName).CreateLogger();
+        Console.WriteLine("Sentry has been disabled and removed from the logger.");
     }
 }

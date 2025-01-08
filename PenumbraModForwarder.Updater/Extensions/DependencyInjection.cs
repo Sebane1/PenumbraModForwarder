@@ -53,4 +53,9 @@ public static class DependencyInjection
 
         Logging.EnableSentry(sentryDns, "Updater");
     }
+    
+    public static void DisableSentryLogging()
+    {
+        Logging.DisableSentry("Updater");
+    }
 }
