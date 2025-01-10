@@ -1,4 +1,17 @@
 # Penumbra Mod Forwarder
+# Important
+Work on this project has been moved to a separate repository, this one will continue to exist but will no longer be maintained
+
+### Updater
+Has been moved to: https://github.com/CouncilOfTsukuyomi/Updater
+
+### PMF
+Has been renamed and moved to: https://github.com/CouncilOfTsukuyomi/ModForwarder
+
+### Common Library
+Has been extracted out of PMF and moved to: https://github.com/CouncilOfTsukuyomi/PMF.CommonLib
+
+---
 
 Forwards `.pmp`, `.ttmp`, and `.ttmp2` files to be automatically opened by Penumbra.
 
