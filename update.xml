@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>2.0.0.0</version>
-  <url>https://github.com/CouncilOfTsukuyomi/Atomos/releases/download/v0.1.1/ModForwarder-Windows-x64.v0.1.1.zip</url>
+  <version>0.2.0.0</version>
+  <url>https://github.com/CouncilOfTsukuyomi/Atomos/releases/download/v0.2.0/Atomos-Windows-x64.v0.2.0.zip</url>
   <changelog></changelog>
   <mandatory>false</mandatory>
 </item>
