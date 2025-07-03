@@ -6,7 +6,7 @@ Work on this project has been moved to a separate repository, this one will cont
 Has been moved to: https://github.com/CouncilOfTsukuyomi/Updater
 
 ### PMF
-Has been renamed and moved to: https://github.com/CouncilOfTsukuyomi/ModForwarder
+Has been renamed and moved to: https://github.com/CouncilOfTsukuyomi/Atomos
 
 ### Common Library
 Has been extracted out of PMF and moved to: https://github.com/CouncilOfTsukuyomi/PMF.CommonLib
