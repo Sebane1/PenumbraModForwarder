@@ -14,10 +14,11 @@ public class UpdateService : IUpdateService
         _logger = logger;
 
         AutoUpdater.ApplicationExitEvent += OnApplicationExit;
-        AutoUpdater.DownloadPath = Application.StartupPath;
+        // AutoUpdater.DownloadPath = Application.StartupPath;
         AutoUpdater.Synchronous = true;
         AutoUpdater.Mandatory = true;
         AutoUpdater.UpdateMode = Mode.ForcedDownload;
+        AutoUpdater.ClearAppDirectory = true;
 
         AutoUpdater.InstalledVersion = GetInstalledVersion();
     }
