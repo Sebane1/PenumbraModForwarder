@@ -19,6 +19,7 @@ static class Program {
 
     [STAThread]
     static void Main(string[] args) {
+        MessageBox.Show("This is a notice that Penumbra Mod Forwarder is rebranding to Atomos in this next update.", "Penumbra Mod Forwarder Migration To Atomos");
         _serviceProvider = Extensions.ServiceExtensions.Configuration();
         var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory);
         MigrateOldConfigIfExists();
