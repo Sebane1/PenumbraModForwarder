@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.0.1.7</Version>
+        <Version>1.0.1.8</Version>
         <AssemblyTitle>Penumbra Mod Forwarder</AssemblyTitle>
         <AssemblyName>PenumbraModForwarder</AssemblyName>
         <PackageId>PenumbraModForwarder</PackageId>
