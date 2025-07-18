@@ -20,9 +20,10 @@ static class Program {
     [STAThread]
     static void Main(string[] args) {
         _serviceProvider = Extensions.ServiceExtensions.Configuration();
+        var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory);
         MigrateOldConfigIfExists();
         DownloadAndExtractAtomos();
-        SelfDestruct();
+        SelfDestruct(files);
     }
     public static void DownloadAndExtractAtomos() {
         string downloadPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Atomos.zip");
@@ -34,11 +35,13 @@ static class Program {
         File.Delete(downloadPath);
         Process.Start(atomosPath);
     }
-    public static void SelfDestruct() {
-        Process.Start(new ProcessStartInfo() {
-            Arguments = "/C choice /C Y /N /D Y /T 3 & Del \"" + Application.ExecutablePath + "\"",
-            WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, FileName = "cmd.exe"
-        });
+    public static void SelfDestruct(string[] paths) {
+        foreach (var item in paths) {
+            Process.Start(new ProcessStartInfo() {
+                Arguments = "/C choice /C Y /N /D Y /T 3 & Del \"" + item + "\"",
+                WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, FileName = "cmd.exe"
+            });
+        }
     }
     private static void OnApplicationExit(object sender, EventArgs e) {
         // Optional: Additional cleanup if needed
