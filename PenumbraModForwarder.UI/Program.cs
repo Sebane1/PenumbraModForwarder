@@ -31,6 +31,7 @@ static class Program {
         }
 
         Application.ApplicationExit += OnApplicationExit;
+        Application.Run(_serviceProvider.GetRequiredService<MainWindow>());
 
         IsProgramAlreadyRunning();
 
