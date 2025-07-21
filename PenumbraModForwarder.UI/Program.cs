@@ -19,14 +19,33 @@ static class Program {
 
     [STAThread]
     static void Main(string[] args) {
-        MessageBox.Show("This is a notice that Penumbra Mod Forwarder is rebranding to Atomos in this next update.", "Penumbra Mod Forwarder Migration To Atomos");
         _serviceProvider = Extensions.ServiceExtensions.Configuration();
-        var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory);
-        MigrateOldConfigIfExists();
-        DownloadAndExtractAtomos();
-        SelfDestruct(files);
+
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+
+        if (args.Length > 0) {
+            var filePath = args[0];
+            HandleFileArgs(filePath);
+            return;
+        }
+
+        Application.ApplicationExit += OnApplicationExit;
+
+        IsProgramAlreadyRunning();
+
+        CheckForUpdates();
+
+        if (IsExiting) {
+            return;
+        }
     }
-    public static void DownloadAndExtractAtomos() {
+
+    private static void OnApplicationExit(object? sender, EventArgs e) {
+        ExitApplication();
+    }
+
+    public static void DownloadAndUpdateToAtomos() {
         string downloadPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Atomos.zip");
         string atomosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Atomos.Launcher.exe");
         using (var client = new WebClient()) {
@@ -36,16 +55,15 @@ static class Program {
         File.Delete(downloadPath);
         Process.Start(atomosPath);
     }
-    public static void SelfDestruct(string[] paths) {
+    public static void CleanupOldFiles(string[] paths) {
         foreach (var item in paths) {
-            Process.Start(new ProcessStartInfo() {
-                Arguments = "/C choice /C Y /N /D Y /T 3 & Del \"" + item + "\"",
-                WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, FileName = "cmd.exe"
-            });
+            if (item.EndsWith(".dll") || item.EndsWith(".dll")) {
+                Process.Start(new ProcessStartInfo() {
+                    Arguments = "/C choice /C Y /N /D Y /T 3 & Del \"" + item + "\"",
+                    WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, FileName = "cmd.exe"
+                });
+            }
         }
-    }
-    private static void OnApplicationExit(object sender, EventArgs e) {
-        // Optional: Additional cleanup if needed
     }
 
     public static void ExitApplication() {
@@ -105,8 +123,20 @@ static class Program {
     }
 
     private static void CheckForUpdates() {
-        var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
-        updateService.CheckForUpdates();
+        if (MessageBox.Show("Penumbra Mod Forwarder has a new update to version 2.0. Please be aware that in order to better differentiate the program from other similarly named FFXIV tools we will be re-branding to Atomos Mod Forwarder. Update now?", "Penumbra Mod Forwarder Update Notice", MessageBoxButtons.YesNo) == DialogResult.Yes) {
+            // Get a snapshot of the current PMF install.
+            var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory);
+
+            // Migrate lingering old configurations 
+            MigrateOldConfigIfExists();
+
+            // Update to Atomos
+            DownloadAndUpdateToAtomos();
+
+            // Cleanup
+            CleanupOldFiles(files);
+            IsExiting = true;
+        }
     }
 
     private static void CreateStartMenuShortcut() {
