@@ -34,6 +34,9 @@ static class Program {
 
         IsProgramAlreadyRunning();
 
+        // Migrate lingering old configurations 
+        MigrateOldConfigIfExists();
+
         CheckForUpdates();
 
         if (IsExiting) {
