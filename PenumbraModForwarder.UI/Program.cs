@@ -46,6 +46,7 @@ static class Program {
     }
 
     public static void DownloadAndUpdateToAtomos() {
+        // Atomos isn't compatible with AutoUpdater.Net so we have to handle getting to the first version of v2 ourselves.
         string downloadPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Atomos.zip");
         string atomosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Atomos.Launcher.exe");
         using (var client = new WebClient()) {
@@ -57,7 +58,8 @@ static class Program {
     }
     public static void CleanupOldFiles(string[] paths) {
         foreach (var item in paths) {
-            if (item.EndsWith(".dll") || item.EndsWith(".dll")) {
+            // Only remove former execution files.
+            if (item.EndsWith(".dll") || item.EndsWith(".exe")) {
                 Process.Start(new ProcessStartInfo() {
                     Arguments = "/C choice /C Y /N /D Y /T 3 & Del \"" + item + "\"",
                     WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, FileName = "cmd.exe"
