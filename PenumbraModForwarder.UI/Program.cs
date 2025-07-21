@@ -31,9 +31,6 @@ static class Program {
         }
 
         Application.ApplicationExit += OnApplicationExit;
-        Application.Run(_serviceProvider.GetRequiredService<MainWindow>());
-
-        IsProgramAlreadyRunning();
 
         // Migrate lingering old configurations 
         MigrateOldConfigIfExists();
@@ -42,6 +39,9 @@ static class Program {
 
         if (IsExiting) {
             return;
+        } else {
+            Application.Run(_serviceProvider.GetRequiredService<MainWindow>());
+            IsProgramAlreadyRunning();
         }
     }
 
